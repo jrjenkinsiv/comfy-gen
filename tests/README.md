@@ -296,9 +296,9 @@ Automated testing on push:
 After running tests, update:
 
 1. **MODEL_REGISTRY.md** - If new models/LoRAs tested
-2. **AGENT_GUIDE.md** - Add new prompt engineering findings
-3. **MCP_COMPREHENSIVE.md** - Document MCP tool updates
-4. **This file (TESTING.md)** - Add new test cases
+2. **USAGE.md** - Add new prompt engineering findings
+3. **USAGE.md** - Document MCP tool updates
+4. **This file (tests/README.md)** - Add new test cases
 
 ## Memory Updates
 
