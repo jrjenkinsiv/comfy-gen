@@ -2,7 +2,7 @@
 
 This document tracks all models and LoRAs installed on moira for ComfyUI.
 
-**Last Updated:** 2026-01-03  
+**Last Updated:** 2026-01-04  
 **Model Directory:** `C:\Users\jrjen\comfy\models\`
 
 ## Directory Structure
@@ -77,6 +77,18 @@ LoRA files are stored in `C:\Users\jrjen\comfy\models\loras\`.
 | `BounceHighWan2_2.safetensors` | Wan 2.2 High | Motion enhancement |
 | `BounceLowWan2_2.safetensors` | Wan 2.2 Low | Motion enhancement |
 | `wan-thiccum-v3.safetensors` | Wan 2.2 | Body enhancement |
+
+### Game Asset LoRAs (Icons, Sprites, UI)
+
+| Filename | Compatible With | Notes |
+|----------|----------------|-------|
+| `vector_icons_game_assets.safetensors` | SD 1.5 | Vector-style game icons, flat design. Strength 0.8. Source: CivitAI 2251918 |
+
+**Game Asset Usage Notes:**
+- Use with SD 1.5 workflow (`flux-dev.json` uses v1-5-pruned-emaonly-fp16)
+- Best for top-down views of ships, icons, UI elements
+- Recommended negative prompt: "realistic, 3d, photograph, perspective"
+- See `lora_catalog.yaml` for the `battleship_ship_icon` preset
 
 ---
 
@@ -202,7 +214,7 @@ python3 generate.py \
    "
    ```
 
-5. **Update lora_catalog.yaml** if it's a LoRA (see [ARCHITECTURE.md](ARCHITECTURE.md) for LoRA injection)
+5. **Update lora_catalog.yaml** if it's a LoRA (see [LORA_CATALOG.md](LORA_CATALOG.md))
 
 ### Example: Adding a New LoRA
 
