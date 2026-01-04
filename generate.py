@@ -14,6 +14,7 @@ import signal
 import os
 import tempfile
 import uuid
+import re
 from pathlib import Path
 from minio import Minio
 from minio.error import S3Error
@@ -349,6 +350,65 @@ def cleanup_partial_output(output_path):
         except Exception as e:
             print(f"[WARN] Failed to clean up {output_path}: {e}")
 
+def adjust_prompt_for_retry(
+    positive_prompt: str, 
+    negative_prompt: str, 
+    attempt: int
+) -> tuple:
+    """Adjust prompts for retry attempt to improve quality.
+    
+    Args:
+        positive_prompt: Original positive prompt
+        negative_prompt: Original negative prompt
+        attempt: Current retry attempt number (1-based)
+    
+    Returns:
+        Tuple of (adjusted_positive, adjusted_negative)
+    """
+    # Extract existing weights from prompt
+    weight_pattern = r'\(([^:]+):(\d+\.?\d*)\)'
+    
+    # Increase emphasis on key terms
+    adjusted_positive = positive_prompt
+    
+    # Add emphasis to "single" and "one" if they appear
+    if "single" in adjusted_positive.lower() or "one" in adjusted_positive.lower():
+        # Increase weight multiplier based on attempt
+        multiplier = 1.0 + (attempt * 0.3)
+        
+        # Apply weight to single/one car phrases
+        adjusted_positive = re.sub(
+            r'\bsingle\s+car\b', 
+            f'(single car:{multiplier:.1f})',
+            adjusted_positive,
+            flags=re.IGNORECASE
+        )
+        adjusted_positive = re.sub(
+            r'\bone\s+car\b',
+            f'(one car:{multiplier:.1f})',
+            adjusted_positive,
+            flags=re.IGNORECASE
+        )
+    
+    # Strengthen negative prompt
+    adjusted_negative = negative_prompt
+    retry_negative_terms = [
+        "multiple cars",
+        "duplicate",
+        "cloned",
+        "ghosting",
+        "mirrored",
+        "two cars",
+        "extra car"
+    ]
+    
+    # Add retry-specific negative terms if not already present
+    for term in retry_negative_terms:
+        if term not in adjusted_negative.lower():
+            adjusted_negative = f"{adjusted_negative}, {term}" if adjusted_negative else term
+    
+    return adjusted_positive, adjusted_negative
+
 # Global variable to track current prompt for signal handler
 current_prompt_id = None
 current_output_path = None
@@ -363,6 +423,47 @@ def signal_handler(signum, frame):
     print("[INFO] Cancelled. Exiting.")
     sys.exit(0)
 
+def run_generation(
+    workflow: dict,
+    output_path: str,
+    uploaded_image_filename: str = None
+) -> tuple:
+    """Run a single generation attempt.
+    
+    Args:
+        workflow: The workflow dict with prompts already set
+        output_path: Path to save the output
+        uploaded_image_filename: Optional uploaded input image filename
+    
+    Returns:
+        Tuple of (success: bool, minio_url: str or None)
+    """
+    global current_prompt_id
+    
+    prompt_id = queue_workflow(workflow)
+    if not prompt_id:
+        return False, None
+    
+    # Track prompt ID for cancellation
+    current_prompt_id = prompt_id
+
+    status = wait_for_completion(prompt_id)
+    if status:
+        if download_output(status, output_path):
+            # Upload to MinIO
+            import datetime
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            object_name = f"{timestamp}_{Path(output_path).name}"
+            minio_url = upload_to_minio(output_path, object_name)
+            if minio_url:
+                print(f"[OK] Image available at: {minio_url}")
+                return True, minio_url
+            else:
+                print("[ERROR] Failed to upload to MinIO")
+                return False, None
+    
+    return False, None
+
 def main():
     global current_prompt_id, current_output_path
     
@@ -376,6 +477,10 @@ def main():
     parser.add_argument("--crop", choices=['center', 'cover', 'contain'], help="Crop mode for resize")
     parser.add_argument("--denoise", type=float, help="Denoise strength (0.0-1.0) for img2img")
     parser.add_argument("--cancel", metavar="PROMPT_ID", help="Cancel a specific prompt by ID")
+    parser.add_argument("--validate", action="store_true", help="Run validation after generation")
+    parser.add_argument("--auto-retry", action="store_true", help="Automatically retry if validation fails")
+    parser.add_argument("--retry-limit", type=int, default=3, help="Maximum retry attempts (default: 3)")
+    parser.add_argument("--positive-threshold", type=float, default=0.25, help="Minimum CLIP score for positive prompt (default: 0.25)")
     args = parser.parse_args()
     
     # Handle cancel mode
@@ -398,6 +503,7 @@ def main():
     
     # Handle input image if provided
     temp_file = None
+    uploaded_filename = None
     if args.input_image:
         try:
             # Check if input is URL or local file
@@ -459,25 +565,86 @@ def main():
     if args.denoise is not None:
         workflow = modify_denoise(workflow, args.denoise)
 
-    prompt_id = queue_workflow(workflow)
-    if not prompt_id:
-        sys.exit(1)
+    # Validation and retry loop
+    attempt = 0
+    max_attempts = args.retry_limit if args.auto_retry else 1
+    minio_url = None
+    validation_result = None
     
-    # Track prompt ID for cancellation
-    current_prompt_id = prompt_id
+    while attempt < max_attempts:
+        attempt += 1
+        
+        if attempt > 1:
+            print(f"\n[INFO] Retry attempt {attempt}/{max_attempts}")
+            # Adjust prompts for retry
+            adjusted_positive, adjusted_negative = adjust_prompt_for_retry(
+                args.prompt, args.negative_prompt, attempt - 1
+            )
+            print(f"[INFO] Adjusted positive prompt: {adjusted_positive}")
+            print(f"[INFO] Adjusted negative prompt: {adjusted_negative}")
+            workflow = modify_prompt(workflow, adjusted_positive, adjusted_negative)
+        
+        # Run generation
+        success, minio_url = run_generation(workflow, args.output, uploaded_filename if args.input_image else None)
+        
+        if not success:
+            print(f"[ERROR] Generation failed on attempt {attempt}")
+            if attempt >= max_attempts:
+                sys.exit(1)
+            continue
+        
+        # Run validation if requested
+        if args.validate:
+            try:
+                from comfy_gen.validation import validate_image
+                
+                print(f"[INFO] Running validation...")
+                validation_result = validate_image(
+                    args.output,
+                    args.prompt,
+                    args.negative_prompt if args.negative_prompt else None,
+                    positive_threshold=args.positive_threshold
+                )
+                
+                print(f"[INFO] Validation result: {validation_result['reason']}")
+                print(f"[INFO] Positive score: {validation_result.get('positive_score', 0.0):.3f}")
+                
+                if validation_result.get('negative_score'):
+                    print(f"[INFO] Negative score: {validation_result['negative_score']:.3f}")
+                    print(f"[INFO] Delta: {validation_result.get('score_delta', 0.0):.3f}")
+                
+                if validation_result['passed']:
+                    print(f"[OK] Image passed validation")
+                    break
+                else:
+                    print(f"[WARN] Image failed validation: {validation_result['reason']}")
+                    if not args.auto_retry:
+                        # Validation failed but no retry requested
+                        break
+                    elif attempt >= max_attempts:
+                        print(f"[ERROR] Max retries reached. Final validation result:")
+                        print(f"  Reason: {validation_result['reason']}")
+                        print(f"  Positive score: {validation_result.get('positive_score', 0.0):.3f}")
+                        break
+                    # Continue to next retry attempt
+                    
+            except ImportError:
+                print("[WARN] Validation module not available. Install dependencies: pip install transformers")
+                break
+            except Exception as e:
+                print(f"[ERROR] Validation failed: {e}")
+                break
+        else:
+            # No validation requested, we're done
+            break
+    
+    # Final output
+    if minio_url:
+        print(f"\nImage available at: {minio_url}")
+        if validation_result:
+            print(f"Validation: {'PASSED' if validation_result['passed'] else 'FAILED'}")
+            print(f"Score: {validation_result.get('positive_score', 0.0):.3f}")
 
-    status = wait_for_completion(prompt_id)
-    if status:
-        if download_output(status, args.output):
-            # Upload to MinIO
-            import datetime
-            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-            object_name = f"{timestamp}_{Path(args.output).name}"
-            minio_url = upload_to_minio(args.output, object_name)
-            if minio_url:
-                print(f"Image available at: {minio_url}")
-            else:
-                print("Failed to upload to MinIO")
 
 if __name__ == "__main__":
     main()
