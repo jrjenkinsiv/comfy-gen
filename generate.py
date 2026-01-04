@@ -988,7 +988,7 @@ def load_presets():
         return {}
     
     try:
-        with open(presets_path, 'r') as f:
+        with open(presets_path, 'r', encoding='utf-8') as f:
             data = yaml.safe_load(f)
         return data.get("presets", {}) if data else {}
     except Exception as e:
@@ -1644,6 +1644,12 @@ def main():
     height = args.height if args.height is not None else preset_params.get('height')
     sampler = args.sampler if args.sampler is not None else preset_params.get('sampler')
     scheduler = args.scheduler if args.scheduler is not None else preset_params.get('scheduler')
+    
+    # Handle seed=-1 for random seed generation
+    if seed == -1:
+        import random
+        seed = random.randint(0, 2**32 - 1)
+        print(f"[OK] Generated random seed: {seed}")
     
     # Validate parameters
     is_valid, error_msg = validate_generation_params(
