@@ -421,6 +421,7 @@ ssh moira "C:\\Users\\jrjen\\comfy\\.venv\\Scripts\\python.exe C:\\Users\\jrjen\
 | [MCP_SERVER.md](docs/MCP_SERVER.md) | MCP server setup for AI assistant integration (Claude, VS Code) |
 | [AGENT_GUIDE.md](docs/AGENT_GUIDE.md) | Guide for AI agents: model selection, workflows, prompts |
 | [MODEL_REGISTRY.md](docs/MODEL_REGISTRY.md) | Complete model inventory and compatibility matrix |
+| [WORKFLOWS.md](docs/WORKFLOWS.md) | Detailed workflow documentation with parameters and examples |
 | [ERROR_HANDLING.md](docs/ERROR_HANDLING.md) | Error handling, validation, dry-run mode, retry logic |
 | [LORA_CATALOG.md](docs/LORA_CATALOG.md) | LoRA metadata and intelligent selection system |
 | [API_REFERENCE.md](docs/API_REFERENCE.md) | Internal module and function documentation |

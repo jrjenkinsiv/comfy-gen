@@ -1,13 +1,32 @@
 # LoRA Catalog for ComfyGen
 # This file contains semantic descriptions and metadata for all LoRAs
 # Used by scripts/select_model.py for intelligent model/LoRA selection
+#
+# Structure:
+#   loras: List of LoRA definitions with metadata
+#   model_suggestions: Predefined scenarios for auto-selection
+#   keyword_mappings: Keywords to tag mappings for intelligent matching
+#
+# Each LoRA entry contains:
+#   filename: Exact filename in C:\Users\jrjen\comfy\models\loras\
+#   tags: Semantic tags for matching (e.g., ["acceleration", "physics"])
+#   compatible_with: List of model filenames this LoRA works with
+#   recommended_strength: Default strength value (0.0-1.0+)
+#   description: Human-readable description
+#   use_cases: List of scenarios where this LoRA is useful
 
 loras:
-  # Acceleration LoRAs - Reduce generation steps
+  # ========================================
+  # ACCELERATION LoRAs - Reduce generation steps
+  # ========================================
+  # These LoRAs reduce Wan 2.2 generation from 30+ steps to 4 steps
+  # ALWAYS use strength 1.0 for acceleration LoRAs
+  # Must match exact model variant (high/low noise, t2v/i2v)
+  
   - filename: "wan2.2_t2v_lightx2v_4steps_lora_v1.1_high_noise.safetensors"
     tags: ["acceleration", "speed", "4-step", "wan2.2", "text-to-video", "high-noise"]
     compatible_with: ["wan2.2_t2v_high_noise_14B_fp8_scaled.safetensors"]
-    recommended_strength: 1.0
+    recommended_strength: 1.0  # Must be 1.0 for acceleration
     description: "Reduces Wan 2.2 T2V high noise generation to 4 steps for faster video creation"
     use_cases: ["fast video generation", "text-to-video with high noise model"]
     
@@ -35,15 +54,21 @@ loras:
   - filename: "Wan2.2-I2V-A14B-4steps-lora-rank64-Seko-V1_high_noise_model.safetensors"
     tags: ["acceleration", "speed", "4-step", "wan2.2", "image-to-video", "seko", "high-noise"]
     compatible_with: ["wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors"]
-    recommended_strength: 1.0
+    recommended_strength: 1.0  # Must be 1.0 for acceleration
     description: "Seko's 4-step acceleration LoRA for Wan 2.2 I2V high noise model"
     use_cases: ["fast video generation", "image-to-video", "animation", "alternative acceleration"]
     
-  # Physics and Motion LoRAs
+  # ========================================
+  # PHYSICS and MOTION LoRAs
+  # ========================================
+  # These LoRAs enhance realism and motion quality in video generation
+  # Typically use strength 0.6-0.8, adjust based on desired effect
+  # Can be combined with acceleration LoRAs
+  
   - filename: "BoobPhysics_WAN_v6.safetensors"
     tags: ["physics", "motion", "body", "wan2.2", "realistic", "bounce"]
     compatible_with: ["wan2.2_t2v_high_noise_14B_fp8_scaled.safetensors", "wan2.2_t2v_low_noise_14B_fp8_scaled.safetensors"]
-    recommended_strength: 0.7
+    recommended_strength: 0.7  # Range: 0.5-0.9 depending on desired intensity
     description: "Enhances realistic body physics and natural motion in video generation"
     use_cases: ["realistic body movement", "natural physics", "character animation", "motion enhancement"]
     
@@ -64,17 +89,22 @@ loras:
   - filename: "wan-thiccum-v3.safetensors"
     tags: ["body", "enhancement", "wan2.2", "character"]
     compatible_with: ["wan2.2_t2v_high_noise_14B_fp8_scaled.safetensors", "wan2.2_t2v_low_noise_14B_fp8_scaled.safetensors"]
-    recommended_strength: 0.7
+    recommended_strength: 0.7  # Range: 0.5-0.9
     description: "Body enhancement LoRA for character-focused video generation"
     use_cases: ["character enhancement", "body modification", "character-focused content"]
 
-# Model suggestions based on content type
+# ========================================
+# MODEL SUGGESTIONS - Predefined scenarios
+# ========================================
+# Used for auto-selection based on prompt content
+# Each scenario defines default model, workflow, and LoRAs
+
 model_suggestions:
   # Text-to-video scenarios
   text_to_video:
     model: "wan2.2_t2v_high_noise_14B_fp8_scaled.safetensors"
     workflow: "workflows/wan22-t2v.json"
-    default_loras:
+    default_loras:  # Always include acceleration LoRA for 4-step generation
       - "wan2.2_t2v_lightx2v_4steps_lora_v1.1_high_noise.safetensors"
     keywords: ["video", "animation", "motion", "movement", "scene", "action"]
     
@@ -82,7 +112,7 @@ model_suggestions:
   image_to_video:
     model: "wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors"
     workflow: "workflows/wan22-i2v.json"
-    default_loras:
+    default_loras:  # Always include acceleration LoRA
       - "wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise.safetensors"
     keywords: ["animate", "bring to life", "add motion to"]
     
@@ -90,14 +120,25 @@ model_suggestions:
   simple_image:
     model: "v1-5-pruned-emaonly-fp16.safetensors"
     workflow: "workflows/flux-dev.json"
-    default_loras: []
+    default_loras: []  # SD 1.5 doesn't need LoRAs by default
     keywords: ["image", "photo", "picture", "portrait", "landscape", "drawing"]
 
-# Keyword to LoRA mapping for intelligent selection
+# ========================================
+# KEYWORD MAPPINGS - Intelligent LoRA selection
+# ========================================
+# Maps prompt keywords to LoRA tags with boost scores
+# When a keyword appears in prompt, LoRAs with matching tags get score boost
+# Higher boost = stronger priority for that LoRA
+#
+# Boost score guidelines:
+#   2.0+ : Critical match, strongly prefer this LoRA
+#   1.5  : Good match, prefer this LoRA
+#   1.0  : Relevant match, consider this LoRA
+
 keyword_mappings:
   physics:
     tags: ["physics", "motion"]
-    boost_score: 2.0
+    boost_score: 2.0  # Strong preference for physics LoRAs
   
   motion:
     tags: ["motion", "dynamic"]

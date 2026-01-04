@@ -135,5 +135,41 @@
     "_meta": {
       "title": "Save Video"
     }
+  },
+  "_workflow_metadata": {
+    "workflow_name": "Wan 2.2 Text-to-Video",
+    "description": "Generate videos from text prompts using Wan 2.2 high noise model",
+    "model": "wan2.2_t2v_high_noise_14B_fp8_scaled.safetensors",
+    "text_encoder": "oldt5_xxl_fp8_e4m3fn_scaled.safetensors",
+    "vae": "wan_2.1_vae.safetensors",
+    "acceleration_lora": "wan2.2_t2v_lightx2v_4steps_lora_v1.1_high_noise.safetensors",
+    "output_specs": {
+      "resolution": "848x480",
+      "frames": 81,
+      "fps": 8,
+      "duration": "~10 seconds",
+      "format": "MP4"
+    },
+    "generation_params": {
+      "steps": 4,
+      "cfg": 1.0,
+      "sampler": "dpmpp_2m"
+    },
+    "use_case": "Video generation from text, cinematic scenes, motion sequences",
+    "estimated_time": "2-5 minutes on RTX 5090",
+    "prompt_tips": [
+      "Include camera movement (drone shot, pan, tilt)",
+      "Specify action and motion",
+      "Describe lighting and atmosphere",
+      "Keep prompts focused on motion/action"
+    ],
+    "nodes_overview": {
+      "text_encoding": "Nodes for T5 text encoding",
+      "model_loading": "Diffusion model and VAE loading",
+      "lora": "Acceleration LoRA (4-step)",
+      "sampling": "Wan 2.2 sampler with 4 steps",
+      "vae_decode": "Video VAE decoding",
+      "save": "Video output to file"
+    }
   }
 }
