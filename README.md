@@ -98,6 +98,12 @@ All models stored in: `C:\Users\jrjen\comfy\models\` on moira.
 
 See [docs/MODEL_REGISTRY.md](docs/MODEL_REGISTRY.md) for complete inventory.
 
+## Documentation
+
+- **[MCP Server Guide](docs/MCP_GUIDE.md)** - Complete guide for using the MCP server with AI assistants
+- **[Model Registry](docs/MODEL_REGISTRY.md)** - List of available models and LoRAs
+- **[Agent Guide](docs/AGENT_GUIDE.md)** - Guide for AI agents performing generation tasks
+
 ## Viewing Images
 
 Generated images are publicly accessible at:
