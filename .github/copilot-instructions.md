@@ -65,8 +65,8 @@ magneto (git push) --> GitHub --> ant-man (runner) --> moira (ComfyUI)
 
 ## 3. Issue-Driven Workflow
 1.  **Create Issue:** Use standard template (Context, Acceptance Criteria, Notes).
-2.  **Labeling:** Apply `serial-assignment`, `parallel-ok`, or `human-required`.
-3.  **Assignment:** Assign to `@copilot`.
+2.  **Labeling:** Apply `serial-assignment`, `parallel-ok`, `local-network`, or `human-required`.
+3.  **Assignment:** Assign to `@copilot` (or Orchestrator handles `local-network` directly).
 4.  **Review:** Review draft PR, request changes or merge.
 
 ## 4. Assignment Rules (Conflict Prevention)
@@ -75,7 +75,8 @@ magneto (git push) --> GitHub --> ant-man (runner) --> moira (ComfyUI)
 |-------|---------|------|
 | `serial-assignment` | Touches high-conflict files (e.g., `generate.py`, core workflows) | **ONE AT A TIME.** Wait for PR merge before assigning next. |
 | `parallel-ok` | Isolated changes (e.g., new workflows, scripts, docs) | **BATCH OK.** Can assign 3-5 simultaneously. |
-| `human-required` | Requires GPU access, ComfyUI runtime, model downloads | **DO NOT ASSIGN.** Report to user. |
+| `local-network` | Requires SSH to moira/ant-man/cerebro (model downloads, GPU tasks, service restarts) | **ORCHESTRATOR ONLY.** VS Code Agent handles directly - do NOT assign to Copilot (it runs on GitHub infra, no local network access). |
+| `human-required` | Requires true human intervention (physical access, subjective aesthetic decisions, external account setup) | **DO NOT ASSIGN.** Report to user. |
 
 **Rate Limiting Prevention:**
 - Assign maximum **3 parallel-ok issues at once** to avoid token exhaustion
