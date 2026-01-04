@@ -30,7 +30,7 @@ Generate images and videos via text prompts without using the ComfyUI GUI. This 
 | **Text-to-Image** | Generate images from text prompts using Flux/SD 1.5 | [Quick Start](#quick-start) |
 | **Image-to-Image** | Transform images with prompts and denoise control | [Input Images](#input-image-options) |
 | **Text-to-Video** | Create videos from prompts with Wan 2.2 | [Model Registry](docs/MODEL_REGISTRY.md) |
-| **Image-to-Video** | Animate existing images | [Agent Guide](docs/AGENT_GUIDE.md) |
+| **Image-to-Video** | Animate existing images | [Usage Guide](docs/USAGE.md) |
 | **Dynamic LoRA Injection** | Add LoRAs via CLI without modifying workflows | [Architecture](docs/ARCHITECTURE.md) |
 | **Image Validation** | CLIP-based semantic similarity scoring | [Validation](#image-validation--auto-retry) |
 | **Auto-Retry** | Automatic retry with prompt adjustment on failure | [Validation](#image-validation--auto-retry) |
@@ -512,7 +512,7 @@ python3 mcp_server.py
 - `restart_comfyui_service` - Restart the ComfyUI server
 - `check_comfyui_service_status` - Check if ComfyUI is running and healthy
 
-See [docs/MCP_SERVER.md](docs/MCP_SERVER.md) for complete documentation.
+See [docs/USAGE.md](docs/USAGE.md) for complete MCP server documentation.
 
 ### Claude Desktop Integration
 
