@@ -165,9 +165,8 @@ See `docs/AGENT_GUIDE.md` for:
 
 ## 9. Troubleshooting
 
-- **Assignment Stuck:** Unassign and reassign `@copilot`.
-- **Dirty Merges:** If a PR has complex conflicts, close it and reassign the issue to trigger a fresh branch.
-- **Stale Branches:** If `main` changes significantly (refactor), close stale PRs and reassign.
+- **Assignment Stuck:** Unassign and reassign `@copilot` on the **issue**.
+- **Dirty Merges / Stale PRs:** If a PR has merge conflicts or is stale after `main` changed, **unassign then reassign the issue** (not the PR). Copilot will create a fresh branch from updated `main`. The old PR will be superseded.
 - **Rate Limited (PR Stopped):** Copilot hit token limits. Wait 1-2 hours, then unassign and reassign the issue. The PR branch may be salvageable - check if it has partial progress worth keeping.
 - **ComfyUI not responding:** SSH to moira, check `tasklist | findstr python`, restart with `start_comfyui.py`.
 - **Model not found:** Verify model exists in `C:\Users\jrjen\comfy\models\` and workflow references correct filename.
