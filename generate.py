@@ -1250,6 +1250,57 @@ def extract_loras_from_workflow(workflow):
     
     return loras
 
+def extract_model_from_workflow(workflow):
+    """Extract model name from workflow.
+    
+    Args:
+        workflow: The workflow dictionary
+    
+    Returns:
+        str: Model filename or None if not found
+    """
+    for node_id, node in workflow.items():
+        if node.get("class_type") == "CheckpointLoaderSimple":
+            inputs = node.get("inputs", {})
+            return inputs.get("ckpt_name")
+        elif node.get("class_type") == "UNETLoader":
+            inputs = node.get("inputs", {})
+            return inputs.get("unet_name")
+    return None
+
+def extract_vae_from_workflow(workflow):
+    """Extract VAE name from workflow.
+    
+    Args:
+        workflow: The workflow dictionary
+    
+    Returns:
+        str: VAE filename or None if not found
+    """
+    for node_id, node in workflow.items():
+        if node.get("class_type") == "VAELoader":
+            inputs = node.get("inputs", {})
+            return inputs.get("vae_name")
+    return None
+
+def extract_resolution_from_workflow(workflow):
+    """Extract resolution from workflow.
+    
+    Args:
+        workflow: The workflow dictionary
+    
+    Returns:
+        list: [width, height] or None if not found
+    """
+    for node_id, node in workflow.items():
+        if node.get("class_type") == "EmptyLatentImage":
+            inputs = node.get("inputs", {})
+            width = inputs.get("width")
+            height = inputs.get("height")
+            if width is not None and height is not None:
+                return [width, height]
+    return None
+
 def create_metadata_json(
     workflow_path,
     prompt,
@@ -1258,7 +1309,10 @@ def create_metadata_json(
     loras,
     preset,
     validation_score,
-    minio_url
+    minio_url,
+    workflow=None,
+    output_path=None,
+    generation_time_seconds=None
 ):
     """Create metadata JSON for experiment tracking.
     
@@ -1271,26 +1325,83 @@ def create_metadata_json(
         preset: Preset name if used
         validation_score: CLIP validation score if validation was run
         minio_url: URL to the generated image in MinIO
+        workflow: Optional workflow dict to extract model/VAE/resolution info
+        output_path: Optional output file path to calculate file size
+        generation_time_seconds: Optional generation time in seconds
     
     Returns:
         dict: Metadata dictionary ready for JSON serialization
     """
     import datetime
     
+    # Generate unique generation ID
+    generation_id = str(uuid.uuid4())
+    
+    # Extract additional info from workflow if provided
+    model = None
+    vae = None
+    resolution = None
+    if workflow:
+        model = extract_model_from_workflow(workflow)
+        vae = extract_vae_from_workflow(workflow)
+        resolution = extract_resolution_from_workflow(workflow)
+    
+    # Calculate file size if output path provided
+    file_size_bytes = None
+    file_format = None
+    if output_path and os.path.exists(output_path):
+        file_size_bytes = os.path.getsize(output_path)
+        file_format = Path(output_path).suffix.lstrip('.')
+    
+    # Create new nested metadata structure
     metadata = {
         "timestamp": datetime.datetime.now().isoformat(),
-        "prompt": prompt,
-        "negative_prompt": negative_prompt if negative_prompt else "",
-        "workflow": Path(workflow_path).name,
-        "seed": workflow_params.get("seed"),
-        "steps": workflow_params.get("steps"),
-        "cfg": workflow_params.get("cfg"),
-        "sampler": workflow_params.get("sampler"),
-        "scheduler": workflow_params.get("scheduler"),
-        "loras": loras,
-        "preset": preset if preset else None,
-        "validation_score": validation_score,
-        "minio_url": minio_url
+        "generation_id": generation_id,
+        
+        "input": {
+            "prompt": prompt,
+            "negative_prompt": negative_prompt if negative_prompt else "",
+            "preset": preset if preset else None
+        },
+        
+        "workflow": {
+            "name": Path(workflow_path).name,
+            "model": model,
+            "vae": vae
+        },
+        
+        "parameters": {
+            "seed": workflow_params.get("seed"),
+            "steps": workflow_params.get("steps"),
+            "cfg": workflow_params.get("cfg"),
+            "sampler": workflow_params.get("sampler"),
+            "scheduler": workflow_params.get("scheduler"),
+            "resolution": resolution,
+            "loras": loras
+        },
+        
+        "quality": {
+            "composite_score": None,
+            "grade": None,
+            "technical": None,
+            "aesthetic": None,
+            "prompt_adherence": {"clip": validation_score} if validation_score is not None else None,
+            "detail": None
+        },
+        
+        "refinement": {
+            "attempt": None,
+            "max_attempts": None,
+            "strategy": None,
+            "previous_scores": None
+        },
+        
+        "storage": {
+            "minio_url": minio_url,
+            "file_size_bytes": file_size_bytes,
+            "format": file_format,
+            "generation_time_seconds": generation_time_seconds
+        }
     }
     
     return metadata
@@ -1486,13 +1597,16 @@ def run_generation(
         json_progress: Output machine-readable JSON progress
     
     Returns:
-        Tuple of (success: bool, minio_url: str or None, object_name: str or None)
+        Tuple of (success: bool, minio_url: str or None, object_name: str or None, generation_time_seconds: float or None)
     """
     global current_prompt_id
     
+    # Track generation start time
+    generation_start_time = time.time()
+    
     prompt_id = queue_workflow(workflow)
     if not prompt_id:
-        return False, None, None
+        return False, None, None, None
     
     # Track prompt ID for cancellation
     current_prompt_id = prompt_id
@@ -1500,6 +1614,9 @@ def run_generation(
     status = wait_for_completion(prompt_id, quiet=quiet, json_progress=json_progress)
     if status:
         if download_output(status, output_path):
+            # Calculate generation time
+            generation_time_seconds = time.time() - generation_start_time
+            
             # Upload to MinIO
             import datetime
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -1508,13 +1625,13 @@ def run_generation(
             if minio_url:
                 if not quiet:
                     print(f"[OK] Image available at: {minio_url}")
-                return True, minio_url, object_name
+                return True, minio_url, object_name, generation_time_seconds
             else:
                 if not quiet:
                     print("[ERROR] Failed to upload to MinIO")
-                return False, None, None
+                return False, None, None, None
     
-    return False, None, None
+    return False, None, None, None
 
 def main():
     global current_prompt_id, current_output_path
@@ -1893,6 +2010,7 @@ def main():
     max_attempts = args.retry_limit if args.auto_retry else 1
     minio_url = None
     validation_result = None
+    generation_time_seconds = None
     
     while attempt < max_attempts:
         attempt += 1
@@ -1909,26 +2027,8 @@ def main():
                 print(f"[INFO] Adjusted negative prompt: {adjusted_negative}")
             workflow = modify_prompt(workflow, adjusted_positive, adjusted_negative)
         
-        # Create metadata for this generation attempt
-        metadata = None
-        if not args.no_metadata:
-            # Get current prompt (may be adjusted for retry)
-            current_positive = args.prompt if attempt == 1 else adjusted_positive
-            current_negative = effective_negative_prompt if attempt == 1 else adjusted_negative
-            
-            metadata = create_metadata_json(
-                workflow_path=args.workflow,
-                prompt=current_positive,
-                negative_prompt=current_negative,
-                workflow_params=workflow_params,
-                loras=loras_metadata,
-                preset=args.preset,
-                validation_score=None,  # Will be updated if validation runs
-                minio_url=None  # Will be updated after upload
-            )
-        
         # Run generation
-        success, minio_url, object_name = run_generation(
+        success, minio_url, object_name, generation_time_seconds = run_generation(
             workflow, 
             args.output, 
             uploaded_filename if args.input_image else None,
@@ -1957,10 +2057,6 @@ def main():
                     positive_threshold=args.positive_threshold
                 )
                 
-                # Update metadata with validation score
-                if metadata and validation_result:
-                    metadata["validation_score"] = validation_result.get('positive_score')
-                
                 if not args.quiet:
                     print(f"[INFO] Validation result: {validation_result['reason']}")
                     print(f"[INFO] Positive score: {validation_result.get('positive_score', 0.0):.3f}")
@@ -1973,8 +2069,24 @@ def main():
                     if not args.quiet:
                         print(f"[OK] Image passed validation")
                     # Upload metadata after successful validation
-                    if metadata and object_name:
-                        metadata["minio_url"] = minio_url
+                    if not args.no_metadata and object_name:
+                        # Get current prompt (may be adjusted for retry)
+                        current_positive = args.prompt if attempt == 1 else adjusted_positive
+                        current_negative = effective_negative_prompt if attempt == 1 else adjusted_negative
+                        
+                        metadata = create_metadata_json(
+                            workflow_path=args.workflow,
+                            prompt=current_positive,
+                            negative_prompt=current_negative,
+                            workflow_params=workflow_params,
+                            loras=loras_metadata,
+                            preset=args.preset,
+                            validation_score=validation_result.get('positive_score') if validation_result else None,
+                            minio_url=minio_url,
+                            workflow=workflow,
+                            output_path=args.output,
+                            generation_time_seconds=generation_time_seconds
+                        )
                         metadata_url = upload_metadata_to_minio(metadata, object_name)
                         if metadata_url and not args.quiet:
                             print(f"[OK] Metadata available at: {metadata_url}")
@@ -1984,8 +2096,23 @@ def main():
                         print(f"[WARN] Image failed validation: {validation_result['reason']}")
                     if not args.auto_retry:
                         # Validation failed but no retry requested - still save metadata
-                        if metadata and object_name:
-                            metadata["minio_url"] = minio_url
+                        if not args.no_metadata and object_name:
+                            current_positive = args.prompt if attempt == 1 else adjusted_positive
+                            current_negative = effective_negative_prompt if attempt == 1 else adjusted_negative
+                            
+                            metadata = create_metadata_json(
+                                workflow_path=args.workflow,
+                                prompt=current_positive,
+                                negative_prompt=current_negative,
+                                workflow_params=workflow_params,
+                                loras=loras_metadata,
+                                preset=args.preset,
+                                validation_score=validation_result.get('positive_score') if validation_result else None,
+                                minio_url=minio_url,
+                                workflow=workflow,
+                                output_path=args.output,
+                                generation_time_seconds=generation_time_seconds
+                            )
                             metadata_url = upload_metadata_to_minio(metadata, object_name)
                             if metadata_url and not args.quiet:
                                 print(f"[OK] Metadata available at: {metadata_url}")
@@ -1996,8 +2123,23 @@ def main():
                             print(f"  Reason: {validation_result['reason']}")
                             print(f"  Positive score: {validation_result.get('positive_score', 0.0):.3f}")
                         # Save metadata for failed attempt
-                        if metadata and object_name:
-                            metadata["minio_url"] = minio_url
+                        if not args.no_metadata and object_name:
+                            current_positive = args.prompt if attempt == 1 else adjusted_positive
+                            current_negative = effective_negative_prompt if attempt == 1 else adjusted_negative
+                            
+                            metadata = create_metadata_json(
+                                workflow_path=args.workflow,
+                                prompt=current_positive,
+                                negative_prompt=current_negative,
+                                workflow_params=workflow_params,
+                                loras=loras_metadata,
+                                preset=args.preset,
+                                validation_score=validation_result.get('positive_score') if validation_result else None,
+                                minio_url=minio_url,
+                                workflow=workflow,
+                                output_path=args.output,
+                                generation_time_seconds=generation_time_seconds
+                            )
                             metadata_url = upload_metadata_to_minio(metadata, object_name)
                             if metadata_url and not args.quiet:
                                 print(f"[OK] Metadata available at: {metadata_url}")
@@ -2008,8 +2150,23 @@ def main():
                 if not args.quiet:
                     print("[WARN] Validation module not available. Install dependencies: pip install transformers")
                 # Upload metadata even if validation failed to import
-                if metadata and object_name:
-                    metadata["minio_url"] = minio_url
+                if not args.no_metadata and object_name:
+                    current_positive = args.prompt if attempt == 1 else adjusted_positive if attempt > 1 else args.prompt
+                    current_negative = effective_negative_prompt if attempt == 1 else adjusted_negative if attempt > 1 else effective_negative_prompt
+                    
+                    metadata = create_metadata_json(
+                        workflow_path=args.workflow,
+                        prompt=current_positive,
+                        negative_prompt=current_negative,
+                        workflow_params=workflow_params,
+                        loras=loras_metadata,
+                        preset=args.preset,
+                        validation_score=None,
+                        minio_url=minio_url,
+                        workflow=workflow,
+                        output_path=args.output,
+                        generation_time_seconds=generation_time_seconds
+                    )
                     metadata_url = upload_metadata_to_minio(metadata, object_name)
                     if metadata_url and not args.quiet:
                         print(f"[OK] Metadata available at: {metadata_url}")
@@ -2018,16 +2175,46 @@ def main():
                 if not args.quiet:
                     print(f"[ERROR] Validation failed: {e}")
                 # Upload metadata even if validation failed
-                if metadata and object_name:
-                    metadata["minio_url"] = minio_url
+                if not args.no_metadata and object_name:
+                    current_positive = args.prompt if attempt == 1 else adjusted_positive if attempt > 1 else args.prompt
+                    current_negative = effective_negative_prompt if attempt == 1 else adjusted_negative if attempt > 1 else effective_negative_prompt
+                    
+                    metadata = create_metadata_json(
+                        workflow_path=args.workflow,
+                        prompt=current_positive,
+                        negative_prompt=current_negative,
+                        workflow_params=workflow_params,
+                        loras=loras_metadata,
+                        preset=args.preset,
+                        validation_score=None,
+                        minio_url=minio_url,
+                        workflow=workflow,
+                        output_path=args.output,
+                        generation_time_seconds=generation_time_seconds
+                    )
                     metadata_url = upload_metadata_to_minio(metadata, object_name)
                     if metadata_url and not args.quiet:
                         print(f"[OK] Metadata available at: {metadata_url}")
                 break
         else:
             # No validation requested - upload metadata immediately
-            if metadata and object_name:
-                metadata["minio_url"] = minio_url
+            if not args.no_metadata and object_name:
+                current_positive = args.prompt if attempt == 1 else adjusted_positive if attempt > 1 else args.prompt
+                current_negative = effective_negative_prompt if attempt == 1 else adjusted_negative if attempt > 1 else effective_negative_prompt
+                
+                metadata = create_metadata_json(
+                    workflow_path=args.workflow,
+                    prompt=current_positive,
+                    negative_prompt=current_negative,
+                    workflow_params=workflow_params,
+                    loras=loras_metadata,
+                    preset=args.preset,
+                    validation_score=None,
+                    minio_url=minio_url,
+                    workflow=workflow,
+                    output_path=args.output,
+                    generation_time_seconds=generation_time_seconds
+                )
                 metadata_url = upload_metadata_to_minio(metadata, object_name)
                 if metadata_url and not args.quiet:
                     print(f"[OK] Metadata available at: {metadata_url}")
