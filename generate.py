@@ -1008,12 +1008,15 @@ def queue_workflow(workflow, retry=True):
     """
     url = f"{COMFYUI_HOST}/prompt"
     
+    # Filter out metadata keys (non-numeric) - ComfyUI only accepts node IDs
+    filtered_workflow = {k: v for k, v in workflow.items() if k.isdigit()}
+    
     max_attempts = MAX_RETRIES if retry else 1
     delay = RETRY_DELAY
     
     for attempt in range(1, max_attempts + 1):
         try:
-            response = requests.post(url, json={"prompt": workflow}, timeout=30)
+            response = requests.post(url, json={"prompt": filtered_workflow}, timeout=30)
             if response.status_code == 200:
                 result = response.json()
                 prompt_id = result["prompt_id"]
