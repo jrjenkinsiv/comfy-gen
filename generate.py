@@ -359,7 +359,7 @@ def adjust_prompt_for_retry(
     
     Args:
         positive_prompt: Original positive prompt
-        negative_prompt: Original negative prompt
+        negative_prompt: Original negative prompt (can be empty string)
         attempt: Current retry attempt number (1-based)
     
     Returns:
@@ -390,8 +390,8 @@ def adjust_prompt_for_retry(
             flags=re.IGNORECASE
         )
     
-    # Strengthen negative prompt
-    adjusted_negative = negative_prompt
+    # Strengthen negative prompt (handle empty string)
+    adjusted_negative = negative_prompt if negative_prompt else ""
     retry_negative_terms = [
         "multiple cars",
         "duplicate",
@@ -404,8 +404,10 @@ def adjust_prompt_for_retry(
     
     # Add retry-specific negative terms if not already present
     for term in retry_negative_terms:
-        if term not in adjusted_negative.lower():
-            adjusted_negative = f"{adjusted_negative}, {term}" if adjusted_negative else term
+        if adjusted_negative and term not in adjusted_negative.lower():
+            adjusted_negative = f"{adjusted_negative}, {term}"
+        elif not adjusted_negative:
+            adjusted_negative = term if not adjusted_negative else f"{adjusted_negative}, {term}"
     
     return adjusted_positive, adjusted_negative
 

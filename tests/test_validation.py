@@ -3,6 +3,7 @@
 
 import sys
 import os
+import tempfile
 from pathlib import Path
 
 # Add parent directory to path to import comfy_gen
@@ -33,8 +34,9 @@ def test_validation_function_signature():
     from comfy_gen.validation import validate_image
     
     # Test with minimal arguments (should not crash)
-    # We pass a non-existent file which should gracefully fail
-    result = validate_image("/tmp/nonexistent.png", "test prompt")
+    # Use tempfile to generate a cross-platform non-existent file path
+    nonexistent_path = os.path.join(tempfile.gettempdir(), "nonexistent_test_image.png")
+    result = validate_image(nonexistent_path, "test prompt")
     
     # Check that result has expected keys
     assert "passed" in result, "Result should have 'passed' key"

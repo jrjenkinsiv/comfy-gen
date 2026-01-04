@@ -64,6 +64,10 @@ class ImageValidator:
                 - score_delta: positive_score - negative_score if both available
         """
         try:
+            # Validate that the image file exists
+            if not Path(image_path).exists():
+                return {"positive_score": 0.0, "error": f"Image file not found: {image_path}"}
+            
             # Load image
             image = Image.open(image_path).convert("RGB")
             
