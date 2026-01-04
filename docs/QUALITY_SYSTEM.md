@@ -1,6 +1,7 @@
 # Quality System Design
 
 > Design document for ComfyGen's image quality assessment and iterative refinement system.
+> Based on academic research: AGIQA-3K, ImageReward, pyiqa benchmarks.
 
 ## Problem Statement
 
@@ -17,77 +18,182 @@ This is a **technical quality** issue that CLIP alone cannot detect.
 
 ---
 
-## Quality Scoring Framework
+## Research Findings
 
-### Multi-Dimensional Quality Score
+### Key Academic Papers
 
-Each image gets scored on multiple dimensions (0-10 scale):
+1. **AGIQA-3K** (IEEE TCSVT 2023) - First comprehensive AGI quality database
+   - 2,982 AI-generated images with human MOS scores
+   - **Two dimensions**: Perception (technical quality) AND Alignment (prompt match)
+   - Finding: These dimensions are NOT correlated - need both!
 
-| Dimension | Metric(s) | What It Measures |
-|-----------|-----------|------------------|
-| **Technical** | BRISQUE, NIQE | Artifacts, noise, blur, jaggedness |
-| **Aesthetic** | LAION Aesthetic, NIMA | Visual appeal, composition, lighting |
-| **Prompt Adherence** | CLIP | Does image match text description |
-| **Detail** | TOPIQ, Edge sharpness | Fine detail preservation, textures |
+2. **ImageReward** (NeurIPS 2023) - Human preference reward model
+   - Trained on 137k expert comparisons
+   - Outperforms CLIP by 38.6%, Aesthetic by 39.6%
+   - Specifically designed for text-to-image generation
+   - pip installable: `pip install image-reward`
 
-### Composite Score Formula
+3. **AGIQA-1K** (arXiv 2023) - Perceptual quality assessment
+   - Key aspects: technical issues, AI artifacts, unnaturalness, discrepancy, aesthetics
+   - Traditional IQA metrics (BRISQUE, NIQE) don't fully capture AI artifacts
 
-```python
-quality_score = (
-    0.30 * technical_score +    # Artifacts, sharpness
-    0.25 * aesthetic_score +    # Visual appeal
-    0.25 * prompt_adherence +   # Matches request
-    0.20 * detail_score         # Fine details
-)
-```
+### Key Insight: Two Separate Pipelines
 
-### Quality Grades
+The research consistently shows **two orthogonal quality dimensions**:
 
-| Grade | Score Range | Description |
-|-------|-------------|-------------|
-| **A** | 8.0 - 10.0 | Production ready, no issues |
-| **B** | 6.5 - 7.9 | Good quality, minor issues |
-| **C** | 5.0 - 6.4 | Acceptable, noticeable issues |
-| **D** | 3.0 - 4.9 | Poor, significant issues |
-| **F** | 0.0 - 2.9 | Failed, regenerate |
+| Pipeline | What It Measures | Metrics |
+|----------|------------------|---------|
+| **Validation** | Does image match prompt? | CLIP, ImageReward |
+| **Quality** | Is image technically good? | BRISQUE, NIQE, TOPIQ, Aesthetic |
+
+**These are NOT the same thing.** An image can:
+- Match the prompt perfectly but look like garbage (low quality, high validation)
+- Look beautiful but not match what was requested (high quality, low validation)
 
 ---
 
-## Metrics Deep Dive
+## Architecture: Modular Two-Pipeline System
 
-### Technical Quality Metrics
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        ComfyGen Pipeline                        │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  generate.py                                                    │
+│      │                                                          │
+│      ▼                                                          │
+│  ┌─────────┐     ┌──────────────────┐     ┌─────────────────┐  │
+│  │ Image   │────▶│ Validation       │────▶│ Quality         │  │
+│  │ Output  │     │ Pipeline         │     │ Pipeline        │  │
+│  └─────────┘     │                  │     │                 │  │
+│                  │ • CLIP Score     │     │ • Technical     │  │
+│                  │ • ImageReward    │     │ • Aesthetic     │  │
+│                  │ • Prompt Match   │     │ • Detail        │  │
+│                  └────────┬─────────┘     └────────┬────────┘  │
+│                           │                        │           │
+│                           ▼                        ▼           │
+│                  ┌─────────────────────────────────────────┐   │
+│                  │           Combined Score                │   │
+│                  │  validation_score + quality_score       │   │
+│                  └─────────────────────────────────────────┘   │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
 
-**BRISQUE (Blind/Referenceless Image Spatial Quality Evaluator)**
-- No-reference metric for natural image quality
-- Detects: blur, noise, compression artifacts
-- Range: 0-100 (lower is better) → normalize to 0-10
+### Pipeline 1: Validation (Existing + Enhanced)
 
-**NIQE (Natural Image Quality Evaluator)**
-- Measures deviation from natural image statistics
-- Detects: unnatural textures, synthetic artifacts
-- Good for catching AI generation artifacts
+**Purpose**: Does the image match the prompt?
 
-### Aesthetic Metrics
+```python
+# comfy_gen/validation.py (existing, enhanced)
 
-**LAION Aesthetic Predictor**
-- Trained on human aesthetic preferences
-- Predicts how "pleasing" an image is to humans
-- Range: 1-10 (higher is better)
+class ValidationPipeline:
+    """Check if image matches what was requested."""
+    
+    def __init__(self):
+        self.clip_model = load_clip()
+        self.image_reward = load_image_reward()  # NEW
+    
+    def score(self, image_path: str, prompt: str, negative_prompt: str = None) -> ValidationResult:
+        return ValidationResult(
+            clip_score=self.compute_clip_score(image_path, prompt),
+            image_reward_score=self.compute_image_reward(image_path, prompt),  # NEW
+            prompt_elements_found=self.check_prompt_elements(image_path, prompt),  # NEW
+            passed=...,
+            grade=...
+        )
+```
 
-**NIMA (Neural Image Assessment)**
-- Trained on AVA dataset (aesthetic votes)
-- Provides mean and distribution of aesthetic scores
+**Metrics**:
+| Metric | Library | What It Measures |
+|--------|---------|------------------|
+| CLIP Score | transformers | Semantic similarity text↔image |
+| ImageReward | image-reward | Human preference for T2I |
+| Element Detection | (custom) | Are requested objects present? |
 
-### Detail/Sharpness Metrics
+### Pipeline 2: Quality (NEW)
 
-**TOPIQ**
-- State-of-the-art perceptual quality
-- Good for edge sharpness and detail preservation
+**Purpose**: Is the image technically good, regardless of prompt?
 
-**Edge Density**
-- Custom metric: ratio of detected edges to image area
-- Low edge density = soft/blurry
-- Very high edge density = noisy/artifact-y
+```python
+# comfy_gen/quality.py (NEW)
+
+class QualityPipeline:
+    """Assess technical and aesthetic quality of image."""
+    
+    def __init__(self):
+        self.technical_metrics = load_pyiqa(['brisque', 'niqe'])
+        self.aesthetic_model = load_laion_aesthetic()
+        self.detail_metrics = load_pyiqa(['topiq_nr'])
+    
+    def score(self, image_path: str) -> QualityResult:
+        return QualityResult(
+            technical=TechnicalScore(
+                brisque=...,  # Artifacts, noise (lower=better, normalize)
+                niqe=...,     # Naturalness (lower=better, normalize)
+            ),
+            aesthetic=AestheticScore(
+                laion_aesthetic=...,  # 1-10 scale, higher=better
+            ),
+            detail=DetailScore(
+                topiq=...,    # Perceptual quality
+                sharpness=...,  # Edge detection based
+            ),
+            composite=...,
+            grade=...
+        )
+```
+
+**Metrics**:
+| Metric | Library | What It Measures | Scale |
+|--------|---------|------------------|-------|
+| BRISQUE | pyiqa | Artifacts, noise, blur | 0-100 (lower=better) |
+| NIQE | pyiqa | Deviation from natural | 0-100 (lower=better) |
+| TOPIQ | pyiqa | Perceptual quality | 0-1 (higher=better) |
+| LAION Aesthetic | aesthetic-predictor | Visual appeal | 1-10 (higher=better) |
+| Sharpness | custom | Edge density ratio | 0-1 (higher=better) |
+
+---
+
+## Scoring System
+
+### Combined Score Formula
+
+**Validation Score** (0-10): Does it match the prompt?
+```python
+validation_score = (
+    0.40 * normalize(clip_score) +      # Semantic match
+    0.60 * normalize(image_reward)      # Human preference
+)
+```
+
+**Quality Score** (0-10): Is it technically good?
+```python
+quality_score = (
+    0.35 * normalize_inverse(brisque) +  # Technical (inverted)
+    0.25 * laion_aesthetic +              # Aesthetic (already 1-10)
+    0.25 * normalize(topiq) * 10 +        # Detail
+    0.15 * normalize_inverse(niqe)        # Naturalness (inverted)
+)
+```
+
+**Final Combined Score**:
+```python
+combined_score = (
+    0.50 * validation_score +  # Equal weight
+    0.50 * quality_score
+)
+```
+
+### Grade Thresholds
+
+| Grade | Combined Score | Meaning |
+|-------|----------------|---------|
+| **A** | 8.0+ | Excellent - Production ready |
+| **B** | 6.5 - 7.9 | Good - Minor issues |
+| **C** | 5.0 - 6.4 | Acceptable - Noticeable issues |
+| **D** | 3.0 - 4.9 | Poor - Significant issues |
+| **F** | < 3.0 | Failed - Regenerate |
 
 ---
 
