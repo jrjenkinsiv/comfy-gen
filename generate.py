@@ -399,8 +399,6 @@ def load_lora_presets():
     Returns:
         dict: Dictionary containing 'loras' list and 'presets' dict, or empty dict on failure
     """
-    import yaml
-    
     catalog_path = Path(__file__).parent / "lora_catalog.yaml"
     if not catalog_path.exists():
         print("[WARN] lora_catalog.yaml not found")
