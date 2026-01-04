@@ -18,6 +18,27 @@ python3 generate.py --workflow workflows/flux-dev.json \
     --prompt "a sunset over mountains" \
     --output /tmp/sunset.png
 
+# Image-to-image transformation
+python3 generate.py --workflow workflows/sd15-img2img.json \
+    --input-image /path/to/source.png \
+    --prompt "oil painting style" \
+    --denoise 0.7 \
+    --output /tmp/painted.png
+
+# Image-to-video generation
+python3 generate.py --workflow workflows/wan22-i2v.json \
+    --input-image /path/to/frame.png \
+    --prompt "camera slowly pans right" \
+    --output /tmp/video.mp4
+
+# From URL with preprocessing
+python3 generate.py --workflow workflows/sd15-img2img.json \
+    --input-image "http://192.168.1.215:9000/comfy-gen/previous_image.png" \
+    --resize 512x512 \
+    --crop center \
+    --prompt "add more detail" \
+    --output /tmp/enhanced.png
+
 # View in browser
 open "http://192.168.1.215:9000/comfy-gen/"
 ```
@@ -55,6 +76,34 @@ magneto (dev) --> GitHub --> ant-man (runner) --> moira (ComfyUI + RTX 5090)
 All models stored in: `C:\Users\jrjen\comfy\models\` on moira.
 
 See [docs/MODEL_REGISTRY.md](docs/MODEL_REGISTRY.md) for complete inventory.
+
+## Workflows
+
+| Workflow | Description | Use Case |
+|----------|-------------|----------|
+| `flux-dev.json` | Basic text-to-image (SD 1.5) | Simple image generation |
+| `sd15-img2img.json` | Image-to-image transformation | Style transfer, enhancement |
+| `wan22-i2v.json` | Image-to-video (Wan 2.2) | Animate still images |
+
+### CLI Arguments
+
+| Argument | Short | Description | Example |
+|----------|-------|-------------|---------|
+| `--workflow` | | Path to workflow JSON (required) | `workflows/sd15-img2img.json` |
+| `--prompt` | | Text prompt (required) | `"oil painting style"` |
+| `--output` | | Output file path | `/tmp/output.png` |
+| `--input-image` | `-i` | Input image path or URL | `/path/to/image.png` |
+| `--denoise` | | Denoise strength (0.0-1.0) | `0.7` |
+| `--resize` | | Resize dimensions | `512x512` |
+| `--crop` | | Crop mode | `center`, `cover`, `contain` |
+
+### Image Preprocessing
+
+When using `--resize`, you can specify a crop mode:
+
+- **`center`**: Center crop to target aspect ratio, then resize
+- **`cover`**: Scale to cover target dimensions, then crop excess
+- **`contain`**: Scale to fit within target dimensions, maintain aspect ratio
 
 ## Viewing Images
 

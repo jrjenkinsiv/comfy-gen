@@ -267,11 +267,48 @@ a car driving along a coastal highway, waves crashing, drone shot following
 
 See `workflows/` directory for ready-to-use templates:
 
-| Template | Use Case |
-|----------|----------|
-| `sd15-basic.json` | Simple SD 1.5 images |
-| `wan22-t2v.json` | Text-to-video (TODO) |
-| `wan22-i2v.json` | Image-to-video (TODO) |
+| Template | Use Case | Input Image Required |
+|----------|----------|---------------------|
+| `flux-dev.json` | Simple SD 1.5 images | No |
+| `sd15-img2img.json` | Image transformation/enhancement | Yes |
+| `wan22-i2v.json` | Image-to-video animation | Yes |
+
+### Using Image-to-Image Workflows
+
+For workflows that require an input image (img2img, I2V):
+
+```bash
+python3 generate.py \
+    --workflow workflows/sd15-img2img.json \
+    --input-image /path/to/source.png \
+    --prompt "oil painting style" \
+    --denoise 0.7 \
+    --output /tmp/output.png
+```
+
+**Denoise Parameter:**
+- `0.3-0.5`: Subtle changes, preserve most of original
+- `0.6-0.8`: Moderate transformation
+- `0.9-1.0`: Major changes, may lose original structure
+
+**Image Preprocessing:**
+```bash
+# Resize and center crop
+python3 generate.py \
+    --input-image large_image.png \
+    --resize 512x512 \
+    --crop center \
+    --workflow workflows/sd15-img2img.json \
+    --prompt "enhance details"
+```
+
+**From URL:**
+```bash
+python3 generate.py \
+    --input-image "http://192.168.1.215:9000/comfy-gen/previous.png" \
+    --workflow workflows/sd15-img2img.json \
+    --prompt "add dramatic lighting"
+```
 
 To create a new workflow:
 1. Export from ComfyUI GUI
