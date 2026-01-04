@@ -176,6 +176,8 @@ async def generate_image(
     seed: int = -1,
     preset: str = None,
     lora_preset: str = None,
+    output_path: str = None,
+    json_progress: bool = False,
     validate: bool = None,
     auto_retry: bool = None,
     retry_limit: int = None,
@@ -198,13 +200,16 @@ async def generate_image(
         preset: Generation preset (draft, balanced, high-quality, fast, ultra). Overrides steps/cfg/sampler/scheduler
         lora_preset: LoRA preset name from lora_catalog.yaml model_suggestions 
                     (e.g., text_to_video, simple_image, battleship_ship_icon)
+        output_path: Optional local file path to save the generated image (in addition to MinIO)
+        json_progress: If True, returns progress updates as structured JSON instead of text (default: False)
         validate: Run CLIP validation after generation. If None, uses preset or config default
         auto_retry: Automatically retry if validation fails. If None, uses preset or config default
         retry_limit: Maximum retry attempts. If None, uses preset or config default (3)
         positive_threshold: Minimum CLIP score for positive prompt. If None, uses preset or config default (0.25)
     
     Returns:
-        Dictionary with status, url, generation metadata, and validation results
+        Dictionary with status, url, local_path (if output_path provided), generation metadata, 
+        validation results, and progress_updates (if json_progress=True)
     """
     # Ensure config is loaded
     _ensure_config_loaded()
@@ -263,7 +268,18 @@ async def generate_image(
     final_retry_limit = retry_limit if retry_limit is not None else preset_params.get("retry_limit", validation_config.get("retry_limit", 3))
     final_positive_threshold = positive_threshold if positive_threshold is not None else preset_params.get("positive_threshold", validation_config.get("positive_threshold", 0.25))
     
-    return await generation.generate_image(
+    # Set up progress callback if json_progress is enabled
+    progress_updates = []
+    progress_callback = None
+    
+    if json_progress:
+        def capture_progress(update: dict):
+            """Capture progress updates for JSON output."""
+            progress_updates.append(update)
+        
+        progress_callback = capture_progress
+    
+    result = await generation.generate_image(
         prompt=prompt,
         negative_prompt=negative_prompt,
         model=model,
@@ -275,11 +291,19 @@ async def generate_image(
         scheduler=final_scheduler,
         seed=seed,
         loras=loras,
+        output_path=output_path,
+        progress_callback=progress_callback,
         validate=final_validate,
         auto_retry=final_auto_retry,
         retry_limit=final_retry_limit,
         positive_threshold=final_positive_threshold
     )
+    
+    # Add progress updates to result if json_progress was enabled
+    if json_progress and progress_updates:
+        result["progress_updates"] = progress_updates
+    
+    return result
 
 
 @mcp.tool()
@@ -669,6 +693,89 @@ async def get_system_status() -> dict:
         Dictionary with system status
     """
     return await control.get_system_status()
+
+
+@mcp.tool()
+async def validate_workflow(
+    model: str = "sd15",
+    prompt: str = "test prompt",
+    width: int = 512,
+    height: int = 512,
+) -> dict:
+    """Validate workflow without generating an image (dry run).
+    
+    This tool validates that:
+    - The workflow file exists and can be loaded
+    - All required models are available on the server
+    - The workflow has the required nodes (sampler, model loader, save node)
+    
+    Args:
+        model: Model to use (sd15, flux, sdxl) - determines which workflow to load
+        prompt: Test prompt (not used for generation, just for validation)
+        width: Output width for validation
+        height: Output height for validation
+    
+    Returns:
+        Dictionary with validation results including:
+        - status: "valid" or "invalid"
+        - workflow_file: Name of the workflow file validated
+        - is_valid: Boolean indicating if workflow is valid
+        - errors: List of validation errors
+        - warnings: List of validation warnings
+        - missing_models: List of missing models
+    """
+    try:
+        from comfygen.workflows import WorkflowManager
+        from comfygen.comfyui_client import ComfyUIClient
+        import os
+        
+        # Get clients
+        comfyui = ComfyUIClient(
+            host=os.getenv("COMFYUI_HOST", "http://192.168.1.215:8188")
+        )
+        workflow_mgr = WorkflowManager()
+        
+        # Check server availability
+        if not comfyui.check_availability():
+            return {
+                "status": "error",
+                "error": "ComfyUI server is not available"
+            }
+        
+        # Load appropriate workflow
+        workflow_map = {
+            "sd15": "flux-dev.json",  # TODO: Update to use sd15-specific workflow when available
+            "flux": "flux-dev.json",
+            "sdxl": "flux-dev.json"   # TODO: Update to use sdxl-specific workflow when available
+        }
+        workflow_file = workflow_map.get(model, "flux-dev.json")
+        
+        workflow = workflow_mgr.load_workflow(workflow_file)
+        if not workflow:
+            return {
+                "status": "invalid",
+                "workflow_file": workflow_file,
+                "error": f"Failed to load workflow: {workflow_file}"
+            }
+        
+        # Apply test parameters to workflow (to validate parameter application)
+        workflow = workflow_mgr.set_prompt(workflow, prompt, "")
+        workflow = workflow_mgr.set_dimensions(workflow, width, height)
+        
+        # Validate workflow
+        validation_result = workflow_mgr.validate_workflow(workflow, comfyui)
+        
+        return {
+            "status": "valid" if validation_result["is_valid"] else "invalid",
+            "workflow_file": workflow_file,
+            **validation_result
+        }
+        
+    except Exception as e:
+        return {
+            "status": "error",
+            "error": str(e)
+        }
 
 
 if __name__ == "__main__":

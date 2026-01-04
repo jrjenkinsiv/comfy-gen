@@ -246,3 +246,113 @@ class WorkflowManager:
             return []
         
         return [f.name for f in self.workflows_dir.glob("*.json")]
+    
+    def validate_workflow(
+        self,
+        workflow: Dict[str, Any],
+        comfyui_client: Optional[Any] = None
+    ) -> Dict[str, Any]:
+        """Validate workflow structure and check if referenced models exist.
+        
+        Args:
+            workflow: Workflow dictionary to validate
+            comfyui_client: Optional ComfyUIClient instance for model verification
+            
+        Returns:
+            Dictionary with validation results:
+            - is_valid (bool): True if workflow is valid
+            - errors (list): List of error messages
+            - warnings (list): List of warning messages
+            - missing_models (list): List of missing models
+        """
+        errors = []
+        warnings = []
+        missing_models = []
+        
+        # Basic structure validation
+        if not isinstance(workflow, dict):
+            errors.append("Workflow must be a dictionary")
+            return {
+                "is_valid": False,
+                "errors": errors,
+                "warnings": warnings,
+                "missing_models": missing_models
+            }
+        
+        if not workflow:
+            errors.append("Workflow is empty")
+            return {
+                "is_valid": False,
+                "errors": errors,
+                "warnings": warnings,
+                "missing_models": missing_models
+            }
+        
+        # Check for required node types
+        has_sampler = False
+        has_model_loader = False
+        has_save_node = False
+        
+        for node_id, node in workflow.items():
+            class_type = node.get("class_type", "")
+            
+            if class_type in ["KSampler", "KSamplerAdvanced", "SamplerCustom"]:
+                has_sampler = True
+            
+            if class_type in ["CheckpointLoaderSimple", "UNETLoader"]:
+                has_model_loader = True
+            
+            if class_type in ["SaveImage", "VHS_VideoCombine"]:
+                has_save_node = True
+        
+        if not has_sampler:
+            warnings.append("No sampler node found (KSampler, KSamplerAdvanced, SamplerCustom)")
+        
+        if not has_model_loader:
+            warnings.append("No model loader found (CheckpointLoaderSimple, UNETLoader)")
+        
+        if not has_save_node:
+            warnings.append("No save node found (SaveImage, VHS_VideoCombine)")
+        
+        # Validate model availability if client provided
+        if comfyui_client:
+            try:
+                available_models = comfyui_client.get_available_models()
+                if available_models:
+                    for node_id, node in workflow.items():
+                        class_type = node.get("class_type", "")
+                        inputs = node.get("inputs", {})
+                        
+                        # Check checkpoint models
+                        if class_type == "CheckpointLoaderSimple" and "ckpt_name" in inputs:
+                            ckpt = inputs["ckpt_name"]
+                            if "checkpoints" in available_models and ckpt not in available_models["checkpoints"]:
+                                missing_models.append({"type": "checkpoint", "name": ckpt})
+                        
+                        # Check LoRA models
+                        elif class_type == "LoraLoader" and "lora_name" in inputs:
+                            lora = inputs["lora_name"]
+                            if "loras" in available_models and lora not in available_models["loras"]:
+                                missing_models.append({"type": "lora", "name": lora})
+                        
+                        # Check VAE models
+                        elif class_type == "VAELoader" and "vae_name" in inputs:
+                            vae = inputs["vae_name"]
+                            if "vae" in available_models and vae not in available_models["vae"]:
+                                missing_models.append({"type": "vae", "name": vae})
+            except Exception as e:
+                warnings.append(f"Failed to validate model availability: {str(e)}")
+        
+        # Add errors for missing models
+        if missing_models:
+            for model in missing_models:
+                errors.append(f"Missing {model['type']}: {model['name']}")
+        
+        is_valid = len(errors) == 0
+        
+        return {
+            "is_valid": is_valid,
+            "errors": errors,
+            "warnings": warnings,
+            "missing_models": missing_models
+        }

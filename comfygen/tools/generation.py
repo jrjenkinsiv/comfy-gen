@@ -170,10 +170,12 @@ async def generate_image(
     seed: int = -1,
     loras: Optional[List[Dict[str, Any]]] = None,
     filename: Optional[str] = None,
+    output_path: Optional[str] = None,
     validate: bool = True,
     auto_retry: bool = True,
     retry_limit: int = 3,
     positive_threshold: float = 0.25,
+    progress_callback: Optional[Any] = None,
 ) -> Dict[str, Any]:
     """Generate image from text prompt.
     
@@ -190,10 +192,12 @@ async def generate_image(
         seed: Random seed (-1 for random)
         loras: List of LoRAs with name and strength
         filename: Output filename (auto-generated if None)
+        output_path: Optional local file path to save output image
         validate: Run CLIP validation after generation (default: True)
         auto_retry: Automatically retry if validation fails (default: True)
         retry_limit: Maximum retry attempts (default: 3)
         positive_threshold: Minimum CLIP score for positive prompt (default: 0.25)
+        progress_callback: Optional callback for progress updates
         
     Returns:
         Dictionary with status, url, metadata, and validation results
@@ -236,9 +240,9 @@ async def generate_image(
             
             # Load appropriate workflow
             workflow_map = {
-                "sd15": "flux-dev.json",  # Using flux-dev as base SD workflow
+                "sd15": "flux-dev.json",  # TODO: Update to use sd15-specific workflow when available
                 "flux": "flux-dev.json",
-                "sdxl": "flux-dev.json"
+                "sdxl": "flux-dev.json"   # TODO: Update to use sdxl-specific workflow when available
             }
             workflow_file = workflow_map.get(model, "flux-dev.json")
             
@@ -280,8 +284,12 @@ async def generate_image(
                     }
                 continue
             
-            # Wait for completion
-            result = comfyui.wait_for_completion(prompt_id, timeout=300)
+            # Wait for completion with progress callback
+            result = comfyui.wait_for_completion(
+                prompt_id, 
+                timeout=300,
+                progress_callback=progress_callback
+            )
             if not result:
                 last_error = "Generation timed out or failed"
                 if attempt >= max_attempts:
@@ -330,6 +338,31 @@ async def generate_image(
                     }
                 continue
             
+            # Download to local path if requested
+            local_path = None
+            if output_path:
+                try:
+                    import requests
+                    import logging
+                    
+                    response = requests.get(image_url, timeout=30)
+                    if response.status_code == 200:
+                        # Ensure parent directory exists
+                        output_dir = Path(output_path).parent
+                        output_dir.mkdir(parents=True, exist_ok=True)
+                        
+                        # Write file
+                        with open(output_path, 'wb') as f:
+                            f.write(response.content)
+                        local_path = str(output_path)
+                    else:
+                        # Log warning but continue - local save is optional
+                        logging.warning(f"Failed to download image for local save: HTTP {response.status_code}")
+                except Exception as e:
+                    # Log warning but continue - local save is optional
+                    import logging
+                    logging.warning(f"Failed to save image locally: {str(e)}")
+            
             # Run validation if requested
             if validate:
                 try:
@@ -361,6 +394,7 @@ async def generate_image(
                                 return {
                                     "status": "success",
                                     "url": image_url,
+                                    "local_path": local_path,
                                     "prompt_id": prompt_id,
                                     "attempt": attempt,
                                     "validation": {
@@ -392,6 +426,7 @@ async def generate_image(
                                     return {
                                         "status": "success",
                                         "url": image_url,
+                                        "local_path": local_path,
                                         "prompt_id": prompt_id,
                                         "attempt": attempt,
                                         "validation": {
@@ -441,6 +476,7 @@ async def generate_image(
                     return {
                         "status": "success",
                         "url": image_url,
+                        "local_path": local_path,
                         "prompt_id": prompt_id,
                         "validation": {
                             "passed": None,
@@ -465,6 +501,7 @@ async def generate_image(
                 return {
                     "status": "success",
                     "url": image_url,
+                    "local_path": local_path,
                     "prompt_id": prompt_id,
                     "metadata": {
                         "prompt": current_prompt,
