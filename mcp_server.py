@@ -23,7 +23,6 @@ VS Code MCP Configuration:
 """
 
 import os
-import sys
 import json
 import asyncio
 import logging
@@ -71,7 +70,7 @@ def get_minio_client() -> Minio:
 def load_workflow_template(workflow_type: str) -> Dict:
     """Load workflow template from workflows directory."""
     workflow_map = {
-        "sd15": "flux-dev.json",  # Using flux-dev as base template
+        "sd15": "flux-dev.json",  # TODO: Create dedicated sd15-basic.json workflow
         "flux": "flux-dev.json",
     }
     
@@ -329,7 +328,6 @@ async def list_models() -> Dict[str, List[str]]:
         }
 
 
-
 @mcp.tool()
 async def list_loras() -> Dict[str, Any]:
     """List available LoRA files from ComfyUI.
@@ -371,7 +369,6 @@ async def list_loras() -> Dict[str, Any]:
             "error": str(e),
             "loras": []
         }
-
 
 
 @mcp.tool()
