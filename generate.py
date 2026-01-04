@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-"""Programmatic image and video generation using ComfyUI API.
+"""Programmatic image generation using ComfyUI API.
 
 Usage:
-    python generate.py --workflow workflow.json --prompt "your prompt" --output output.png
-    python generate.py --workflow workflow.json --prompt "your prompt" --output output.mp4
+    python generate.py --workflow workflow.json --prompt "your prompt" --negative-prompt "negative prompt" --output output.png
 """
 
 import argparse
@@ -28,16 +27,18 @@ def load_workflow(workflow_path):
     with open(workflow_path, 'r') as f:
         return json.load(f)
 
-def modify_prompt(workflow, new_prompt):
+def modify_prompt(workflow, positive_prompt, negative_prompt=""):
     """Modify the prompt in the workflow."""
-    # This depends on the workflow structure
-    # Assume there's a node with "text" field for prompt
-    for node_id, node in workflow.items():
-        if isinstance(node, dict) and "inputs" in node:
-            if "text" in node["inputs"]:
-                node["inputs"]["text"] = new_prompt
-                print(f"Updated prompt in node {node_id}")
-                break
+    # Update positive prompt (node 2)
+    if "2" in workflow and "inputs" in workflow["2"] and "text" in workflow["2"]["inputs"]:
+        workflow["2"]["inputs"]["text"] = positive_prompt
+        print(f"Updated positive prompt in node 2")
+    
+    # Update negative prompt (node 3)
+    if "3" in workflow and "inputs" in workflow["3"] and "text" in workflow["3"]["inputs"]:
+        workflow["3"]["inputs"]["text"] = negative_prompt
+        print(f"Updated negative prompt in node 3")
+    
     return workflow
 
 def queue_workflow(workflow):
@@ -76,11 +77,10 @@ def wait_for_completion(prompt_id):
         time.sleep(5)
 
 def download_output(status, output_path):
-    """Download the generated image or video."""
+    """Download the generated image."""
     # Assume output is in outputs node
     outputs = status.get("outputs", {})
     for node_id, node_outputs in outputs.items():
-        # Check for images first
         if "images" in node_outputs:
             for image in node_outputs["images"]:
                 filename = image["filename"]
@@ -94,20 +94,6 @@ def download_output(status, output_path):
                     return True
                 else:
                     print(f"Error downloading image: {response.text}")
-        # Check for videos (VHS_VideoCombine outputs under "gifs" key)
-        if "gifs" in node_outputs:
-            for video in node_outputs["gifs"]:
-                filename = video["filename"]
-                subfolder = video.get("subfolder", "")
-                url = f"{COMFYUI_HOST}/view?filename={filename}&subfolder={subfolder}&type=output"
-                response = requests.get(url)
-                if response.status_code == 200:
-                    with open(output_path, 'wb') as f:
-                        f.write(response.content)
-                    print(f"Saved video to {output_path}")
-                    return True
-                else:
-                    print(f"Error downloading video: {response.text}")
     return False
 
 def upload_to_minio(file_path, object_name):
@@ -152,14 +138,15 @@ def upload_to_minio(file_path, object_name):
         return None
 
 def main():
-    parser = argparse.ArgumentParser(description="Generate images and videos with ComfyUI")
+    parser = argparse.ArgumentParser(description="Generate images with ComfyUI")
     parser.add_argument("--workflow", required=True, help="Path to workflow JSON")
-    parser.add_argument("--prompt", required=True, help="Text prompt")
-    parser.add_argument("--output", default="output.png", help="Output file path (e.g., output.png or output.mp4)")
+    parser.add_argument("--prompt", required=True, help="Positive text prompt")
+    parser.add_argument("--negative-prompt", default="", help="Negative text prompt")
+    parser.add_argument("--output", default="output.png", help="Output image path")
     args = parser.parse_args()
 
     workflow = load_workflow(args.workflow)
-    workflow = modify_prompt(workflow, args.prompt)
+    workflow = modify_prompt(workflow, args.prompt, args.negative_prompt)
 
     prompt_id = queue_workflow(workflow)
     if not prompt_id:
@@ -174,7 +161,7 @@ def main():
             object_name = f"{timestamp}_{Path(args.output).name}"
             minio_url = upload_to_minio(args.output, object_name)
             if minio_url:
-                print(f"Output available at: {minio_url}")
+                print(f"Image available at: {minio_url}")
             else:
                 print("Failed to upload to MinIO")
 

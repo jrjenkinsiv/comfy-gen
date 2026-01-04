@@ -36,8 +36,8 @@
   },
   "4": {
     "inputs": {
-      "width": 1024,
-      "height": 1024,
+      "width": 512,
+      "height": 512,
       "batch_size": 1
     },
     "class_type": "EmptyLatentImage",
@@ -48,10 +48,10 @@
   "5": {
     "inputs": {
       "seed": 0,
-      "steps": 20,
+      "steps": 30,
       "cfg": 7,
-      "sampler_name": "euler",
-      "scheduler": "simple",
+      "sampler_name": "dpmpp_2m",
+      "scheduler": "normal",
       "denoise": 1,
       "model": [
         "1",
