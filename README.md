@@ -30,16 +30,16 @@ Generate images and videos via text prompts without using the ComfyUI GUI. This 
 | **Text-to-Image** | Generate images from text prompts using Flux/SD 1.5 | [Quick Start](#quick-start) |
 | **Image-to-Image** | Transform images with prompts and denoise control | [Input Images](#input-image-options) |
 | **Text-to-Video** | Create videos from prompts with Wan 2.2 | [Model Registry](docs/MODEL_REGISTRY.md) |
-| **Image-to-Video** | Animate existing images | [Agent Guide](docs/AGENT_GUIDE.md) |
-| **Dynamic LoRA Injection** | Add LoRAs via CLI without modifying workflows | [LoRA Injection](docs/LORA_INJECTION.md) |
+| **Image-to-Video** | Animate existing images | [Usage Guide](docs/USAGE.md) |
+| **Dynamic LoRA Injection** | Add LoRAs via CLI without modifying workflows | [Architecture](docs/ARCHITECTURE.md) |
 | **Image Validation** | CLIP-based semantic similarity scoring | [Validation](#image-validation--auto-retry) |
 | **Auto-Retry** | Automatic retry with prompt adjustment on failure | [Validation](#image-validation--auto-retry) |
-| **Experiment Tracking** | JSON metadata sidecars for reproducibility | [Metadata Tracking](docs/METADATA_TRACKING.md) |
-| **Model Validation** | Pre-flight checks for missing models | [Error Handling](docs/ERROR_HANDLING.md) |
-| **Dry-Run Mode** | Validate workflows without generation | [Error Handling](docs/ERROR_HANDLING.md) |
-| **MCP Server** | AI assistant integration (Claude, VS Code) | [MCP Server](docs/MCP_SERVER.md) |
+| **Experiment Tracking** | JSON metadata sidecars for reproducibility | [Architecture](docs/ARCHITECTURE.md) |
+| **Model Validation** | Pre-flight checks for missing models | [Usage Guide](docs/USAGE.md) |
+| **Dry-Run Mode** | Validate workflows without generation | [Usage Guide](docs/USAGE.md) |
+| **MCP Server** | AI assistant integration (Claude, VS Code) | [Usage Guide](docs/USAGE.md) |
 | **Generation Cancel** | Interrupt running jobs with cleanup | [Canceling](#canceling-generation) |
-| **Error Recovery** | Automatic retry with exponential backoff | [Error Handling](docs/ERROR_HANDLING.md) |
+| **Error Recovery** | Automatic retry with exponential backoff | [Usage Guide](docs/USAGE.md) |
 
 ## Quick Start
 
@@ -379,7 +379,7 @@ python3 generate.py --workflow workflows/flux-dev.json \
     --output test.png
 ```
 
-See [docs/METADATA_TRACKING.md](docs/METADATA_TRACKING.md) for querying past generations and reproduction.
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for querying past generations and reproduction.
 
 ## Error Handling & Dry-Run Mode
 
@@ -461,7 +461,7 @@ Queued workflow with ID: abc123-def456
 - `1` - Generation or runtime failure
 - `2` - Configuration error (server down, missing models, invalid workflow)
 
-See [docs/ERROR_HANDLING.md](docs/ERROR_HANDLING.md) for complete documentation.
+See [docs/USAGE.md](docs/USAGE.md) for complete documentation.
 
 ## Starting ComfyUI
 
@@ -474,13 +474,9 @@ ssh moira "C:\\Users\\jrjen\\comfy\\.venv\\Scripts\\python.exe C:\\Users\\jrjen\
 
 | Document | Description |
 |----------|-------------|
-| [MCP_SERVER.md](docs/MCP_SERVER.md) | MCP server setup for AI assistant integration (Claude, VS Code) |
-| [AGENT_GUIDE.md](docs/AGENT_GUIDE.md) | Guide for AI agents: model selection, workflows, prompts |
+| [USAGE.md](docs/USAGE.md) | Complete usage guide: CLI, MCP server, workflows, prompt engineering |
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | System design: workflows, presets, LoRA injection, metadata tracking |
 | [MODEL_REGISTRY.md](docs/MODEL_REGISTRY.md) | Complete model inventory and compatibility matrix |
-| [WORKFLOWS.md](docs/WORKFLOWS.md) | Detailed workflow documentation with parameters and examples |
-| [METADATA_TRACKING.md](docs/METADATA_TRACKING.md) | Experiment tracking with JSON metadata sidecars |
-| [ERROR_HANDLING.md](docs/ERROR_HANDLING.md) | Error handling, validation, dry-run mode, retry logic |
-| [LORA_CATALOG.md](docs/LORA_CATALOG.md) | LoRA metadata and intelligent selection system |
 | [API_REFERENCE.md](docs/API_REFERENCE.md) | Internal module and function documentation |
 
 ## Examples
@@ -516,7 +512,7 @@ python3 mcp_server.py
 - `restart_comfyui_service` - Restart the ComfyUI server
 - `check_comfyui_service_status` - Check if ComfyUI is running and healthy
 
-See [docs/MCP_SERVER.md](docs/MCP_SERVER.md) for complete documentation.
+See [docs/USAGE.md](docs/USAGE.md) for complete MCP server documentation.
 
 ### Claude Desktop Integration
 

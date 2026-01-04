@@ -230,7 +230,7 @@ async def main():
         print("1. Add the MCP server config to your client settings")
         print("2. Simply describe what you want to generate")
         print("3. The AI will use the appropriate tools automatically")
-        print("\nSee docs/MCP_COMPREHENSIVE.md for full documentation.")
+        print("\nSee docs/USAGE.md for full documentation.")
         
     except Exception as e:
         print(f"\nError running examples: {e}")
