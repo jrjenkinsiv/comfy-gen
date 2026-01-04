@@ -49,8 +49,14 @@ import check_comfyui_status
 # Import generation tools
 from comfygen.tools import generation, video, models, gallery, prompts, control
 
+# Import config loader
+from comfygen.config import get_config
+
 # Initialize FastMCP server
 mcp = FastMCP("ComfyUI Comprehensive Generation Server")
+
+# Load configuration on startup
+_config = get_config()
 
 
 @mcp.tool()
@@ -143,44 +149,86 @@ def check_comfyui_service_status() -> str:
 @mcp.tool()
 async def generate_image(
     prompt: str,
-    negative_prompt: str = "blurry, low quality, watermark",
+    negative_prompt: str = "",
     model: str = "sd15",
     width: int = 512,
     height: int = 512,
-    steps: int = 20,
-    cfg: float = 7.0,
-    sampler: str = "euler",
-    scheduler: str = "normal",
+    steps: int = None,
+    cfg: float = None,
+    sampler: str = None,
+    scheduler: str = None,
     seed: int = -1,
+    preset: str = None,
+    lora_preset: str = None,
 ) -> dict:
     """Generate image from text prompt.
     
     Args:
         prompt: Positive text prompt describing what to generate
-        negative_prompt: Negative prompt (what to avoid)
+        negative_prompt: Negative prompt (what to avoid). If empty, uses default from config.
         model: Model to use (sd15, flux, sdxl)
         width: Output width in pixels (default: 512)
         height: Output height in pixels (default: 512)
-        steps: Number of sampling steps (default: 20)
-        cfg: CFG scale (default: 7.0)
-        sampler: Sampler algorithm (default: euler)
-        scheduler: Scheduler type (default: normal)
+        steps: Number of sampling steps (overrides preset if both specified)
+        cfg: CFG scale (overrides preset if both specified)
+        sampler: Sampler algorithm (overrides preset if both specified)
+        scheduler: Scheduler type (overrides preset if both specified)
         seed: Random seed, -1 for random (default: -1)
+        preset: Generation preset (draft, balanced, high-quality). Provides defaults for steps, cfg, sampler, scheduler.
+        lora_preset: LoRA preset name from lora_catalog.yaml (e.g., 'text_to_video', 'simple_image')
     
     Returns:
         Dictionary with status, url, and generation metadata
     """
+    # Apply preset if specified
+    preset_params = {}
+    if preset:
+        preset_config = _config.get_preset(preset)
+        if preset_config:
+            preset_params = preset_config
+        else:
+            available = list(_config.get_presets().keys())
+            return {
+                "status": "error",
+                "error": f"Preset '{preset}' not found. Available: {', '.join(available)}"
+            }
+    
+    # Apply preset defaults, but CLI args override
+    final_steps = steps if steps is not None else preset_params.get('steps', 20)
+    final_cfg = cfg if cfg is not None else preset_params.get('cfg', 7.0)
+    final_sampler = sampler if sampler is not None else preset_params.get('sampler', 'euler')
+    final_scheduler = scheduler if scheduler is not None else preset_params.get('scheduler', 'normal')
+    
+    # Apply default negative prompt if not provided
+    final_negative_prompt = negative_prompt
+    if not final_negative_prompt:
+        final_negative_prompt = _config.get_default_negative_prompt()
+    
+    # Resolve LoRA preset if specified
+    loras = None
+    if lora_preset:
+        lora_tuples = _config.resolve_lora_preset(lora_preset)
+        if lora_tuples:
+            loras = [{"name": name, "strength": strength} for name, strength in lora_tuples]
+        else:
+            available = list(_config.get_lora_presets().keys())
+            return {
+                "status": "error",
+                "error": f"LoRA preset '{lora_preset}' not found. Available: {', '.join(available)}"
+            }
+    
     return await generation.generate_image(
         prompt=prompt,
-        negative_prompt=negative_prompt,
+        negative_prompt=final_negative_prompt,
         model=model,
         width=width,
         height=height,
-        steps=steps,
-        cfg=cfg,
-        sampler=sampler,
-        scheduler=scheduler,
-        seed=seed
+        steps=final_steps,
+        cfg=final_cfg,
+        sampler=final_sampler,
+        scheduler=final_scheduler,
+        seed=seed,
+        loras=loras
     )
 
 
@@ -200,7 +248,7 @@ async def img2img(
     Args:
         input_image: URL or path to input image
         prompt: Positive text prompt for transformation
-        negative_prompt: Negative prompt
+        negative_prompt: Negative prompt. If empty, uses default from config.
         denoise: Denoise strength 0.0-1.0 (lower preserves more original, default: 0.7)
         model: Model to use (default: sd15)
         steps: Number of sampling steps (default: 20)
@@ -210,10 +258,15 @@ async def img2img(
     Returns:
         Dictionary with status, url, and generation metadata
     """
+    # Apply default negative prompt if not provided
+    final_negative_prompt = negative_prompt
+    if not final_negative_prompt:
+        final_negative_prompt = _config.get_default_negative_prompt()
+    
     return await generation.img2img(
         input_image=input_image,
         prompt=prompt,
-        negative_prompt=negative_prompt,
+        negative_prompt=final_negative_prompt,
         denoise=denoise,
         model=model,
         steps=steps,
@@ -229,7 +282,7 @@ async def img2img(
 @mcp.tool()
 async def generate_video(
     prompt: str,
-    negative_prompt: str = "static, blurry, watermark",
+    negative_prompt: str = "",
     width: int = 832,
     height: int = 480,
     frames: int = 81,
@@ -242,7 +295,7 @@ async def generate_video(
     
     Args:
         prompt: Positive text prompt describing the video
-        negative_prompt: Negative prompt (default: "static, blurry, watermark")
+        negative_prompt: Negative prompt. If empty, uses default from config.
         width: Video width in pixels (default: 832)
         height: Video height in pixels (default: 480)
         frames: Number of frames, ~5 sec at 16fps = 81 frames (default: 81)
@@ -254,9 +307,14 @@ async def generate_video(
     Returns:
         Dictionary with status, url, and generation metadata
     """
+    # Apply default negative prompt if not provided
+    final_negative_prompt = negative_prompt
+    if not final_negative_prompt:
+        final_negative_prompt = _config.get_default_negative_prompt()
+    
     return await video.generate_video(
         prompt=prompt,
-        negative_prompt=negative_prompt,
+        negative_prompt=final_negative_prompt,
         width=width,
         height=height,
         frames=frames,
@@ -283,7 +341,7 @@ async def image_to_video(
     Args:
         input_image: URL or path to input image
         prompt: Positive text prompt describing desired motion
-        negative_prompt: Negative prompt
+        negative_prompt: Negative prompt. If empty, uses default from config.
         motion_strength: How much movement 0.0-1.0+ (default: 1.0)
         frames: Number of frames (default: 81)
         fps: Frames per second (default: 16)
@@ -293,10 +351,15 @@ async def image_to_video(
     Returns:
         Dictionary with status, url, and generation metadata
     """
+    # Apply default negative prompt if not provided
+    final_negative_prompt = negative_prompt
+    if not final_negative_prompt:
+        final_negative_prompt = _config.get_default_negative_prompt()
+    
     return await video.image_to_video(
         input_image=input_image,
         prompt=prompt,
-        negative_prompt=negative_prompt,
+        negative_prompt=final_negative_prompt,
         motion_strength=motion_strength,
         frames=frames,
         fps=fps,
