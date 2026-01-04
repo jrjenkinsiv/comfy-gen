@@ -114,6 +114,57 @@ This config tells ComfyUI to look in `C:\Users\jrjen\comfy\models\` for all mode
 
 ---
 
+## Usage Examples
+
+### Text-to-Video with Wan 2.2
+
+Generate a video from a text prompt:
+
+```bash
+python3 generate.py \
+    --workflow workflows/wan22-t2v.json \
+    --prompt "a person walking through a park on a sunny day" \
+    --output /tmp/video.mp4
+```
+
+The workflow uses:
+- **Model:** `wan2.2_t2v_high_noise_14B_fp8_scaled.safetensors`
+- **Text Encoders:** `oldt5_xxl_fp8_e4m3fn_scaled.safetensors`
+- **VAE:** `wan_2.1_vae.safetensors`
+- **Acceleration LoRA:** `wan2.2_t2v_lightx2v_4steps_lora_v1.1_high_noise.safetensors` (4 steps)
+- **Output:** 848x480, 81 frames, 8 fps (~10 seconds)
+
+### Image-to-Video with Wan 2.2
+
+Animate an existing image:
+
+```bash
+python3 generate.py \
+    --workflow workflows/wan22-i2v.json \
+    --prompt "the person starts walking forward" \
+    --output /tmp/animated.mp4
+```
+
+The workflow uses:
+- **Model:** `wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors`
+- **Acceleration LoRA:** `wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise.safetensors` (4 steps)
+- **Input:** Load your image via ComfyUI or modify the workflow
+
+**Note:** The I2V workflow requires an input image. Update node 5 in `wan22-i2v.json` with your image path or upload via ComfyUI.
+
+### SD 1.5 Image Generation
+
+For simple image generation:
+
+```bash
+python3 generate.py \
+    --workflow workflows/flux-dev.json \
+    --prompt "a beautiful mountain landscape at sunset" \
+    --output /tmp/landscape.png
+```
+
+---
+
 ## Adding New Models
 
 1. Download model to appropriate subdirectory in `C:\Users\jrjen\comfy\models\`

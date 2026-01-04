@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Programmatic image generation using ComfyUI API.
+"""Programmatic image and video generation using ComfyUI API.
 
 Usage:
     python generate.py --workflow workflow.json --prompt "your prompt" --output output.png
+    python generate.py --workflow workflow.json --prompt "your prompt" --output output.mp4
 """
 
 import argparse
@@ -75,10 +76,11 @@ def wait_for_completion(prompt_id):
         time.sleep(5)
 
 def download_output(status, output_path):
-    """Download the generated image."""
+    """Download the generated image or video."""
     # Assume output is in outputs node
     outputs = status.get("outputs", {})
     for node_id, node_outputs in outputs.items():
+        # Check for images first
         if "images" in node_outputs:
             for image in node_outputs["images"]:
                 filename = image["filename"]
@@ -92,6 +94,20 @@ def download_output(status, output_path):
                     return True
                 else:
                     print(f"Error downloading image: {response.text}")
+        # Check for videos (VHS_VideoCombine outputs under "gifs" key)
+        if "gifs" in node_outputs:
+            for video in node_outputs["gifs"]:
+                filename = video["filename"]
+                subfolder = video.get("subfolder", "")
+                url = f"{COMFYUI_HOST}/view?filename={filename}&subfolder={subfolder}&type=output"
+                response = requests.get(url)
+                if response.status_code == 200:
+                    with open(output_path, 'wb') as f:
+                        f.write(response.content)
+                    print(f"Saved video to {output_path}")
+                    return True
+                else:
+                    print(f"Error downloading video: {response.text}")
     return False
 
 def upload_to_minio(file_path, object_name):
@@ -136,10 +152,10 @@ def upload_to_minio(file_path, object_name):
         return None
 
 def main():
-    parser = argparse.ArgumentParser(description="Generate images with ComfyUI")
+    parser = argparse.ArgumentParser(description="Generate images and videos with ComfyUI")
     parser.add_argument("--workflow", required=True, help="Path to workflow JSON")
     parser.add_argument("--prompt", required=True, help="Text prompt")
-    parser.add_argument("--output", default="output.png", help="Output image path")
+    parser.add_argument("--output", default="output.png", help="Output file path (e.g., output.png or output.mp4)")
     args = parser.parse_args()
 
     workflow = load_workflow(args.workflow)
@@ -158,7 +174,7 @@ def main():
             object_name = f"{timestamp}_{Path(args.output).name}"
             minio_url = upload_to_minio(args.output, object_name)
             if minio_url:
-                print(f"Image available at: {minio_url}")
+                print(f"Output available at: {minio_url}")
             else:
                 print("Failed to upload to MinIO")
 
