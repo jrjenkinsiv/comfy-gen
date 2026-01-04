@@ -179,6 +179,88 @@ Validation requires additional packages:
 pip install transformers
 ```
 
+## Error Handling & Dry-Run Mode
+
+ComfyGen includes robust error handling with automatic retries and workflow validation.
+
+### Server Availability Check
+
+Before generation, the script checks if ComfyUI server is available:
+
+```bash
+python3 generate.py --workflow workflows/flux-dev.json --prompt "test"
+```
+
+If server is down:
+```
+[ERROR] Cannot connect to ComfyUI server at http://192.168.1.215:8188
+[ERROR] Make sure ComfyUI is running on moira (192.168.1.215:8188)
+[ERROR] ComfyUI server is not available
+```
+
+Exit code: 2 (configuration error)
+
+### Model Validation
+
+The script queries available models and validates workflow references:
+
+```bash
+python3 generate.py --workflow workflows/custom.json --prompt "test"
+```
+
+If models are missing:
+```
+[ERROR] Workflow validation failed - missing models:
+  - checkpoint: custom-model.safetensors
+    Suggested fallbacks:
+      * sd15-v1-5.safetensors
+      * sdxl-base-1.0.safetensors
+```
+
+### Dry-Run Mode
+
+Validate workflows without generating images:
+
+```bash
+# Validate a workflow before running expensive generation
+python3 generate.py --workflow workflows/flux-dev.json --dry-run
+
+# Batch validate all workflows
+for workflow in workflows/*.json; do
+    python3 generate.py --workflow "$workflow" --dry-run || echo "Failed: $workflow"
+done
+```
+
+If successful:
+```
+[OK] ComfyUI server is available
+[OK] Retrieved available models from server
+[OK] Workflow validation passed - all models available
+[OK] Dry-run mode - workflow is valid
+```
+
+### Automatic Retry
+
+Transient failures (network errors, server errors) are automatically retried with exponential backoff:
+
+```
+[ERROR] Connection error: Connection reset by peer
+[INFO] Retrying in 2 seconds... (attempt 1/3)
+Queued workflow with ID: abc123-def456
+```
+
+- Maximum retries: 3
+- Initial delay: 2 seconds
+- Backoff multiplier: 2x
+
+### Exit Codes
+
+- `0` - Success
+- `1` - Generation or runtime failure
+- `2` - Configuration error (server down, missing models, invalid workflow)
+
+See [docs/ERROR_HANDLING.md](docs/ERROR_HANDLING.md) for complete documentation.
+
 ## Starting ComfyUI
 
 If ComfyUI is not running:
