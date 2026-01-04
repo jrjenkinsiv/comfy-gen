@@ -34,6 +34,7 @@ Generate images and videos via text prompts without using the ComfyUI GUI. This 
 | **Dynamic LoRA Injection** | Add LoRAs via CLI without modifying workflows | [LoRA Injection](docs/LORA_INJECTION.md) |
 | **Image Validation** | CLIP-based semantic similarity scoring | [Validation](#image-validation--auto-retry) |
 | **Auto-Retry** | Automatic retry with prompt adjustment on failure | [Validation](#image-validation--auto-retry) |
+| **Experiment Tracking** | JSON metadata sidecars for reproducibility | [Metadata Tracking](docs/METADATA_TRACKING.md) |
 | **Model Validation** | Pre-flight checks for missing models | [Error Handling](docs/ERROR_HANDLING.md) |
 | **Dry-Run Mode** | Validate workflows without generation | [Error Handling](docs/ERROR_HANDLING.md) |
 | **MCP Server** | AI assistant integration (Claude, VS Code) | [MCP Server](docs/MCP_SERVER.md) |
@@ -336,6 +337,50 @@ Validation requires additional packages:
 pip install transformers
 ```
 
+## Experiment Tracking
+
+Every generation automatically creates a JSON metadata sidecar for reproducibility and tracking:
+
+```bash
+python3 generate.py --workflow workflows/flux-dev.json \
+    --prompt "a serene lake at dawn" \
+    --steps 30 --seed 12345 \
+    --output lake.png
+```
+
+Output:
+```
+[OK] Image available at: http://192.168.1.215:9000/comfy-gen/20260104_011032_lake.png
+[OK] Metadata available at: http://192.168.1.215:9000/comfy-gen/20260104_011032_lake.png.json
+```
+
+The JSON sidecar includes all generation parameters:
+```json
+{
+  "timestamp": "2026-01-04T01:10:32.123456",
+  "prompt": "a serene lake at dawn",
+  "workflow": "flux-dev.json",
+  "seed": 12345,
+  "steps": 30,
+  "cfg": 7.5,
+  "sampler": "euler",
+  "loras": [],
+  "validation_score": null,
+  "minio_url": "http://192.168.1.215:9000/comfy-gen/20260104_011032_lake.png"
+}
+```
+
+### Disable Metadata
+
+```bash
+python3 generate.py --workflow workflows/flux-dev.json \
+    --prompt "test" \
+    --no-metadata \
+    --output test.png
+```
+
+See [docs/METADATA_TRACKING.md](docs/METADATA_TRACKING.md) for querying past generations and reproduction.
+
 ## Error Handling & Dry-Run Mode
 
 ComfyGen includes robust error handling with automatic retries and workflow validation.
@@ -433,6 +478,7 @@ ssh moira "C:\\Users\\jrjen\\comfy\\.venv\\Scripts\\python.exe C:\\Users\\jrjen\
 | [AGENT_GUIDE.md](docs/AGENT_GUIDE.md) | Guide for AI agents: model selection, workflows, prompts |
 | [MODEL_REGISTRY.md](docs/MODEL_REGISTRY.md) | Complete model inventory and compatibility matrix |
 | [WORKFLOWS.md](docs/WORKFLOWS.md) | Detailed workflow documentation with parameters and examples |
+| [METADATA_TRACKING.md](docs/METADATA_TRACKING.md) | Experiment tracking with JSON metadata sidecars |
 | [ERROR_HANDLING.md](docs/ERROR_HANDLING.md) | Error handling, validation, dry-run mode, retry logic |
 | [LORA_CATALOG.md](docs/LORA_CATALOG.md) | LoRA metadata and intelligent selection system |
 | [API_REFERENCE.md](docs/API_REFERENCE.md) | Internal module and function documentation |

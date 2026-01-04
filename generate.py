@@ -1172,6 +1172,151 @@ def upload_to_minio(file_path, object_name):
         print(f"[ERROR] MinIO error: {e}")
         return None
 
+def extract_workflow_params(workflow):
+    """Extract generation parameters from workflow.
+    
+    Args:
+        workflow: The workflow dictionary
+    
+    Returns:
+        dict: Extracted parameters (seed, steps, cfg, sampler, scheduler)
+    """
+    params = {
+        "seed": None,
+        "steps": None,
+        "cfg": None,
+        "sampler": None,
+        "scheduler": None
+    }
+    
+    # Find KSampler node
+    for node_id, node in workflow.items():
+        if node.get("class_type") == "KSampler":
+            inputs = node.get("inputs", {})
+            params["seed"] = inputs.get("seed")
+            params["steps"] = inputs.get("steps")
+            params["cfg"] = inputs.get("cfg")
+            params["sampler"] = inputs.get("sampler_name")
+            params["scheduler"] = inputs.get("scheduler")
+            break
+    
+    return params
+
+def extract_loras_from_workflow(workflow):
+    """Extract LoRA information from workflow.
+    
+    Args:
+        workflow: The workflow dictionary
+    
+    Returns:
+        list: List of dicts with 'name' and 'strength' for each LoRA
+    """
+    loras = []
+    
+    for node_id, node in workflow.items():
+        if node.get("class_type") == "LoraLoader":
+            inputs = node.get("inputs", {})
+            lora_name = inputs.get("lora_name")
+            strength_model = inputs.get("strength_model", 1.0)
+            
+            if lora_name:
+                loras.append({
+                    "name": lora_name,
+                    "strength": strength_model
+                })
+    
+    return loras
+
+def create_metadata_json(
+    workflow_path,
+    prompt,
+    negative_prompt,
+    workflow_params,
+    loras,
+    preset,
+    validation_score,
+    minio_url
+):
+    """Create metadata JSON for experiment tracking.
+    
+    Args:
+        workflow_path: Path to workflow file
+        prompt: Positive text prompt
+        negative_prompt: Negative text prompt
+        workflow_params: Dict of workflow parameters (seed, steps, cfg, etc.)
+        loras: List of LoRA dicts with name and strength
+        preset: Preset name if used
+        validation_score: CLIP validation score if validation was run
+        minio_url: URL to the generated image in MinIO
+    
+    Returns:
+        dict: Metadata dictionary ready for JSON serialization
+    """
+    import datetime
+    
+    metadata = {
+        "timestamp": datetime.datetime.now().isoformat(),
+        "prompt": prompt,
+        "negative_prompt": negative_prompt if negative_prompt else "",
+        "workflow": Path(workflow_path).name,
+        "seed": workflow_params.get("seed"),
+        "steps": workflow_params.get("steps"),
+        "cfg": workflow_params.get("cfg"),
+        "sampler": workflow_params.get("sampler"),
+        "scheduler": workflow_params.get("scheduler"),
+        "loras": loras,
+        "preset": preset if preset else None,
+        "validation_score": validation_score,
+        "minio_url": minio_url
+    }
+    
+    return metadata
+
+def upload_metadata_to_minio(metadata, object_name):
+    """Upload metadata JSON to MinIO as a sidecar file.
+    
+    Args:
+        metadata: Metadata dictionary
+        object_name: Base object name (e.g., "image.png")
+    
+    Returns:
+        str: URL to uploaded metadata JSON, or None on failure
+    """
+    try:
+        # Create temporary JSON file
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+            json.dump(metadata, f, indent=2)
+            temp_path = f.name
+        
+        try:
+            # Upload with .json extension
+            json_object_name = f"{object_name}.json"
+            
+            client = Minio(
+                MINIO_ENDPOINT,
+                access_key=MINIO_ACCESS_KEY,
+                secret_key=MINIO_SECRET_KEY,
+                secure=False
+            )
+            
+            client.fput_object(
+                BUCKET_NAME,
+                json_object_name,
+                temp_path,
+                content_type="application/json"
+            )
+            
+            print(f"[OK] Uploaded metadata to MinIO as {json_object_name}")
+            return f"http://192.168.1.215:9000/{BUCKET_NAME}/{json_object_name}"
+        finally:
+            # Clean up temp file
+            if os.path.exists(temp_path):
+                os.remove(temp_path)
+    
+    except Exception as e:
+        print(f"[ERROR] Failed to upload metadata: {e}")
+        return None
+
 def interrupt_generation():
     """Interrupt currently running generation."""
     try:
@@ -1318,13 +1463,13 @@ def run_generation(
         json_progress: Output machine-readable JSON progress
     
     Returns:
-        Tuple of (success: bool, minio_url: str or None)
+        Tuple of (success: bool, minio_url: str or None, object_name: str or None)
     """
     global current_prompt_id
     
     prompt_id = queue_workflow(workflow)
     if not prompt_id:
-        return False, None
+        return False, None, None
     
     # Track prompt ID for cancellation
     current_prompt_id = prompt_id
@@ -1340,13 +1485,13 @@ def run_generation(
             if minio_url:
                 if not quiet:
                     print(f"[OK] Image available at: {minio_url}")
-                return True, minio_url
+                return True, minio_url, object_name
             else:
                 if not quiet:
                     print("[ERROR] Failed to upload to MinIO")
-                return False, None
+                return False, None, None
     
-    return False, None
+    return False, None, None
 
 def main():
     global current_prompt_id, current_output_path
@@ -1375,6 +1520,7 @@ def main():
     parser.add_argument("--positive-threshold", type=float, default=0.25, help="Minimum CLIP score for positive prompt (default: 0.25)")
     parser.add_argument("--quiet", action="store_true", help="Suppress progress output")
     parser.add_argument("--json-progress", action="store_true", help="Output machine-readable JSON progress")
+    parser.add_argument("--no-metadata", action="store_true", help="Disable JSON metadata sidecar upload")
     
     # Advanced generation parameters
     parser.add_argument("--steps", type=int, help="Number of sampling steps (1-150, default: 20)")
@@ -1681,6 +1827,10 @@ def main():
     if width is not None or height is not None:
         workflow = modify_dimensions(workflow, width=width, height=height)
 
+    # Extract workflow parameters and LoRAs for metadata
+    workflow_params = extract_workflow_params(workflow)
+    loras_metadata = extract_loras_from_workflow(workflow)
+    
     # Validation and retry loop
     attempt = 0
     max_attempts = args.retry_limit if args.auto_retry else 1
@@ -1702,8 +1852,26 @@ def main():
                 print(f"[INFO] Adjusted negative prompt: {adjusted_negative}")
             workflow = modify_prompt(workflow, adjusted_positive, adjusted_negative)
         
+        # Create metadata for this generation attempt
+        metadata = None
+        if not args.no_metadata:
+            # Get current prompt (may be adjusted for retry)
+            current_positive = args.prompt if attempt == 1 else adjusted_positive
+            current_negative = args.negative_prompt if attempt == 1 else adjusted_negative
+            
+            metadata = create_metadata_json(
+                workflow_path=args.workflow,
+                prompt=current_positive,
+                negative_prompt=current_negative,
+                workflow_params=workflow_params,
+                loras=loras_metadata,
+                preset=args.preset,
+                validation_score=None,  # Will be updated if validation runs
+                minio_url=None  # Will be updated after upload
+            )
+        
         # Run generation
-        success, minio_url = run_generation(
+        success, minio_url, object_name = run_generation(
             workflow, 
             args.output, 
             uploaded_filename if args.input_image else None,
@@ -1732,6 +1900,10 @@ def main():
                     positive_threshold=args.positive_threshold
                 )
                 
+                # Update metadata with validation score
+                if metadata and validation_result:
+                    metadata["validation_score"] = validation_result.get('positive_score')
+                
                 if not args.quiet:
                     print(f"[INFO] Validation result: {validation_result['reason']}")
                     print(f"[INFO] Positive score: {validation_result.get('positive_score', 0.0):.3f}")
@@ -1743,31 +1915,65 @@ def main():
                 if validation_result['passed']:
                     if not args.quiet:
                         print(f"[OK] Image passed validation")
+                    # Upload metadata after successful validation
+                    if metadata and object_name:
+                        metadata["minio_url"] = minio_url
+                        metadata_url = upload_metadata_to_minio(metadata, object_name)
+                        if metadata_url and not args.quiet:
+                            print(f"[OK] Metadata available at: {metadata_url}")
                     break
                 else:
                     if not args.quiet:
                         print(f"[WARN] Image failed validation: {validation_result['reason']}")
                     if not args.auto_retry:
-                        # Validation failed but no retry requested
+                        # Validation failed but no retry requested - still save metadata
+                        if metadata and object_name:
+                            metadata["minio_url"] = minio_url
+                            metadata_url = upload_metadata_to_minio(metadata, object_name)
+                            if metadata_url and not args.quiet:
+                                print(f"[OK] Metadata available at: {metadata_url}")
                         break
                     elif attempt >= max_attempts:
                         if not args.quiet:
                             print(f"[ERROR] Max retries reached. Final validation result:")
                             print(f"  Reason: {validation_result['reason']}")
                             print(f"  Positive score: {validation_result.get('positive_score', 0.0):.3f}")
+                        # Save metadata for failed attempt
+                        if metadata and object_name:
+                            metadata["minio_url"] = minio_url
+                            metadata_url = upload_metadata_to_minio(metadata, object_name)
+                            if metadata_url and not args.quiet:
+                                print(f"[OK] Metadata available at: {metadata_url}")
                         break
                     # Continue to next retry attempt
                     
             except ImportError:
                 if not args.quiet:
                     print("[WARN] Validation module not available. Install dependencies: pip install transformers")
+                # Upload metadata even if validation failed to import
+                if metadata and object_name:
+                    metadata["minio_url"] = minio_url
+                    metadata_url = upload_metadata_to_minio(metadata, object_name)
+                    if metadata_url and not args.quiet:
+                        print(f"[OK] Metadata available at: {metadata_url}")
                 break
             except Exception as e:
                 if not args.quiet:
                     print(f"[ERROR] Validation failed: {e}")
+                # Upload metadata even if validation failed
+                if metadata and object_name:
+                    metadata["minio_url"] = minio_url
+                    metadata_url = upload_metadata_to_minio(metadata, object_name)
+                    if metadata_url and not args.quiet:
+                        print(f"[OK] Metadata available at: {metadata_url}")
                 break
         else:
-            # No validation requested, we're done
+            # No validation requested - upload metadata immediately
+            if metadata and object_name:
+                metadata["minio_url"] = minio_url
+                metadata_url = upload_metadata_to_minio(metadata, object_name)
+                if metadata_url and not args.quiet:
+                    print(f"[OK] Metadata available at: {metadata_url}")
             break
     
     # Final output
