@@ -19,6 +19,39 @@ The image will be:
 2. Saved locally to `/tmp/car.png`
 3. Uploaded to MinIO at `http://192.168.1.215:9000/comfy-gen/<timestamp>_car.png`
 
+### Image Generation with Validation
+
+Use `--validate` to check if the generated image matches the prompt using CLIP:
+
+```bash
+python3 generate.py \
+    --workflow workflows/flux-dev.json \
+    --prompt "a single red Porsche 911 on a mountain road" \
+    --negative-prompt "multiple cars, duplicate, cloned" \
+    --output /tmp/car.png \
+    --validate \
+    --validation-threshold 0.25
+```
+
+### Auto-Retry on Validation Failure
+
+Use `--auto-retry` to automatically regenerate images that fail validation:
+
+```bash
+python3 generate.py \
+    --workflow workflows/flux-dev.json \
+    --prompt "a single red Porsche 911 on a mountain road" \
+    --negative-prompt "multiple cars, duplicate, blurry" \
+    --output /tmp/car.png \
+    --validate --auto-retry --retry-limit 3
+```
+
+When validation fails, the system will:
+1. Strengthen positive prompt emphasis (e.g., add "single subject", increase weight)
+2. Add negative terms: "duplicate", "cloned", "multiple", "ghosting", "mirrored"
+3. Retry generation (up to retry-limit attempts)
+4. Report validation scores and diagnostics
+
 ### Viewing Generated Images
 
 Images are viewable directly in browser (no download):
@@ -307,3 +340,104 @@ To create a new workflow:
 1. Export from ComfyUI GUI
 2. Save to `workflows/` with descriptive name
 3. Document in this file
+
+---
+
+## Image Validation and Quality Control
+
+### Validation Overview
+
+ComfyGen includes CLIP-based validation to verify generated images match prompts. This is useful for:
+- Detecting duplicate/cloned subjects (e.g., multiple cars instead of one)
+- Verifying semantic similarity between image and prompt
+- Automatically retrying with adjusted prompts on failure
+
+### Basic Validation
+
+Add `--validate` to check the image after generation:
+
+```bash
+python3 generate.py \
+    --workflow workflows/flux-dev.json \
+    --prompt "a single red Porsche 911" \
+    --output /tmp/car.png \
+    --validate
+```
+
+**Output:**
+```
+[INFO] Validating image...
+[OK] Image matches prompt (score: 0.342 >= 0.25), low negative score (0.089)
+  Positive score: 0.342
+  Negative score: 0.089
+[OK] Validation passed!
+```
+
+### Auto-Retry on Failure
+
+Use `--auto-retry` to automatically regenerate failed images:
+
+```bash
+python3 generate.py \
+    --workflow workflows/flux-dev.json \
+    --prompt "a single red Porsche 911 on a mountain road" \
+    --negative-prompt "multiple cars, duplicate" \
+    --output /tmp/car.png \
+    --validate --auto-retry --retry-limit 3
+```
+
+**What happens on retry:**
+1. **Prompt strengthening**: Adds "single subject", "one" to positive prompt
+2. **Weight increase**: Wraps prompt with `(...:1.3)` → `(...:1.6)` → `(...:1.9)`
+3. **Negative expansion**: Adds "duplicate", "cloned", "multiple", "ghosting", "mirrored"
+4. **Regeneration**: Runs workflow with adjusted prompts
+
+### Validation Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `--validate` | flag | false | Enable validation |
+| `--auto-retry` | flag | false | Retry on failure |
+| `--retry-limit` | int | 3 | Max retry attempts |
+| `--validation-threshold` | float | 0.25 | CLIP score threshold (0-1) |
+
+### CLIP Score Interpretation
+
+| Score Range | Meaning |
+|-------------|---------|
+| 0.35+ | Strong match |
+| 0.25-0.35 | Good match (default threshold) |
+| 0.15-0.25 | Weak match |
+| < 0.15 | Poor match |
+
+### When to Use Validation
+
+**Use validation when:**
+- Generating subjects where count matters (e.g., "one car", "single person")
+- Quality is critical and retries are acceptable
+- You want automated quality control
+
+**Skip validation when:**
+- Speed is critical (adds ~5-10s per validation)
+- Generating abstract/artistic content (CLIP may not assess well)
+- Running batch jobs where manual review is planned
+
+### Example: High-Quality Car Generation
+
+```bash
+# Generate a single car with strict validation
+python3 generate.py \
+    --workflow workflows/flux-dev.json \
+    --prompt "(single Porsche 911:2.0), one car only, isolated subject, mountain road, cinematic" \
+    --negative-prompt "multiple cars, duplicate, cloned, ghosting, mirrored, two cars, several cars" \
+    --output /tmp/porsche.png \
+    --validate --auto-retry --retry-limit 5 \
+    --validation-threshold 0.30
+```
+
+This will:
+- Emphasize "single" and "one car" with weight 2.0
+- Retry up to 5 times on failure
+- Require CLIP score >= 0.30 (higher than default)
+- Progressively strengthen prompts on each retry
+

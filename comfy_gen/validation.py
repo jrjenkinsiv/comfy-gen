@@ -16,6 +16,11 @@ try:
     CLIP_AVAILABLE = True
 except ImportError:
     CLIP_AVAILABLE = False
+    # Create dummy types for type hints
+    Image = None
+    torch = None
+    CLIPProcessor = None
+    CLIPModel = None
 
 
 class ImageValidator:
@@ -119,7 +124,7 @@ class ImageValidator:
                 'diagnostics': f"Validation error: {str(e)}"
             }
     
-    def _compute_similarity(self, image: Image.Image, text: str) -> float:
+    def _compute_similarity(self, image, text: str) -> float:
         """Compute CLIP similarity between image and text.
         
         Args:
