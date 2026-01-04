@@ -149,44 +149,5 @@
     "_meta": {
       "title": "Save Video"
     }
-  },
-  "_workflow_metadata": {
-    "workflow_name": "Wan 2.2 Image-to-Video",
-    "description": "Animate existing images with motion using Wan 2.2 high noise model",
-    "model": "wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors",
-    "input_requirements": "Requires input image (--input-image flag)",
-    "text_encoder": "oldt5_xxl_fp8_e4m3fn_scaled.safetensors",
-    "vae": "wan_2.1_vae.safetensors",
-    "acceleration_lora": "wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise.safetensors",
-    "output_specs": {
-      "resolution": "848x480",
-      "frames": 81,
-      "fps": 8,
-      "duration": "~10 seconds",
-      "format": "MP4"
-    },
-    "generation_params": {
-      "steps": 4,
-      "cfg": 1.0,
-      "sampler": "dpmpp_2m"
-    },
-    "use_case": "Animate static images, add camera movement, create motion from photos",
-    "estimated_time": "2-5 minutes on RTX 5090",
-    "prompt_tips": [
-      "Describe desired motion (pan, zoom, tilt)",
-      "Specify camera movement",
-      "Focus on action to add to scene",
-      "Keep prompts concise and motion-focused"
-    ],
-    "preprocessing_options": "Input image should match 848x480 or use --resize",
-    "nodes_overview": {
-      "image_loading": "Load input image",
-      "text_encoding": "T5 text encoding for motion prompt",
-      "model_loading": "Diffusion model and VAE loading",
-      "lora": "Acceleration LoRA (4-step)",
-      "sampling": "I2V sampler with image conditioning",
-      "vae_decode": "Video VAE decoding",
-      "save": "Video output to file"
-    }
   }
 }
