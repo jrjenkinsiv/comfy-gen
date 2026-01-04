@@ -49,6 +49,13 @@ import check_comfyui_status
 # Import generation tools
 from comfygen.tools import generation, video, models, gallery, prompts, control
 
+# Import config loader
+from comfygen.config import load_presets_config, load_lora_catalog
+
+# Load configuration on startup
+_config = load_presets_config()
+_lora_catalog = load_lora_catalog()
+
 # Initialize FastMCP server
 mcp = FastMCP("ComfyUI Comprehensive Generation Server")
 
@@ -143,56 +150,145 @@ def check_comfyui_service_status() -> str:
 @mcp.tool()
 async def generate_image(
     prompt: str,
-    negative_prompt: str = "blurry, low quality, watermark",
+    negative_prompt: str = "",
     model: str = "sd15",
-    width: int = 512,
-    height: int = 512,
-    steps: int = 20,
-    cfg: float = 7.0,
-    sampler: str = "euler",
-    scheduler: str = "normal",
+    width: int = None,
+    height: int = None,
+    steps: int = None,
+    cfg: float = None,
+    sampler: str = None,
+    scheduler: str = None,
     seed: int = -1,
-    validate: bool = True,
-    auto_retry: bool = True,
-    retry_limit: int = 3,
-    positive_threshold: float = 0.25,
+    validate: bool = None,
+    auto_retry: bool = None,
+    retry_limit: int = None,
+    positive_threshold: float = None,
+    preset: str = None,
+    lora_preset: str = None,
 ) -> dict:
     """Generate image from text prompt with optional CLIP validation.
     
     Args:
         prompt: Positive text prompt describing what to generate
-        negative_prompt: Negative prompt (what to avoid)
+        negative_prompt: Negative prompt (what to avoid). Uses default from config if empty.
         model: Model to use (sd15, flux, sdxl)
-        width: Output width in pixels (default: 512)
-        height: Output height in pixels (default: 512)
-        steps: Number of sampling steps (default: 20)
-        cfg: CFG scale (default: 7.0)
-        sampler: Sampler algorithm (default: euler)
-        scheduler: Scheduler type (default: normal)
+        width: Output width in pixels (default from preset or 512)
+        height: Output height in pixels (default from preset or 512)
+        steps: Number of sampling steps (default from preset or 20)
+        cfg: CFG scale (default from preset or 7.0)
+        sampler: Sampler algorithm (default from preset or euler)
+        scheduler: Scheduler type (default from preset or normal)
         seed: Random seed, -1 for random (default: -1)
-        validate: Run CLIP validation after generation (default: True)
-        auto_retry: Automatically retry if validation fails (default: True)
-        retry_limit: Maximum retry attempts (default: 3)
-        positive_threshold: Minimum CLIP score for positive prompt (default: 0.25)
+        validate: Run CLIP validation after generation (default from preset or True)
+        auto_retry: Automatically retry if validation fails (default from preset or True)
+        retry_limit: Maximum retry attempts (default from preset or 3)
+        positive_threshold: Minimum CLIP score for positive prompt (default from preset or 0.25)
+        preset: Generation preset name (draft, balanced, high-quality, fast, ultra)
+        lora_preset: LoRA preset name from lora_catalog.yaml model_suggestions
     
     Returns:
         Dictionary with status, url, generation metadata, and validation results
     """
+    from comfygen.config import get_preset, get_lora_preset, apply_preset_to_params
+    
+    # Apply default negative prompt from config if not provided
+    effective_negative = negative_prompt
+    if not effective_negative:
+        effective_negative = _config.get("default_negative_prompt", "")
+    
+    # Start with provided parameters (None values will be filled by preset or defaults)
+    params = {
+        "negative_prompt": effective_negative,
+        "model": model,
+        "seed": seed,
+    }
+    
+    # Only include parameters that were explicitly provided
+    if width is not None:
+        params["width"] = width
+    if height is not None:
+        params["height"] = height
+    if steps is not None:
+        params["steps"] = steps
+    if cfg is not None:
+        params["cfg"] = cfg
+    if sampler is not None:
+        params["sampler"] = sampler
+    if scheduler is not None:
+        params["scheduler"] = scheduler
+    if validate is not None:
+        params["validate"] = validate
+    if auto_retry is not None:
+        params["auto_retry"] = auto_retry
+    if retry_limit is not None:
+        params["retry_limit"] = retry_limit
+    if positive_threshold is not None:
+        params["positive_threshold"] = positive_threshold
+    
+    # Apply preset if specified (preset values used as defaults)
+    if preset:
+        preset_config = get_preset(preset)
+        if preset_config:
+            params = apply_preset_to_params(params, preset_config)
+        else:
+            available = ', '.join(_config.get("presets", {}).keys())
+            return {
+                "status": "error",
+                "error": f"Unknown preset '{preset}'. Available: {available}"
+            }
+    
+    # Apply LoRA preset if specified
+    loras = None
+    if lora_preset:
+        lora_config = get_lora_preset(lora_preset)
+        if lora_config:
+            default_loras = lora_config.get("default_loras", [])
+            if default_loras:
+                # Convert to format expected by generate_image
+                loras = [{"name": lora, "strength": 1.0} for lora in default_loras]
+            # Also update model if specified in preset
+            if "model" in lora_config:
+                params["model"] = lora_config["model"]
+            if "workflow" in lora_config:
+                # Store workflow hint for later (not directly used in this function)
+                pass
+        else:
+            available = ', '.join(_lora_catalog.get("model_suggestions", {}).keys())
+            return {
+                "status": "error",
+                "error": f"Unknown lora_preset '{lora_preset}'. Available: {available}"
+            }
+    
+    # Apply final defaults for any still-missing values
+    final_params = {
+        "width": params.get("width", 512),
+        "height": params.get("height", 512),
+        "steps": params.get("steps", 20),
+        "cfg": params.get("cfg", 7.0),
+        "sampler": params.get("sampler", "euler"),
+        "scheduler": params.get("scheduler", "normal"),
+        "validate": params.get("validate", True),
+        "auto_retry": params.get("auto_retry", True),
+        "retry_limit": params.get("retry_limit", 3),
+        "positive_threshold": params.get("positive_threshold", 0.25),
+    }
+    
     return await generation.generate_image(
         prompt=prompt,
-        negative_prompt=negative_prompt,
-        model=model,
-        width=width,
-        height=height,
-        steps=steps,
-        cfg=cfg,
-        sampler=sampler,
-        scheduler=scheduler,
-        seed=seed,
-        validate=validate,
-        auto_retry=auto_retry,
-        retry_limit=retry_limit,
-        positive_threshold=positive_threshold
+        negative_prompt=params["negative_prompt"],
+        model=params["model"],
+        width=final_params["width"],
+        height=final_params["height"],
+        steps=final_params["steps"],
+        cfg=final_params["cfg"],
+        sampler=final_params["sampler"],
+        scheduler=final_params["scheduler"],
+        seed=params["seed"],
+        loras=loras,
+        validate=final_params["validate"],
+        auto_retry=final_params["auto_retry"],
+        retry_limit=final_params["retry_limit"],
+        positive_threshold=final_params["positive_threshold"]
     )
 
 
@@ -212,7 +308,7 @@ async def img2img(
     Args:
         input_image: URL or path to input image
         prompt: Positive text prompt for transformation
-        negative_prompt: Negative prompt
+        negative_prompt: Negative prompt. Uses default from config if empty.
         denoise: Denoise strength 0.0-1.0 (lower preserves more original, default: 0.7)
         model: Model to use (default: sd15)
         steps: Number of sampling steps (default: 20)
@@ -222,10 +318,15 @@ async def img2img(
     Returns:
         Dictionary with status, url, and generation metadata
     """
+    # Apply default negative prompt from config if not provided
+    effective_negative = negative_prompt
+    if not effective_negative:
+        effective_negative = _config.get("default_negative_prompt", "")
+    
     return await generation.img2img(
         input_image=input_image,
         prompt=prompt,
-        negative_prompt=negative_prompt,
+        negative_prompt=effective_negative,
         denoise=denoise,
         model=model,
         steps=steps,
@@ -241,7 +342,7 @@ async def img2img(
 @mcp.tool()
 async def generate_video(
     prompt: str,
-    negative_prompt: str = "static, blurry, watermark",
+    negative_prompt: str = "",
     width: int = 832,
     height: int = 480,
     frames: int = 81,
@@ -254,7 +355,7 @@ async def generate_video(
     
     Args:
         prompt: Positive text prompt describing the video
-        negative_prompt: Negative prompt (default: "static, blurry, watermark")
+        negative_prompt: Negative prompt. Uses default from config if empty.
         width: Video width in pixels (default: 832)
         height: Video height in pixels (default: 480)
         frames: Number of frames, ~5 sec at 16fps = 81 frames (default: 81)
@@ -266,9 +367,14 @@ async def generate_video(
     Returns:
         Dictionary with status, url, and generation metadata
     """
+    # Apply default negative prompt from config if not provided
+    effective_negative = negative_prompt
+    if not effective_negative:
+        effective_negative = _config.get("default_negative_prompt", "")
+    
     return await video.generate_video(
         prompt=prompt,
-        negative_prompt=negative_prompt,
+        negative_prompt=effective_negative,
         width=width,
         height=height,
         frames=frames,
@@ -295,7 +401,7 @@ async def image_to_video(
     Args:
         input_image: URL or path to input image
         prompt: Positive text prompt describing desired motion
-        negative_prompt: Negative prompt
+        negative_prompt: Negative prompt. Uses default from config if empty.
         motion_strength: How much movement 0.0-1.0+ (default: 1.0)
         frames: Number of frames (default: 81)
         fps: Frames per second (default: 16)
@@ -305,10 +411,15 @@ async def image_to_video(
     Returns:
         Dictionary with status, url, and generation metadata
     """
+    # Apply default negative prompt from config if not provided
+    effective_negative = negative_prompt
+    if not effective_negative:
+        effective_negative = _config.get("default_negative_prompt", "")
+    
     return await video.image_to_video(
         input_image=input_image,
         prompt=prompt,
-        negative_prompt=negative_prompt,
+        negative_prompt=effective_negative,
         motion_strength=motion_strength,
         frames=frames,
         fps=fps,
