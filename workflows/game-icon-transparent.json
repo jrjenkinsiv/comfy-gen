@@ -1,0 +1,147 @@
+{
+  "1": {
+    "inputs": {
+      "ckpt_name": "v1-5-pruned-emaonly-fp16.safetensors"
+    },
+    "class_type": "CheckpointLoaderSimple",
+    "_meta": {
+      "title": "Load Checkpoint",
+      "notes": "Use SD 1.5 for game asset generation"
+    }
+  },
+  "2": {
+    "inputs": {
+      "text": "game icon, centered, isolated object, white background, clean design",
+      "clip": [
+        "1",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "Positive Prompt",
+      "notes": "Include 'white background', 'isolated object', 'centered' for easier background removal"
+    }
+  },
+  "3": {
+    "inputs": {
+      "text": "complex background, gradient, shadows, multiple objects, text, watermark, blurry, low quality, realistic photo, detailed background, scenery",
+      "clip": [
+        "1",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "Negative Prompt",
+      "notes": "Avoid complex backgrounds and multiple objects for clean icon generation"
+    }
+  },
+  "4": {
+    "inputs": {
+      "width": 512,
+      "height": 512,
+      "batch_size": 1
+    },
+    "class_type": "EmptyLatentImage",
+    "_meta": {
+      "title": "Empty Latent Image",
+      "notes": "512x512 is ideal for game icons. Adjust for larger assets."
+    }
+  },
+  "5": {
+    "inputs": {
+      "seed": 0,
+      "steps": 30,
+      "cfg": 8.0,
+      "sampler_name": "dpmpp_2m",
+      "scheduler": "normal",
+      "denoise": 1,
+      "model": [
+        "1",
+        0
+      ],
+      "positive": [
+        "2",
+        0
+      ],
+      "negative": [
+        "3",
+        0
+      ],
+      "latent_image": [
+        "4",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "KSampler",
+      "notes": "CFG 8.0 for stronger prompt adherence. Increase steps to 50+ for complex icons."
+    }
+  },
+  "6": {
+    "inputs": {
+      "samples": [
+        "5",
+        0
+      ],
+      "vae": [
+        "1",
+        2
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "7": {
+    "inputs": {
+      "filename_prefix": "game_icon",
+      "images": [
+        "6",
+        0
+      ]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "Save Image",
+      "notes": "Output will be PNG with white background. For true transparency, install LayerDiffusion extension in ComfyUI."
+    }
+  },
+  "_workflow_meta": {
+    "title": "Game Icon with Transparent Background",
+    "description": "Workflow optimized for game icon generation with clean backgrounds for easy transparency.",
+    "transparency_notes": "This workflow generates images with white/blank backgrounds for easier background removal. For TRUE alpha channel transparency, install the LayerDiffusion extension from https://github.com/layerdiffusion/sd-forge-layerdiffuse",
+    "recommended_loras": [
+      "game_icon_v1.safetensors (strength: 0.8)",
+      "simple_vector_flux.safetensors (strength: 0.7, trigger: v3ct0r)",
+      "flux_flat_art_game_assets.safetensors (strength: 0.8)"
+    ],
+    "usage_examples": [
+      {
+        "use_case": "Battleship icon (top-down)",
+        "prompt": "(single battleship:1.8), top-down view, military vessel, clean icon style, game asset, centered, white background, flat design, vector style",
+        "negative_prompt": "multiple ships, side view, realistic photo, complex background, scenery, water, waves, text",
+        "cfg": 8.5,
+        "steps": 50
+      },
+      {
+        "use_case": "Explosion effect sprite",
+        "prompt": "(single explosion:1.8), game effect sprite, clean edges, cartoon style, orange and red, comic book explosion, centered, white background",
+        "negative_prompt": "multiple explosions, realistic photo, complex scene, background, smoke clouds, text",
+        "cfg": 8.0,
+        "steps": 40
+      },
+      {
+        "use_case": "UI button",
+        "prompt": "(single button:1.8), game UI element, nautical theme, brass and wood, clean design, centered, white background, flat icon",
+        "negative_prompt": "text, multiple buttons, complex background, realistic photo, 3D rendering",
+        "cfg": 8.0,
+        "steps": 30
+      }
+    ],
+    "post_processing": "Use background removal tools (RemBG, SAM, Photoshop) to convert white background to alpha channel transparency if LayerDiffusion is not available."
+  }
+}

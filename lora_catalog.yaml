@@ -149,6 +149,97 @@ loras:
     description: "Disney/Pixar animation style"
     use_cases: ["cartoon characters", "disney style", "animated look"]
 
+  # ========================================
+  # GAME ASSET LoRAs - Icons, sprites, UI elements, VFX
+  # ========================================
+  # These LoRAs are pending download and testing (marked as NOT_INSTALLED)
+  # After download, remove NOT_INSTALLED prefix and update compatibility info
+  # Source: CivitAI research findings documented in MODEL_REGISTRY.md
+
+  # Game Icons & Flat Design LoRAs
+  - filename: "NOT_INSTALLED_flux_flat_art_game_assets.safetensors"
+    tags: ["game-icon", "flat-design", "vector", "flux", "ui-element"]
+    compatible_with: ["flux1-dev-fp8.safetensors"]
+    recommended_strength: 0.8  # Range: 0.6-1.0
+    description: "Flat illustration style for game icons. Creates isolated images with clean backgrounds."
+    use_cases: ["game icons", "UI elements", "flat design assets", "clean icon style"]
+    notes: "CivitAI: https://civitai.com/models/1039062/flux-lora-flat-art-style-game-assets"
+    
+  - filename: "NOT_INSTALLED_simple_vector_flux.safetensors"
+    tags: ["game-icon", "vector", "flat-design", "flux"]
+    compatible_with: ["flux1-dev-fp8.safetensors"]
+    recommended_strength: 0.7  # Range: 0.6-0.9
+    description: "Classic vector art generation. Trigger word: 'v3ct0r'"
+    use_cases: ["vector icons", "clean flat assets", "simple game icons"]
+    notes: "CivitAI: https://civitai.com/models/785122/simple-vector-flux. Trigger: v3ct0r"
+    
+  - filename: "NOT_INSTALLED_game_icon_v1.safetensors"
+    tags: ["game-icon", "ui-element", "sd15"]
+    compatible_with: ["v1-5-pruned-emaonly-fp16.safetensors"]
+    recommended_strength: 0.8  # Range: 0.6-1.0
+    description: "SD 1.5 game UI iconography with monochrome and transparent background support"
+    use_cases: ["game icons", "UI elements", "minimalistic game assets"]
+    notes: "CivitAI: https://civitai.com/models/31827/game-icon"
+
+  # Pixel Art LoRAs
+  - filename: "NOT_INSTALLED_retro_game_art_sdxl.safetensors"
+    tags: ["pixel-art", "retro", "game-asset", "sdxl"]
+    compatible_with: ["flux1-dev-fp8.safetensors"]  # May need SDXL checkpoint
+    recommended_strength: 0.8  # Range: 0.7-1.0
+    description: "Low color depth pixelated retro game style (MS-DOS/Amiga). Trigger: 'r3tr0'"
+    use_cases: ["retro game assets", "pixel art", "8-bit style", "16-bit style"]
+    notes: "CivitAI: https://civitai.com/models/553027/sdxl-lora-retro-game-art. Trigger: r3tr0"
+    
+  - filename: "NOT_INSTALLED_retro_game_art_sd15.safetensors"
+    tags: ["pixel-art", "retro", "game-asset", "sd15"]
+    compatible_with: ["v1-5-pruned-emaonly-fp16.safetensors"]
+    recommended_strength: 0.8  # Range: 0.7-1.0
+    description: "SD 1.5 version of retro game art LoRA. Trigger: 'r3tr0'"
+    use_cases: ["retro game assets", "pixel art", "NES/SNES style"]
+    notes: "CivitAI: https://civitai.com/models/550675/sd-15-lora-retro-game-art. Trigger: r3tr0"
+
+  # Naval & Battleship LoRAs
+  - filename: "NOT_INSTALLED_battleships_v1.safetensors"
+    tags: ["naval", "battleship", "warship", "military", "sd15"]
+    compatible_with: ["v1-5-pruned-emaonly-fp16.safetensors"]
+    recommended_strength: 0.9  # Range: 0.8-1.0
+    description: "General battleship LoRA. Best at 768x768. Trigger: 'battleship'"
+    use_cases: ["battleship icons", "naval vessels", "warship sprites", "military ships"]
+    notes: "CivitAI: https://civitai.com/models/110237/battleships. Works best at 768x768 resolution"
+    
+  - filename: "NOT_INSTALLED_uss_iowa_battleship.safetensors"
+    tags: ["naval", "battleship", "warship", "military", "sd15", "iowa"]
+    compatible_with: ["v1-5-pruned-emaonly-fp16.safetensors"]
+    recommended_strength: 0.9  # Range: 0.85-1.0
+    description: "Iowa-class battleships (Iowa, Missouri, Wisconsin, New Jersey). Trigger: 'iowa, battleship'"
+    use_cases: ["realistic battleships", "WW2 naval vessels", "Iowa-class ships"]
+    notes: "CivitAI: https://civitai.com/models/234609/uss-iowa-battleship. Trigger: iowa, battleship"
+    
+  - filename: "NOT_INSTALLED_hms_warspite.safetensors"
+    tags: ["naval", "battleship", "warship", "military", "sd15", "british"]
+    compatible_with: ["v1-5-pruned-emaonly-fp16.safetensors"]
+    recommended_strength: 0.85  # Range: 0.8-0.9
+    description: "British Royal Navy HMS Warspite. Trigger: 'warspite'. Recommended: oil painting style"
+    use_cases: ["British battleships", "Royal Navy vessels", "oil painting style warships"]
+    notes: "CivitAI: https://civitai.com/models/224879/hms-warspite-battleship. Best with 'oil painting' in prompt"
+
+  # VFX & Explosion LoRAs
+  - filename: "NOT_INSTALLED_explosion_matrix_v2.safetensors"
+    tags: ["explosion", "vfx", "fire", "game-effect", "sdxl"]
+    compatible_with: ["flux1-dev-fp8.safetensors"]  # May need SDXL checkpoint
+    recommended_strength: 0.8  # Range: 0.6-1.0
+    description: "Stylized explosions and fire effects. Trigger: 'exploder'. Secondary: explosion, fire, lava, fireball"
+    use_cases: ["explosion sprites", "fire effects", "game VFX", "lava effects"]
+    notes: "CivitAI: https://civitai.com/models/1069206/explosion-matrix. Clip Skip 1-2 recommended"
+    
+  - filename: "NOT_INSTALLED_firevfx_v2.safetensors"
+    tags: ["fire", "vfx", "magic", "game-effect", "sd15"]
+    compatible_with: ["v1-5-pruned-emaonly-fp16.safetensors"]
+    recommended_strength: 0.8  # Range: 0.6-1.0
+    description: "Consistent fire effects. Triggers: 'pyrokinesis', 'fire magic', 'fireball'"
+    use_cases: ["fire magic", "elemental attacks", "fire spells", "burning effects"]
+    notes: "CivitAI: https://civitai.com/models/9049/firevfx-create-more-consistent-fire"
+
 # ========================================
 # MODEL SUGGESTIONS - Predefined scenarios
 # ========================================
@@ -338,3 +429,52 @@ keyword_mappings:
   turbo:
     tags: ["acceleration", "speed", "turbo"]
     boost_score: 2.0
+
+  # Game asset keywords
+  icon:
+    tags: ["game-icon", "ui-element", "flat-design"]
+    boost_score: 2.0
+    
+  sprite:
+    tags: ["pixel-art", "game-asset", "sprite"]
+    boost_score: 2.0
+    
+  pixel:
+    tags: ["pixel-art", "retro"]
+    boost_score: 2.0
+    
+  retro:
+    tags: ["pixel-art", "retro"]
+    boost_score: 1.5
+    
+  battleship:
+    tags: ["naval", "battleship", "warship", "military"]
+    boost_score: 2.0
+    
+  warship:
+    tags: ["naval", "warship", "military"]
+    boost_score: 2.0
+    
+  naval:
+    tags: ["naval", "warship", "battleship"]
+    boost_score: 2.0
+    
+  explosion:
+    tags: ["explosion", "vfx", "fire"]
+    boost_score: 2.0
+    
+  fire:
+    tags: ["fire", "vfx", "explosion"]
+    boost_score: 1.5
+    
+  vfx:
+    tags: ["vfx", "explosion", "fire", "game-effect"]
+    boost_score: 1.5
+    
+  vector:
+    tags: ["vector", "flat-design", "game-icon"]
+    boost_score: 1.8
+    
+  flat:
+    tags: ["flat-design", "game-icon", "vector"]
+    boost_score: 1.5
