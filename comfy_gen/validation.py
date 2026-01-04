@@ -44,6 +44,76 @@ class ImageValidator:
         self.processor = CLIPProcessor.from_pretrained(model_name)
         print(f"[OK] CLIP model loaded")
     
+    def _chunk_prompt(self, prompt: str, max_chars: int = 250) -> list[str]:
+        """Split a long prompt into chunks that fit within CLIP's token limit.
+        
+        CLIP has a 77-token limit. This function splits long prompts into
+        manageable chunks that are processed separately and averaged.
+        
+        Args:
+            prompt: The full text prompt
+            max_chars: Maximum characters per chunk (conservative token estimate)
+            
+        Returns:
+            List of prompt chunks
+        """
+        words = prompt.split()
+        chunks = []
+        current_chunk = []
+        current_length = 0
+        
+        for word in words:
+            word_len = len(word) + 1  # +1 for space
+            if current_length + word_len > max_chars and current_chunk:
+                chunks.append(' '.join(current_chunk))
+                current_chunk = [word]
+                current_length = word_len
+            else:
+                current_chunk.append(word)
+                current_length += word_len
+        
+        if current_chunk:
+            chunks.append(' '.join(current_chunk))
+        
+        return chunks if chunks else [prompt]
+    
+    def _get_text_embedding(self, prompt: str) -> torch.Tensor:
+        """Get averaged text embedding for a prompt, handling long prompts via chunking.
+        
+        Args:
+            prompt: Text prompt (can be longer than 77 tokens)
+            
+        Returns:
+            Normalized text embedding tensor
+        """
+        chunks = self._chunk_prompt(prompt)
+        
+        if len(chunks) > 1:
+            print(f"[INFO] Processing prompt in {len(chunks)} chunks (long prompt)")
+        
+        embeddings = []
+        for chunk in chunks:
+            inputs = self.processor(
+                text=[chunk],
+                return_tensors="pt",
+                padding=True,
+                truncation=True,
+                max_length=77
+            ).to(self.device)
+            
+            with torch.no_grad():
+                text_features = self.model.get_text_features(**inputs)
+                text_features = text_features / text_features.norm(dim=-1, keepdim=True)
+                embeddings.append(text_features)
+        
+        # Average embeddings if multiple chunks
+        if len(embeddings) > 1:
+            avg_embedding = torch.stack(embeddings).mean(dim=0)
+            avg_embedding = avg_embedding / avg_embedding.norm(dim=-1, keepdim=True)
+            return avg_embedding
+        else:
+            return embeddings[0]
+    
     def compute_clip_score(
         self, 
         image_path: str, 
@@ -51,6 +121,9 @@ class ImageValidator:
         negative_prompt: Optional[str] = None
     ) -> Dict[str, float]:
         """Compute CLIP similarity scores for an image.
+        
+        Handles long prompts by chunking them into 77-token segments,
+        processing each separately, and averaging the embeddings.
         
         Args:
             image_path: Path to the generated image
@@ -71,38 +144,40 @@ class ImageValidator:
             # Load image
             image = Image.open(image_path).convert("RGB")
             
-            # Prepare prompts
-            prompts = [positive_prompt]
-            if negative_prompt:
-                prompts.append(negative_prompt)
-            
-            # Process inputs
-            inputs = self.processor(
-                text=prompts,
+            # Get image embedding
+            image_inputs = self.processor(
                 images=image,
-                return_tensors="pt",
-                padding=True
+                return_tensors="pt"
             ).to(self.device)
             
-            # Compute embeddings
             with torch.no_grad():
-                outputs = self.model(**inputs)
-                logits_per_image = outputs.logits_per_image
-                probs = logits_per_image.softmax(dim=1)
-            
-            # Extract scores
-            positive_score = float(probs[0][0])
-            result = {"positive_score": positive_score}
-            
-            if negative_prompt:
-                negative_score = float(probs[0][1])
-                result["negative_score"] = negative_score
-                result["score_delta"] = positive_score - negative_score
+                image_features = self.model.get_image_features(**image_inputs)
+                image_features = image_features / image_features.norm(dim=-1, keepdim=True)
+                
+                # Get text embeddings (chunked for long prompts)
+                positive_embedding = self._get_text_embedding(positive_prompt)
+                
+                # Compute cosine similarity for positive prompt
+                positive_sim = (image_features @ positive_embedding.T).squeeze()
+                # Transform cosine similarity [-1, 1] to probability-like score [0, 1]
+                # Good matches typically have cosine sim of 0.2-0.35
+                positive_score = float(torch.clamp((positive_sim + 1) / 2, 0.0, 1.0))
+                
+                result = {"positive_score": positive_score}
+                
+                if negative_prompt:
+                    negative_embedding = self._get_text_embedding(negative_prompt)
+                    negative_sim = (image_features @ negative_embedding.T).squeeze()
+                    negative_score = float(torch.clamp((negative_sim + 1) / 2, 0.0, 1.0))
+                    result["negative_score"] = negative_score
+                    result["score_delta"] = positive_score - negative_score
             
             return result
             
         except Exception as e:
             print(f"[ERROR] Failed to compute CLIP score: {e}")
+            import traceback
+            traceback.print_exc()
             return {"positive_score": 0.0, "error": str(e)}
     
     def validate_image(

@@ -150,8 +150,54 @@ class QualityScorer:
         normalized = score * 10.0
         return normalized
     
+    def _chunk_prompt(self, prompt: str, max_tokens: int = 77) -> list[str]:
+        """Split a long prompt into chunks that fit within CLIP's token limit.
+        
+        This mimics how AUTOMATIC1111 and ComfyUI handle long prompts:
+        - Split into chunks of max_tokens (default 77, CLIP's limit)
+        - Each chunk is processed separately
+        - Embeddings are averaged for final comparison
+        
+        Args:
+            prompt: The full text prompt
+            max_tokens: Maximum tokens per chunk (default 77 for CLIP)
+            
+        Returns:
+            List of prompt chunks
+        """
+        # Simple word-based chunking (CLIP tokenizer will handle actual tokenization)
+        # We use a conservative estimate: ~4 chars per token on average
+        # 77 tokens * 4 chars = ~308 chars, but we'll be more conservative
+        words = prompt.split()
+        chunks = []
+        current_chunk = []
+        current_length = 0
+        
+        # Aim for ~60-65 tokens per chunk to leave room for special tokens
+        max_chars_per_chunk = 250  # Conservative estimate
+        
+        for word in words:
+            word_len = len(word) + 1  # +1 for space
+            if current_length + word_len > max_chars_per_chunk and current_chunk:
+                chunks.append(' '.join(current_chunk))
+                current_chunk = [word]
+                current_length = word_len
+            else:
+                current_chunk.append(word)
+                current_length += word_len
+        
+        if current_chunk:
+            chunks.append(' '.join(current_chunk))
+        
+        return chunks if chunks else [prompt]
+    
     def _compute_clip_score(self, image_path: str, prompt: str) -> float:
         """Compute CLIP similarity score between image and prompt.
+        
+        Handles long prompts by chunking them (like AUTOMATIC1111/ComfyUI):
+        - Prompts > 77 tokens are split into chunks
+        - Each chunk is encoded separately
+        - Image embedding is compared against averaged text embedding
         
         Args:
             image_path: Path to the image
@@ -166,28 +212,58 @@ class QualityScorer:
         try:
             image = Image.open(image_path).convert("RGB")
             
-            inputs = self.clip_processor(
-                text=[prompt],
+            # Chunk long prompts to handle > 77 token inputs
+            prompt_chunks = self._chunk_prompt(prompt)
+            
+            if len(prompt_chunks) > 1:
+                print(f"[INFO] Long prompt detected, processing in {len(prompt_chunks)} chunks")
+            
+            # Get image features (only need to do this once)
+            image_inputs = self.clip_processor(
                 images=image,
-                return_tensors="pt",
-                padding=True
+                return_tensors="pt"
             ).to(self.device)
             
             with torch.no_grad():
-                outputs = self.clip_model(**inputs)
-                # Get cosine similarity between image and text embeddings
-                # logits_per_image is already the cosine similarity scaled by temperature
-                # For a single text prompt, we take the similarity value
-                similarity = outputs.logits_per_image[0, 0]
+                image_features = self.clip_model.get_image_features(**image_inputs)
+                image_features = image_features / image_features.norm(dim=-1, keepdim=True)
                 
-                # CLIP similarity is typically in range [-100, 100] due to temperature scaling
-                # Normalize to 0-1 range using sigmoid-like function
-                # Original CLIP uses temperature=100, so we scale accordingly
-                normalized_score = torch.sigmoid(similarity / 100.0)
+                # Process each text chunk and average embeddings
+                text_embeddings = []
+                for chunk in prompt_chunks:
+                    text_inputs = self.clip_processor(
+                        text=[chunk],
+                        return_tensors="pt",
+                        padding=True,
+                        truncation=True,
+                        max_length=77  # CLIP's limit
+                    ).to(self.device)
+                    
+                    text_features = self.clip_model.get_text_features(**text_inputs)
+                    text_features = text_features / text_features.norm(dim=-1, keepdim=True)
+                    text_embeddings.append(text_features)
+                
+                # Average text embeddings across chunks
+                if len(text_embeddings) > 1:
+                    avg_text_features = torch.stack(text_embeddings).mean(dim=0)
+                    avg_text_features = avg_text_features / avg_text_features.norm(dim=-1, keepdim=True)
+                else:
+                    avg_text_features = text_embeddings[0]
+                
+                # Compute cosine similarity
+                similarity = (image_features @ avg_text_features.T).squeeze()
+                
+                # CLIP cosine similarity is in [-1, 1], but typically positive for relevant pairs
+                # Transform to [0, 1] range: good matches ~0.25-0.35, excellent ~0.35+
+                # We scale up since raw CLIP scores tend to be modest
+                # Map [0.15, 0.40] -> [0.0, 1.0] approximately
+                normalized_score = torch.clamp((similarity - 0.15) / 0.25, 0.0, 1.0)
                 
             return float(normalized_score)
         except Exception as e:
             print(f"[ERROR] Failed to compute CLIP score: {e}")
+            import traceback
+            traceback.print_exc()
             return 0.0
     
     def _assign_grade(self, composite_score: float) -> str:
