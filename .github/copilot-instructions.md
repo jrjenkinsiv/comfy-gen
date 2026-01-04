@@ -168,6 +168,20 @@ See `docs/AGENT_GUIDE.md` for:
 - **Assignment Stuck:** Unassign and reassign `@copilot` on the **issue**.
 - **Dirty Merges / Stale PRs:** If a PR has merge conflicts or is stale after `main` changed, **unassign then reassign the issue** (not the PR). Copilot will create a fresh branch from updated `main`. The old PR will be superseded.
 - **Rate Limited (PR Stopped):** Copilot hit token limits. Wait 1-2 hours, then unassign and reassign the issue. The PR branch may be salvageable - check if it has partial progress worth keeping.
+
+**Unassignment Procedure (MCP Tool Workaround):**
+The `mcp_github_issue_write` tool with `assignees: []` is **ignored** - it does NOT clear assignees.
+The `mcp_github_assign_copilot_to_issue` tool **adds** Copilot to existing assignees (doesn't replace).
+
+To properly reset an issue for Copilot:
+```bash
+# Remove specific user, leaving only Copilot
+gh issue edit <N> --repo <owner>/<repo> --remove-assignee <username>
+
+# If Copilot not yet assigned, remove all users then assign:
+gh issue edit <N> --repo <owner>/<repo> --remove-assignee <user1>,<user2>
+# Then use mcp_github_assign_copilot_to_issue
+```
 - **ComfyUI not responding:** SSH to moira, check `tasklist | findstr python`, restart with `start_comfyui.py`.
 - **Model not found:** Verify model exists in `C:\Users\jrjen\comfy\models\` and workflow references correct filename.
 - **MinIO access denied:** Bucket policy may have reset. Run `scripts/set_bucket_policy.py`.
