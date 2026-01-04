@@ -149,6 +149,22 @@ loras:
     description: "Disney/Pixar animation style"
     use_cases: ["cartoon characters", "disney style", "animated look"]
 
+  # ========================================
+  # GAME ASSET LoRAs - Icons, sprites, and UI elements
+  # ========================================
+  # These LoRAs are optimized for generating game assets like icons,
+  # sprites, and UI elements. Most are SD 1.5 compatible.
+  
+  - filename: "vector_icons_game_assets.safetensors"
+    tags: ["game", "icon", "vector", "flat", "ui", "mobile", "sd15"]
+    compatible_with: ["v1-5-pruned-emaonly-fp16.safetensors"]
+    recommended_strength: 0.8  # Range: 0.6-1.0
+    description: "Vector-style game icons and UI assets, clean flat design"
+    use_cases: ["game icons", "mobile app icons", "ui elements", "flat design icons", "battleship game assets"]
+    trigger_words: ["vector icon", "flat design", "game icon"]
+    notes: "Best for top-down views. Use with negative prompt: realistic, 3d, photograph, perspective"
+    source: "CivitAI ID 2251918"
+
 # ========================================
 # MODEL SUGGESTIONS - Predefined scenarios
 # ========================================
@@ -188,7 +204,8 @@ model_suggestions:
   battleship_ship_icon:
     model: "v1-5-pruned-emaonly-fp16.safetensors"
     workflow: "workflows/flux-dev.json"
-    default_loras: []
+    default_loras:
+      - "vector_icons_game_assets.safetensors:0.8"
     keywords: ["ship icon", "naval icon", "vessel icon", "battleship icon"]
     prompt_template: "(single {subject}:1.8), top-down view, military vessel, clean icon style, game asset, centered composition, {style}"
     negative_template: "multiple ships, side view, realistic photo, blurry, complex background, text, watermark"
