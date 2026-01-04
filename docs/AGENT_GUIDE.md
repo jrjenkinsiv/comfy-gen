@@ -190,14 +190,17 @@ These LoRAs allow generating in fewer steps:
 
 ### When to Use Wan 2.2
 - Video generation requested
-- Complex motion needed
-- Longer generation time acceptable
+- Animation or motion needed
+- Text-to-video: Use `workflows/wan22-t2v.json`
+- Image-to-video: Use `workflows/wan22-i2v.json`
+- Longer generation time acceptable (4 steps with acceleration LoRA)
 
 ### Choosing LoRA Strength
-1. Start with `strength_model: 0.7, strength_clip: 0.7`
-2. If effect too subtle, increase to 0.9
-3. If artifacts appear, decrease to 0.5
-4. For physics/motion LoRAs, use 0.6-0.8
+1. For acceleration LoRAs (4-step): Use `strength_model: 1.0, strength_clip: 1.0`
+2. For style LoRAs: Start with `strength_model: 0.7, strength_clip: 0.7`
+3. If effect too subtle, increase to 0.9
+4. If artifacts appear, decrease to 0.5
+5. For physics/motion LoRAs, use 0.6-0.8
 
 ---
 
@@ -267,11 +270,38 @@ a car driving along a coastal highway, waves crashing, drone shot following
 
 See `workflows/` directory for ready-to-use templates:
 
-| Template | Use Case |
-|----------|----------|
-| `sd15-basic.json` | Simple SD 1.5 images |
-| `wan22-t2v.json` | Text-to-video (TODO) |
-| `wan22-i2v.json` | Image-to-video (TODO) |
+| Template | Use Case | Notes |
+|----------|----------|-------|
+| `flux-dev.json` | Simple SD 1.5 images | Fast, general purpose |
+| `wan22-t2v.json` | Text-to-video | Uses Wan 2.2 with 4-step LoRA |
+| `wan22-i2v.json` | Image-to-video | Animates existing images |
+
+### Using Wan 2.2 Workflows
+
+**Text-to-Video Example:**
+```bash
+python3 generate.py \
+    --workflow workflows/wan22-t2v.json \
+    --prompt "a person walking through a park on a sunny day" \
+    --output /tmp/video.mp4
+```
+
+**Image-to-Video Example:**
+```bash
+# Note: Requires modifying the workflow to specify input image
+python3 generate.py \
+    --workflow workflows/wan22-i2v.json \
+    --prompt "the person starts walking forward" \
+    --output /tmp/animated.mp4
+```
+
+**Wan 2.2 Video Specifications:**
+- **Resolution:** 848x480 pixels
+- **Frame Count:** 81 frames
+- **Frame Rate:** 8 fps
+- **Duration:** ~10 seconds
+- **Steps:** 4 (with acceleration LoRA)
+- **CFG:** 1.0 (recommended with 4-step LoRA)
 
 To create a new workflow:
 1. Export from ComfyUI GUI

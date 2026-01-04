@@ -1,0 +1,139 @@
+{
+  "1": {
+    "inputs": {
+      "unet_name": "wan2.2_t2v_high_noise_14B_fp8_scaled.safetensors"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "Load Wan 2.2 Diffusion Model"
+    }
+  },
+  "2": {
+    "inputs": {
+      "clip_name1": "oldt5_xxl_fp8_e4m3fn_scaled.safetensors",
+      "clip_name2": "oldt5_xxl_fp8_e4m3fn_scaled.safetensors",
+      "type": "flux"
+    },
+    "class_type": "DualCLIPLoader",
+    "_meta": {
+      "title": "Load Text Encoders"
+    }
+  },
+  "3": {
+    "inputs": {
+      "text": "a person walking through a park on a sunny day",
+      "clip": [
+        "2",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "Positive Prompt"
+    }
+  },
+  "4": {
+    "inputs": {
+      "vae_name": "wan_2.1_vae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
+  },
+  "5": {
+    "inputs": {
+      "model": [
+        "1",
+        0
+      ],
+      "clip": [
+        "2",
+        0
+      ],
+      "lora_name": "wan2.2_t2v_lightx2v_4steps_lora_v1.1_high_noise.safetensors",
+      "strength_model": 1.0,
+      "strength_clip": 1.0
+    },
+    "class_type": "LoraLoader",
+    "_meta": {
+      "title": "Load 4-Step Acceleration LoRA"
+    }
+  },
+  "6": {
+    "inputs": {
+      "width": 848,
+      "height": 480,
+      "length": 81,
+      "batch_size": 1
+    },
+    "class_type": "EmptyLatentVideo",
+    "_meta": {
+      "title": "Empty Latent Video"
+    }
+  },
+  "7": {
+    "inputs": {
+      "seed": 0,
+      "steps": 4,
+      "cfg": 1.0,
+      "sampler_name": "euler",
+      "scheduler": "simple",
+      "denoise": 1.0,
+      "model": [
+        "5",
+        0
+      ],
+      "positive": [
+        "3",
+        0
+      ],
+      "negative": [
+        "3",
+        0
+      ],
+      "latent_image": [
+        "6",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "Sample Video"
+    }
+  },
+  "8": {
+    "inputs": {
+      "samples": [
+        "7",
+        0
+      ],
+      "vae": [
+        "4",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "Decode Video"
+    }
+  },
+  "9": {
+    "inputs": {
+      "frame_rate": 8,
+      "loop_count": 0,
+      "filename_prefix": "wan22_t2v",
+      "format": "video/h264-mp4",
+      "pingpong": false,
+      "save_output": true,
+      "images": [
+        "8",
+        0
+      ]
+    },
+    "class_type": "VHS_VideoCombine",
+    "_meta": {
+      "title": "Save Video"
+    }
+  }
+}
