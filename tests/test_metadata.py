@@ -114,6 +114,98 @@ def test_extract_loras_from_workflow_no_loras():
     print("[OK] extract_loras_from_workflow handles workflows without LoRAs")
 
 
+def test_extract_model_from_workflow():
+    """Test extracting model name from workflow."""
+    # Test CheckpointLoaderSimple
+    workflow = {
+        "1": {
+            "class_type": "CheckpointLoaderSimple",
+            "inputs": {"ckpt_name": "flux1-dev-fp8.safetensors"}
+        }
+    }
+    
+    model = generate.extract_model_from_workflow(workflow)
+    assert model == "flux1-dev-fp8.safetensors"
+    
+    # Test UNETLoader
+    workflow2 = {
+        "1": {
+            "class_type": "UNETLoader",
+            "inputs": {"unet_name": "wan22-diffusion.safetensors"}
+        }
+    }
+    
+    model2 = generate.extract_model_from_workflow(workflow2)
+    assert model2 == "wan22-diffusion.safetensors"
+    
+    # Test no model loader
+    workflow3 = {
+        "1": {
+            "class_type": "KSampler",
+            "inputs": {"steps": 30}
+        }
+    }
+    
+    model3 = generate.extract_model_from_workflow(workflow3)
+    assert model3 is None
+    
+    print("[OK] extract_model_from_workflow extracts model names correctly")
+
+
+def test_extract_vae_from_workflow():
+    """Test extracting VAE name from workflow."""
+    # Test with VAE
+    workflow = {
+        "1": {
+            "class_type": "VAELoader",
+            "inputs": {"vae_name": "ae.safetensors"}
+        }
+    }
+    
+    vae = generate.extract_vae_from_workflow(workflow)
+    assert vae == "ae.safetensors"
+    
+    # Test without VAE
+    workflow2 = {
+        "1": {
+            "class_type": "CheckpointLoaderSimple",
+            "inputs": {"ckpt_name": "model.safetensors"}
+        }
+    }
+    
+    vae2 = generate.extract_vae_from_workflow(workflow2)
+    assert vae2 is None
+    
+    print("[OK] extract_vae_from_workflow extracts VAE names correctly")
+
+
+def test_extract_resolution_from_workflow():
+    """Test extracting resolution from workflow."""
+    # Test with EmptyLatentImage
+    workflow = {
+        "1": {
+            "class_type": "EmptyLatentImage",
+            "inputs": {"width": 1024, "height": 768, "batch_size": 1}
+        }
+    }
+    
+    resolution = generate.extract_resolution_from_workflow(workflow)
+    assert resolution == [1024, 768]
+    
+    # Test without EmptyLatentImage
+    workflow2 = {
+        "1": {
+            "class_type": "KSampler",
+            "inputs": {"steps": 30}
+        }
+    }
+    
+    resolution2 = generate.extract_resolution_from_workflow(workflow2)
+    assert resolution2 is None
+    
+    print("[OK] extract_resolution_from_workflow extracts resolution correctly")
+
+
 def test_create_metadata_json():
     """Test creating metadata JSON structure."""
     workflow_params = {
@@ -128,33 +220,79 @@ def test_create_metadata_json():
         {"name": "style.safetensors", "strength": 0.8}
     ]
     
-    metadata = generate.create_metadata_json(
-        workflow_path="/path/to/workflow.json",
-        prompt="a beautiful landscape",
-        negative_prompt="ugly, bad",
-        workflow_params=workflow_params,
-        loras=loras,
-        preset="high-quality",
-        validation_score=0.85,
-        minio_url="http://192.168.1.215:9000/comfy-gen/image.png"
-    )
+    # Create a mock workflow for extraction
+    workflow = {
+        "1": {
+            "class_type": "CheckpointLoaderSimple",
+            "inputs": {"ckpt_name": "flux1-dev-fp8.safetensors"}
+        },
+        "2": {
+            "class_type": "VAELoader",
+            "inputs": {"vae_name": "ae.safetensors"}
+        },
+        "3": {
+            "class_type": "EmptyLatentImage",
+            "inputs": {"width": 1024, "height": 768}
+        }
+    }
     
-    # Check all required fields
-    assert "timestamp" in metadata
-    assert metadata["prompt"] == "a beautiful landscape"
-    assert metadata["negative_prompt"] == "ugly, bad"
-    assert metadata["workflow"] == "workflow.json"
-    assert metadata["seed"] == 12345
-    assert metadata["steps"] == 30
-    assert metadata["cfg"] == 7.5
-    assert metadata["sampler"] == "euler"
-    assert metadata["scheduler"] == "normal"
-    assert metadata["loras"] == loras
-    assert metadata["preset"] == "high-quality"
-    assert metadata["validation_score"] == 0.85
-    assert metadata["minio_url"] == "http://192.168.1.215:9000/comfy-gen/image.png"
+    # Create temporary output file for file size test
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.png', delete=False) as f:
+        f.write("fake image content")
+        temp_path = f.name
     
-    print("[OK] create_metadata_json creates complete metadata structure")
+    try:
+        metadata = generate.create_metadata_json(
+            workflow_path="/path/to/workflow.json",
+            prompt="a beautiful landscape",
+            negative_prompt="ugly, bad",
+            workflow_params=workflow_params,
+            loras=loras,
+            preset="high-quality",
+            validation_score=0.85,
+            minio_url="http://192.168.1.215:9000/comfy-gen/image.png",
+            workflow=workflow,
+            output_path=temp_path,
+            generation_time_seconds=45.2
+        )
+        
+        # Check top-level fields
+        assert "timestamp" in metadata
+        assert "generation_id" in metadata
+        
+        # Check input section
+        assert metadata["input"]["prompt"] == "a beautiful landscape"
+        assert metadata["input"]["negative_prompt"] == "ugly, bad"
+        assert metadata["input"]["preset"] == "high-quality"
+        
+        # Check workflow section
+        assert metadata["workflow"]["name"] == "workflow.json"
+        assert metadata["workflow"]["model"] == "flux1-dev-fp8.safetensors"
+        assert metadata["workflow"]["vae"] == "ae.safetensors"
+        
+        # Check parameters section
+        assert metadata["parameters"]["seed"] == 12345
+        assert metadata["parameters"]["steps"] == 30
+        assert metadata["parameters"]["cfg"] == 7.5
+        assert metadata["parameters"]["sampler"] == "euler"
+        assert metadata["parameters"]["scheduler"] == "normal"
+        assert metadata["parameters"]["resolution"] == [1024, 768]
+        assert metadata["parameters"]["loras"] == loras
+        
+        # Check quality section
+        assert metadata["quality"]["prompt_adherence"]["clip"] == 0.85
+        
+        # Check storage section
+        assert metadata["storage"]["minio_url"] == "http://192.168.1.215:9000/comfy-gen/image.png"
+        assert metadata["storage"]["file_size_bytes"] > 0
+        assert metadata["storage"]["format"] == "png"
+        assert metadata["storage"]["generation_time_seconds"] == 45.2
+        
+        print("[OK] create_metadata_json creates complete nested metadata structure")
+    finally:
+        # Clean up temp file
+        if temp_path and Path(temp_path).exists():
+            Path(temp_path).unlink()
 
 
 def test_create_metadata_json_minimal():
@@ -178,14 +316,30 @@ def test_create_metadata_json_minimal():
         minio_url=None
     )
     
-    assert metadata["prompt"] == "test"
-    assert metadata["negative_prompt"] == ""
-    assert metadata["loras"] == []
-    assert metadata["preset"] is None
-    assert metadata["validation_score"] is None
-    assert metadata["minio_url"] is None
+    # Check nested structure exists
+    assert "input" in metadata
+    assert "workflow" in metadata
+    assert "parameters" in metadata
+    assert "quality" in metadata
+    assert "storage" in metadata
     
-    print("[OK] create_metadata_json handles minimal parameters")
+    # Check input section
+    assert metadata["input"]["prompt"] == "test"
+    assert metadata["input"]["negative_prompt"] == ""
+    assert metadata["input"]["preset"] is None
+    
+    # Check parameters
+    assert metadata["parameters"]["loras"] == []
+    assert metadata["parameters"]["sampler"] is None
+    assert metadata["parameters"]["scheduler"] is None
+    
+    # Check quality section
+    assert metadata["quality"]["prompt_adherence"] is None
+    
+    # Check storage
+    assert metadata["storage"]["minio_url"] is None
+    
+    print("[OK] create_metadata_json handles minimal parameters with nested structure")
 
 
 def test_upload_metadata_to_minio():
@@ -235,6 +389,9 @@ if __name__ == "__main__":
     test_extract_workflow_params_no_ksampler()
     test_extract_loras_from_workflow()
     test_extract_loras_from_workflow_no_loras()
+    test_extract_model_from_workflow()
+    test_extract_vae_from_workflow()
+    test_extract_resolution_from_workflow()
     test_create_metadata_json()
     test_create_metadata_json_minimal()
     test_upload_metadata_to_minio()

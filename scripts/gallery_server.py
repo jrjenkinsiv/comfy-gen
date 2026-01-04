@@ -186,8 +186,39 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     if (keys.includes(jsonKey)) {
                         try {
                             const metaResp = await fetch(`${MINIO}/${BUCKET}/${jsonKey}`);
-                            meta = await metaResp.json();
-                        } catch (e) {}
+                            const rawMeta = await metaResp.json();
+                            
+                            // Handle both old flat format and new nested format
+                            if (rawMeta.input) {
+                                // New nested format
+                                meta = {
+                                    prompt: rawMeta.input?.prompt || 'No prompt',
+                                    negative_prompt: rawMeta.input?.negative_prompt || '',
+                                    seed: rawMeta.parameters?.seed,
+                                    steps: rawMeta.parameters?.steps,
+                                    cfg: rawMeta.parameters?.cfg,
+                                    loras: rawMeta.parameters?.loras || [],
+                                    validation_score: rawMeta.quality?.prompt_adherence?.clip,
+                                    generation_time: rawMeta.storage?.generation_time_seconds,
+                                    file_size: rawMeta.storage?.file_size_bytes,
+                                    model: rawMeta.workflow?.model,
+                                    resolution: rawMeta.parameters?.resolution
+                                };
+                            } else {
+                                // Old flat format - maintain backward compatibility
+                                meta = {
+                                    prompt: rawMeta.prompt || 'No prompt',
+                                    negative_prompt: rawMeta.negative_prompt || '',
+                                    seed: rawMeta.seed,
+                                    steps: rawMeta.steps,
+                                    cfg: rawMeta.cfg,
+                                    loras: rawMeta.loras || [],
+                                    validation_score: rawMeta.validation_score
+                                };
+                            }
+                        } catch (e) {
+                            console.error(`Failed to load metadata for ${png}:`, e);
+                        }
                     }
                     
                     allImages.push({
