@@ -2,3 +2,5 @@ requests
 torch
 torchvision
 minio
+transformers
+Pillow
