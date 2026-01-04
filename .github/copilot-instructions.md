@@ -154,7 +154,6 @@ C:\Users\jrjen\comfy\models\
 4. **Set parameters appropriately:**
    - Steps: 30 for drafts, 80+ for final/complex prompts
    - CFG: 7.0 default, 8-10 for stricter prompt adherence
-   - Validation: `--validate --auto-retry --retry-limit 3 --positive-threshold 0.85` for quality control
 5. **Generate** - `python3 generate.py --workflow <file> --prompt "<detailed_prompt>" --negative-prompt "<detailed_negative>" --steps 80 --output /tmp/output.png`
 6. **Return URL** - Image will be at `http://192.168.1.215:9000/comfy-gen/<timestamp>_<filename>`
 

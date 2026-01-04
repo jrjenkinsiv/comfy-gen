@@ -173,11 +173,11 @@ Generate 4-6 images with a basic prompt, assess results.
 
 Add 1-2 new constraint categories at a time.
 
-### 3. **Use Validation Strategically**
+### 3. **Use Appropriate Steps**
 
-- CLIP validation checks semantic match, not visual quality
-- Use `--positive-threshold 0.85` for stricter matching
-- Increase steps (`--steps 80`) for complex prompts
+- Increase steps (`--steps 80`) for complex prompts with many constraints
+- 30 steps for drafts, 80+ for final output
+- More steps = better convergence to prompt requirements
 
 ### 4. **Refine Based on Results**
 

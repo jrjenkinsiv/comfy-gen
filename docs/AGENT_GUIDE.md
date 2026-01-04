@@ -942,7 +942,6 @@ Before generating, ensure:
 - [ ] **Prompts are detailed and verbose** (see [Prompt Engineering](#prompt-engineering-tips) and [DETAILED_PROMPTING_GUIDE.md](DETAILED_PROMPTING_GUIDE.md))
 - [ ] Negative prompts include specific constraints (not just generic "bad quality")
 - [ ] Input images are prepared if needed (resize, crop)
-- [ ] Validation enabled if quality is critical (`--validate --auto-retry`)
 - [ ] Steps set appropriately (30 for drafts, 80+ for complex/final output)
 - [ ] Output path is writable
 - [ ] MinIO is accessible for upload
