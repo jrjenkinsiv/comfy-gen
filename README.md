@@ -186,14 +186,49 @@ If ComfyUI is not running:
 ssh moira "C:\\Users\\jrjen\\comfy\\.venv\\Scripts\\python.exe C:\\Users\\jrjen\\comfy-gen\\scripts\\start_comfyui.py"
 ```
 
+## MCP Server for Service Management
+
+ComfyGen includes an MCP (Model Context Protocol) server that allows AI assistants like Claude to manage ComfyUI services:
+
+```bash
+# Run the MCP server
+python3 mcp_server.py
+```
+
+### Available MCP Tools
+
+- `start_comfyui_service` - Start the ComfyUI server
+- `stop_comfyui_service` - Stop the ComfyUI server
+- `restart_comfyui_service` - Restart the ComfyUI server
+- `check_comfyui_service_status` - Check if ComfyUI is running and healthy
+
+### Claude Desktop Integration
+
+To use these tools in Claude Desktop, add this to your `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "comfyui-service-manager": {
+      "command": "python3",
+      "args": ["/path/to/comfy-gen/mcp_server.py"]
+    }
+  }
+}
+```
+
 ## Scripts
 
 | Script | Purpose |
 |--------|---------|
 | `scripts/start_comfyui.py` | Start ComfyUI server on moira (run via SSH) |
+| `scripts/stop_comfyui.py` | Stop ComfyUI server on moira (run via SSH) |
+| `scripts/restart_comfyui.py` | Restart ComfyUI server on moira (run via SSH) |
+| `scripts/check_comfyui_status.py` | Check ComfyUI server status |
 | `scripts/cancel_generation.py` | Cancel running/queued jobs or list queue |
 | `scripts/set_bucket_policy.py` | Make MinIO bucket publicly readable |
 | `scripts/create_bucket.py` | Create the comfy-gen MinIO bucket |
+| `mcp_server.py` | MCP server for service management |
 
 ## Canceling Generation
 
