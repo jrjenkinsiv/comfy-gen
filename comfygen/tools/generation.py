@@ -343,6 +343,8 @@ async def generate_image(
             if output_path:
                 try:
                     import requests
+                    import logging
+                    
                     response = requests.get(image_url, timeout=30)
                     if response.status_code == 200:
                         # Ensure parent directory exists
@@ -355,12 +357,11 @@ async def generate_image(
                         local_path = str(output_path)
                     else:
                         # Log warning but continue - local save is optional
-                        import warnings
-                        warnings.warn(f"Failed to download image for local save: HTTP {response.status_code}")
+                        logging.warning(f"Failed to download image for local save: HTTP {response.status_code}")
                 except Exception as e:
                     # Log warning but continue - local save is optional
-                    import warnings
-                    warnings.warn(f"Failed to save image locally: {str(e)}")
+                    import logging
+                    logging.warning(f"Failed to save image locally: {str(e)}")
             
             # Run validation if requested
             if validate:

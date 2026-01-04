@@ -398,15 +398,23 @@ class ComfyUIClient:
                 })
         
         def on_error(ws, error):
-            if not isinstance(error, (websocket.WebSocketConnectionClosedException, 
-                                     ConnectionResetError, 
-                                     BrokenPipeError)):
-                progress_callback({
-                    "type": "error",
-                    "prompt_id": prompt_id,
-                    "error": str(error),
-                    "message": f"WebSocket error: {error}"
-                })
+            # Handle various connection error types gracefully
+            try:
+                is_connection_error = isinstance(error, (ConnectionResetError, BrokenPipeError))
+                if WEBSOCKET_AVAILABLE:
+                    # Check for WebSocket-specific errors if the module is available
+                    is_connection_error = is_connection_error or isinstance(error, websocket.WebSocketException)
+                
+                if not is_connection_error:
+                    progress_callback({
+                        "type": "error",
+                        "prompt_id": prompt_id,
+                        "error": str(error),
+                        "message": f"WebSocket error: {error}"
+                    })
+            except Exception:
+                # Catch-all for any error handling issues
+                pass
         
         def on_close(ws, close_status_code, close_msg):
             tracker_state['running'] = False

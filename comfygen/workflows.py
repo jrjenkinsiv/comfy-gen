@@ -250,7 +250,7 @@ class WorkflowManager:
     def validate_workflow(
         self,
         workflow: Dict[str, Any],
-        comfyui_client = None
+        comfyui_client: Optional[Any] = None
     ) -> Dict[str, Any]:
         """Validate workflow structure and check if referenced models exist.
         
