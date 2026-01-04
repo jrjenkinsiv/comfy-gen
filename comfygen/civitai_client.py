@@ -40,7 +40,7 @@ class CivitAIClient:
             sort: Sort method (Most Downloaded, Highest Rated, Newest)
             nsfw: Include NSFW results
             limit: Maximum results to return
-            page: Page number
+            page: Page number (ignored when using query search)
             
         Returns:
             List of model dictionaries
@@ -48,7 +48,8 @@ class CivitAIClient:
         params = {
             "query": query,
             "limit": limit,
-            "page": page,
+            # Note: CivitAI API doesn't support 'page' with query search
+            # Use cursor-based pagination for future implementation
             "sort": sort,
             "nsfw": str(nsfw).lower()
         }
