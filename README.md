@@ -202,6 +202,8 @@ python3 mcp_server.py
 - `restart_comfyui_service` - Restart the ComfyUI server
 - `check_comfyui_service_status` - Check if ComfyUI is running and healthy
 
+See [docs/MCP_SERVER.md](docs/MCP_SERVER.md) for complete documentation.
+
 ### Claude Desktop Integration
 
 To use these tools in Claude Desktop, add this to your `claude_desktop_config.json`:
