@@ -693,6 +693,6 @@ for i, prompt in enumerate(prompts):
 
 ## See Also
 
-- [AGENT_GUIDE.md](AGENT_GUIDE.md) - Usage guide for AI agents
-- [ERROR_HANDLING.md](ERROR_HANDLING.md) - Error handling patterns
+- [USAGE.md](USAGE.md) - Comprehensive usage guide
+- [ARCHITECTURE.md](ARCHITECTURE.md) - System architecture and workflows
 - [MODEL_REGISTRY.md](MODEL_REGISTRY.md) - Available models

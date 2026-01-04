@@ -173,7 +173,7 @@ Presets (--preset):
 """)
     
     print("="*60)
-    print("For more information, see docs/AGENT_GUIDE.md")
+    print("For more information, see docs/USAGE.md")
     print("="*60)
 
 
