@@ -11,6 +11,7 @@ import requests
 import time
 import sys
 import signal
+import glob
 from pathlib import Path
 from minio import Minio
 from minio.error import S3Error
@@ -151,7 +152,8 @@ def cancel_generation(prompt_id):
         if response.status_code == 200:
             print(f"[OK] Cancelled generation {prompt_id}")
             return True
-    except requests.RequestException:
+    except requests.RequestException as e:
+        # Queue deletion failed, continue to try interrupt
         pass
     
     # Also interrupt current generation in case it's running
@@ -178,16 +180,18 @@ def signal_handler(sig, frame):
 def cleanup_partial_outputs():
     """Clean up any partial output files."""
     # Remove temporary output files that might be partially downloaded
+    # Note: Using /tmp is Linux-specific but matches project's Linux-based infrastructure
     try:
-        import glob
         temp_files = glob.glob("/tmp/*.png.tmp") + glob.glob("/tmp/*.mp4.tmp")
         for f in temp_files:
             try:
                 Path(f).unlink()
                 print(f"[INFO] Cleaned up partial file: {f}")
-            except Exception:
+            except OSError as e:
+                # Ignore errors during cleanup (file may not exist, permission issues, etc.)
                 pass
-    except Exception:
+    except Exception as e:
+        # Ignore glob errors - cleanup is best-effort
         pass
 
 def main():
