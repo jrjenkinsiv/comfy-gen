@@ -304,8 +304,8 @@ def main():
                     sys.exit(1)
                 image_to_process = args.input_image
             
-            # Preprocess image if resize/crop specified
-            if args.resize or args.crop:
+            # Preprocess image if resize specified
+            if args.resize:
                 # If using original local file, create a temp copy to avoid modifying it
                 if not is_from_url and temp_image_path is None:
                     temp_fd, temp_image_path = tempfile.mkstemp(suffix=".png")

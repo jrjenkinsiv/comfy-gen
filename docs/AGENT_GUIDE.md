@@ -269,7 +269,7 @@ See `workflows/` directory for ready-to-use templates:
 
 | Template | Use Case | Input Image Required |
 |----------|----------|---------------------|
-| `flux-dev.json` | Simple SD 1.5 images | No |
+| `flux-dev.json` | Text-to-image with SD 1.5 | No |
 | `sd15-img2img.json` | Image transformation/enhancement | Yes |
 | `wan22-i2v.json` | Image-to-video animation | Yes |
 

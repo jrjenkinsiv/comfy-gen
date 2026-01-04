@@ -65,14 +65,18 @@
   },
   "7": {
     "inputs": {
-      "width": 512,
-      "height": 512,
-      "video_frames": 25,
-      "batch_size": 1
+      "pixels": [
+        "4",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ]
     },
-    "class_type": "EmptyLatentVideo",
+    "class_type": "VAEEncode",
     "_meta": {
-      "title": "Empty Latent Video"
+      "title": "VAE Encode Input Image"
     }
   },
   "8": {
