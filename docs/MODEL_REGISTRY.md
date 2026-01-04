@@ -83,12 +83,25 @@ LoRA files are stored in `C:\Users\jrjen\comfy\models\loras\`.
 | Filename | Compatible With | Notes |
 |----------|----------------|-------|
 | `vector_icons_game_assets.safetensors` | SD 1.5 | Vector-style game icons, flat design. Strength 0.8. Source: CivitAI 2251918 |
+| `PixelArtRedmond15V-PixelArt-PIXARFK.safetensors` | SD 1.5 | Pixel art style. Trigger: "pixarfk". Source: HuggingFace artificialguybr |
 
 **Game Asset Usage Notes:**
 - Use with SD 1.5 workflow (`flux-dev.json` uses v1-5-pruned-emaonly-fp16)
 - Best for top-down views of ships, icons, UI elements
 - Recommended negative prompt: "realistic, 3d, photograph, perspective"
 - See `lora_catalog.yaml` for the `battleship_ship_icon` preset
+
+### NSFW/Adult LoRAs (18+)
+
+**Note:** NSFW LoRAs are cataloged in `lora_catalog.yaml` with `category: "nsfw"` tag.
+These are stored locally only and never uploaded to GitHub or public locations.
+
+Categories include:
+- Wan 2.2 T2V/I2V adult content (high/low noise variants)
+- Flux/SD adult anatomy and action LoRAs
+- Physics/motion enhancement LoRAs
+
+See `lora_catalog.yaml` for full inventory with compatibility info.
 
 ---
 

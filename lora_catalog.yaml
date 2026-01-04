@@ -165,6 +165,214 @@ loras:
     notes: "Best for top-down views. Use with negative prompt: realistic, 3d, photograph, perspective"
     source: "CivitAI ID 2251918"
 
+  - filename: "PixelArtRedmond15V-PixelArt-PIXARFK.safetensors"
+    tags: ["game", "pixel-art", "retro", "8-bit", "16-bit", "sprite", "sd15"]
+    compatible_with: ["v1-5-pruned-emaonly-fp16.safetensors"]
+    recommended_strength: 0.8  # Range: 0.6-1.0
+    description: "Pixel art style for retro game aesthetics"
+    use_cases: ["pixel art games", "retro sprites", "8-bit style", "16-bit style", "indie game assets"]
+    trigger_words: ["pixel art", "pixelated", "8-bit", "16-bit", "retro game"]
+    notes: "Use trigger word 'pixarfk' or 'pixel art style' in prompt"
+    source: "HuggingFace artificialguybr/pixelartredmond-1-5v-pixel-art-loras-for-sd-1-5"
+
+  # ========================================
+  # NSFW/ADULT LoRAs (18+)
+  # ========================================
+  # These LoRAs are for adult content generation.
+  # Stored locally only - never uploaded to GitHub or public locations.
+  # See NSFW Content Policy in copilot-instructions.md
+  
+  # --- Wan 2.2 Adult Content LoRAs ---
+  - filename: "NSFW-22-H-e8.safetensors"
+    tags: ["nsfw", "adult", "wan2.2", "high-noise"]
+    compatible_with: ["wan2.2_t2v_high_noise_14B_fp8_scaled.safetensors"]
+    recommended_strength: 0.7
+    description: "General NSFW content for Wan 2.2 high noise"
+    category: "nsfw"
+
+  - filename: "NSFW-22-L-e8.safetensors"
+    tags: ["nsfw", "adult", "wan2.2", "low-noise"]
+    compatible_with: ["wan2.2_t2v_low_noise_14B_fp8_scaled.safetensors"]
+    recommended_strength: 0.7
+    description: "General NSFW content for Wan 2.2 low noise"
+    category: "nsfw"
+
+  - filename: "wan2.2-i2v-high-pov-insertion-v1.0.safetensors"
+    tags: ["nsfw", "adult", "wan2.2", "i2v", "high-noise", "pov"]
+    compatible_with: ["wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors"]
+    recommended_strength: 0.7
+    description: "Adult POV content for Wan 2.2 I2V high noise"
+    category: "nsfw"
+
+  - filename: "wan2.2-i2v-low-pov-insertion-v1.0.safetensors"
+    tags: ["nsfw", "adult", "wan2.2", "i2v", "low-noise", "pov"]
+    compatible_with: ["wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors"]
+    recommended_strength: 0.7
+    description: "Adult POV content for Wan 2.2 I2V low noise"
+    category: "nsfw"
+
+  - filename: "wan2.2-i2v-high-oral-insertion-v1.0.safetensors"
+    tags: ["nsfw", "adult", "wan2.2", "i2v", "high-noise", "oral"]
+    compatible_with: ["wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors"]
+    recommended_strength: 0.7
+    description: "Adult oral content for Wan 2.2 I2V high noise"
+    category: "nsfw"
+
+  - filename: "wan2.2-i2v-low-oral-insertion-v1.0.safetensors"
+    tags: ["nsfw", "adult", "wan2.2", "i2v", "low-noise", "oral"]
+    compatible_with: ["wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors"]
+    recommended_strength: 0.7
+    description: "Adult oral content for Wan 2.2 I2V low noise"
+    category: "nsfw"
+
+  - filename: "wan2.2-i2v-high-cumshot-v1.0.safetensors"
+    tags: ["nsfw", "adult", "wan2.2", "i2v", "high-noise", "cumshot"]
+    compatible_with: ["wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors"]
+    recommended_strength: 0.7
+    description: "Adult cumshot content for Wan 2.2 I2V high noise"
+    category: "nsfw"
+
+  - filename: "wan2.2-i2v-low-cumshot-v1.0.safetensors"
+    tags: ["nsfw", "adult", "wan2.2", "i2v", "low-noise", "cumshot"]
+    compatible_with: ["wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors"]
+    recommended_strength: 0.7
+    description: "Adult cumshot content for Wan 2.2 I2V low noise"
+    category: "nsfw"
+
+  - filename: "WAN-2.2-I2V-HandjobBlowjobCombo-HIGH-v1.safetensors"
+    tags: ["nsfw", "adult", "wan2.2", "i2v", "high-noise", "handjob", "blowjob"]
+    compatible_with: ["wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors"]
+    recommended_strength: 0.7
+    description: "Adult handjob/blowjob combo for Wan 2.2 I2V high noise"
+    category: "nsfw"
+
+  - filename: "WAN-2.2-I2V-HandjobBlowjobCombo-LOW-v1.safetensors"
+    tags: ["nsfw", "adult", "wan2.2", "i2v", "low-noise", "handjob", "blowjob"]
+    compatible_with: ["wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors"]
+    recommended_strength: 0.7
+    description: "Adult handjob/blowjob combo for Wan 2.2 I2V low noise"
+    category: "nsfw"
+
+  - filename: "Wan2.2 - T2V - POV Hand Job - HIGH 14B.safetensors"
+    tags: ["nsfw", "adult", "wan2.2", "t2v", "high-noise", "handjob", "pov"]
+    compatible_with: ["wan2.2_t2v_high_noise_14B_fp8_scaled.safetensors"]
+    recommended_strength: 0.7
+    description: "Adult POV handjob for Wan 2.2 T2V high noise"
+    category: "nsfw"
+
+  - filename: "Wan2.2 - T2V - POV Hand Job - LOW 14B.safetensors"
+    tags: ["nsfw", "adult", "wan2.2", "t2v", "low-noise", "handjob", "pov"]
+    compatible_with: ["wan2.2_t2v_low_noise_14B_fp8_scaled.safetensors"]
+    recommended_strength: 0.7
+    description: "Adult POV handjob for Wan 2.2 T2V low noise"
+    category: "nsfw"
+
+  - filename: "Wan2.2 - T2V - Facial - LOW 14B.safetensors"
+    tags: ["nsfw", "adult", "wan2.2", "t2v", "low-noise", "facial"]
+    compatible_with: ["wan2.2_t2v_low_noise_14B_fp8_scaled.safetensors"]
+    recommended_strength: 0.7
+    description: "Adult facial content for Wan 2.2 T2V low noise"
+    category: "nsfw"
+
+  - filename: "Wan2.2 v2 - T2V - Body Shots - LOW 14B.safetensors"
+    tags: ["nsfw", "adult", "wan2.2", "t2v", "low-noise", "bodyshot"]
+    compatible_with: ["wan2.2_t2v_low_noise_14B_fp8_scaled.safetensors"]
+    recommended_strength: 0.7
+    description: "Adult body shots for Wan 2.2 T2V low noise"
+    category: "nsfw"
+
+  - filename: "wan22-f4c3spl4sh-100epoc-high-k3nk.safetensors"
+    tags: ["nsfw", "adult", "wan2.2", "high-noise", "facial"]
+    compatible_with: ["wan2.2_t2v_high_noise_14B_fp8_scaled.safetensors"]
+    recommended_strength: 0.7
+    description: "Adult facial splash for Wan 2.2 high noise"
+    category: "nsfw"
+
+  - filename: "wan22-f4c3spl4sh-154epoc-low-k3nk.safetensors"
+    tags: ["nsfw", "adult", "wan2.2", "low-noise", "facial"]
+    compatible_with: ["wan2.2_t2v_low_noise_14B_fp8_scaled.safetensors"]
+    recommended_strength: 0.7
+    description: "Adult facial splash for Wan 2.2 low noise"
+    category: "nsfw"
+
+  - filename: "wan22-ultimatedeepthroat-I2V-101epoc-low-k3nk.safetensors"
+    tags: ["nsfw", "adult", "wan2.2", "i2v", "low-noise", "deepthroat"]
+    compatible_with: ["wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors"]
+    recommended_strength: 0.7
+    description: "Adult deepthroat for Wan 2.2 I2V low noise"
+    category: "nsfw"
+
+  - filename: "wan_cumshot.safetensors"
+    tags: ["nsfw", "adult", "wan2.2", "cumshot"]
+    compatible_with: ["wan2.2_t2v_high_noise_14B_fp8_scaled.safetensors", "wan2.2_t2v_low_noise_14B_fp8_scaled.safetensors"]
+    recommended_strength: 0.7
+    description: "Adult cumshot for Wan 2.2"
+    category: "nsfw"
+
+  - filename: "WAN_dr34mj0b.safetensors"
+    tags: ["nsfw", "adult", "wan2.2", "blowjob"]
+    compatible_with: ["wan2.2_t2v_high_noise_14B_fp8_scaled.safetensors", "wan2.2_t2v_low_noise_14B_fp8_scaled.safetensors"]
+    recommended_strength: 0.7
+    description: "Adult dreamjob for Wan 2.2"
+    category: "nsfw"
+
+  - filename: "wan2.2-rapid-mega-aio-v1.safetensors"
+    tags: ["nsfw", "adult", "wan2.2", "multi-purpose"]
+    compatible_with: ["wan2.2_t2v_high_noise_14B_fp8_scaled.safetensors", "wan2.2_t2v_low_noise_14B_fp8_scaled.safetensors"]
+    recommended_strength: 0.7
+    description: "All-in-one adult LoRA for Wan 2.2"
+    category: "nsfw"
+
+  - filename: "doggyPOV_v1_1.safetensors"
+    tags: ["nsfw", "adult", "wan2.2", "pov", "doggy"]
+    compatible_with: ["wan2.2_t2v_high_noise_14B_fp8_scaled.safetensors", "wan2.2_t2v_low_noise_14B_fp8_scaled.safetensors"]
+    recommended_strength: 0.7
+    description: "Adult doggy POV for Wan 2.2"
+    category: "nsfw"
+
+  - filename: "BetterTitfuck_v4_July2025.safetensors"
+    tags: ["nsfw", "adult", "wan2.2", "titfuck"]
+    compatible_with: ["wan2.2_t2v_high_noise_14B_fp8_scaled.safetensors", "wan2.2_t2v_low_noise_14B_fp8_scaled.safetensors"]
+    recommended_strength: 0.7
+    description: "Adult titfuck for Wan 2.2"
+    category: "nsfw"
+
+  # --- Flux/SD Adult Content LoRAs ---
+  - filename: "big_breasts_v2_epoch_30.safetensors"
+    tags: ["nsfw", "adult", "body", "enhancement"]
+    compatible_with: ["flux1-dev-fp8.safetensors", "v1-5-pruned-emaonly-fp16.safetensors"]
+    recommended_strength: 0.7
+    description: "Body enhancement LoRA"
+    category: "nsfw"
+
+  - filename: "deepthroat_epoch_80.safetensors"
+    tags: ["nsfw", "adult", "deepthroat"]
+    compatible_with: ["flux1-dev-fp8.safetensors", "v1-5-pruned-emaonly-fp16.safetensors"]
+    recommended_strength: 0.7
+    description: "Adult deepthroat for Flux/SD"
+    category: "nsfw"
+
+  - filename: "dicks_epoch_100.safetensors"
+    tags: ["nsfw", "adult", "anatomy"]
+    compatible_with: ["flux1-dev-fp8.safetensors", "v1-5-pruned-emaonly-fp16.safetensors"]
+    recommended_strength: 0.7
+    description: "Adult anatomy LoRA"
+    category: "nsfw"
+
+  - filename: "erect_penis_epoch_80.safetensors"
+    tags: ["nsfw", "adult", "anatomy"]
+    compatible_with: ["flux1-dev-fp8.safetensors", "v1-5-pruned-emaonly-fp16.safetensors"]
+    recommended_strength: 0.7
+    description: "Adult anatomy LoRA (erect)"
+    category: "nsfw"
+
+  - filename: "flaccid_penis_epoch_100.safetensors"
+    tags: ["nsfw", "adult", "anatomy"]
+    compatible_with: ["flux1-dev-fp8.safetensors", "v1-5-pruned-emaonly-fp16.safetensors"]
+    recommended_strength: 0.7
+    description: "Adult anatomy LoRA (flaccid)"
+    category: "nsfw"
+
 # ========================================
 # MODEL SUGGESTIONS - Predefined scenarios
 # ========================================
