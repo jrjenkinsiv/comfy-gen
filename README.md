@@ -12,6 +12,8 @@ Generate images and videos via text prompts without using the ComfyUI GUI. This 
 
 ## Quick Start
 
+### CLI Usage
+
 ```bash
 # Generate an image locally (from magneto)
 python3 generate.py --workflow workflows/flux-dev.json \
@@ -21,6 +23,46 @@ python3 generate.py --workflow workflows/flux-dev.json \
 # View in browser
 open "http://192.168.1.215:9000/comfy-gen/"
 ```
+
+### MCP Server (AI Assistant Integration)
+
+Use the MCP server to enable AI assistants (like Claude) to generate images directly via tool calls:
+
+```bash
+# Install dependencies
+pip install -r requirements.txt
+
+# Run MCP server
+python3 mcp_server.py
+```
+
+Configure in VS Code (`settings.json` or workspace settings):
+
+```json
+{
+  "mcpServers": {
+    "comfy-gen": {
+      "command": "python3",
+      "args": ["/absolute/path/to/comfy-gen/mcp_server.py"],
+      "env": {
+        "COMFYUI_HOST": "http://192.168.1.215:8188",
+        "MINIO_ENDPOINT": "192.168.1.215:9000"
+      }
+    }
+  }
+}
+```
+
+#### Available MCP Tools
+
+- `generate_image` - Generate image with customizable parameters
+- `generate_video` - Generate video with Wan 2.2 (coming soon)
+- `list_models` - List available checkpoint models
+- `list_loras` - List available LoRA files
+- `get_progress` - Check generation progress
+- `cancel_generation` - Cancel current job
+- `list_images` - List generated images in MinIO
+- `get_image_url` - Get URL for specific image
 
 ## Architecture
 
