@@ -179,6 +179,60 @@ model_suggestions:
     default_loras: []  # SD 1.5 doesn't need LoRAs by default
     keywords: ["image", "photo", "picture", "portrait", "landscape", "drawing"]
 
+  # ========================================
+  # GAME ASSET GENERATION SCENARIOS
+  # ========================================
+  # Presets for generating game icons, sprites, and UI elements
+  
+  # Ship icons for battleship game
+  battleship_ship_icon:
+    model: "v1-5-pruned-emaonly-fp16.safetensors"
+    workflow: "workflows/flux-dev.json"
+    default_loras: []
+    keywords: ["ship icon", "naval icon", "vessel icon", "battleship icon"]
+    prompt_template: "(single {subject}:1.8), top-down view, military vessel, clean icon style, game asset, centered composition, {style}"
+    negative_template: "multiple ships, side view, realistic photo, blurry, complex background, text, watermark"
+    style_suggestions:
+      - "flat design, vector style, solid colors"
+      - "pixel art, 16-bit style, retro game"
+      - "cartoon style, bold outlines, vibrant"
+      
+  # Explosion/hit effects
+  battleship_explosion:
+    model: "v1-5-pruned-emaonly-fp16.safetensors"
+    workflow: "workflows/flux-dev.json"
+    default_loras: []
+    keywords: ["explosion icon", "hit effect", "blast effect"]
+    prompt_template: "(single explosion:1.8), game effect sprite, clean edges, {style}"
+    negative_template: "realistic photo, multiple explosions, complex scene"
+    style_suggestions:
+      - "cartoon explosion, orange and red, comic book style"
+      - "pixel art explosion, 8-bit, retro"
+      
+  # Water/ocean tiles
+  battleship_water:
+    model: "v1-5-pruned-emaonly-fp16.safetensors"
+    workflow: "workflows/flux-dev.json"
+    default_loras: []
+    keywords: ["water tile", "ocean tile", "sea texture"]
+    prompt_template: "tileable ocean water texture, {style}, seamless pattern"
+    negative_template: "objects, ships, land, text"
+    style_suggestions:
+      - "stylized waves, blue gradient, game tile"
+      - "cartoon water, cel-shaded, bright blue"
+      
+  # UI elements
+  game_ui_button:
+    model: "v1-5-pruned-emaonly-fp16.safetensors"
+    workflow: "workflows/flux-dev.json"
+    default_loras: []
+    keywords: ["game button", "ui button", "interface element"]
+    prompt_template: "(single button:1.8), game UI element, {style}, clean design"
+    negative_template: "text, multiple buttons, complex background"
+    style_suggestions:
+      - "nautical theme, brass and wood, pirate style"
+      - "modern flat design, rounded corners, gradient"
+
 # ========================================
 # KEYWORD MAPPINGS - Intelligent LoRA selection
 # ========================================
