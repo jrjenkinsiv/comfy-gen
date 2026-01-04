@@ -8,6 +8,7 @@ Usage:
 import argparse
 import json
 import os
+import random
 import re
 import signal
 import sys
@@ -882,6 +883,119 @@ def modify_denoise(workflow, denoise_value):
                 print(f"Updated denoise strength in node {node_id}: {denoise_value}")
     return workflow
 
+def modify_sampler_params(workflow, steps=None, cfg=None, seed=None, sampler_name=None, scheduler=None):
+    """Modify KSampler parameters in workflow.
+    
+    Args:
+        workflow: The workflow dictionary
+        steps: Number of sampling steps (optional)
+        cfg: Classifier-free guidance scale (optional)
+        seed: Random seed (optional)
+        sampler_name: Sampler algorithm (optional)
+        scheduler: Noise scheduler (optional)
+    
+    Returns:
+        dict: Modified workflow
+    """
+    for node_id, node in workflow.items():
+        if node.get("class_type") == "KSampler":
+            if "inputs" in node:
+                if steps is not None:
+                    node["inputs"]["steps"] = steps
+                    print(f"[OK] Updated steps in node {node_id}: {steps}")
+                if cfg is not None:
+                    node["inputs"]["cfg"] = cfg
+                    print(f"[OK] Updated CFG in node {node_id}: {cfg}")
+                if seed is not None:
+                    node["inputs"]["seed"] = seed
+                    print(f"[OK] Updated seed in node {node_id}: {seed}")
+                if sampler_name is not None:
+                    node["inputs"]["sampler_name"] = sampler_name
+                    print(f"[OK] Updated sampler in node {node_id}: {sampler_name}")
+                if scheduler is not None:
+                    node["inputs"]["scheduler"] = scheduler
+                    print(f"[OK] Updated scheduler in node {node_id}: {scheduler}")
+    return workflow
+
+def modify_dimensions(workflow, width=None, height=None):
+    """Modify output dimensions in EmptyLatentImage node.
+    
+    Args:
+        workflow: The workflow dictionary
+        width: Output width in pixels (optional)
+        height: Output height in pixels (optional)
+    
+    Returns:
+        dict: Modified workflow
+    """
+    for node_id, node in workflow.items():
+        if node.get("class_type") == "EmptyLatentImage":
+            if "inputs" in node:
+                if width is not None:
+                    node["inputs"]["width"] = width
+                    print(f"[OK] Updated width in node {node_id}: {width}")
+                if height is not None:
+                    node["inputs"]["height"] = height
+                    print(f"[OK] Updated height in node {node_id}: {height}")
+    return workflow
+
+def validate_generation_params(steps=None, cfg=None, denoise=None, width=None, height=None):
+    """Validate generation parameters are within acceptable ranges.
+    
+    Args:
+        steps: Number of sampling steps
+        cfg: Classifier-free guidance scale
+        denoise: Denoising strength
+        width: Output width
+        height: Output height
+    
+    Returns:
+        tuple: (is_valid, error_message) where error_message is None if valid
+    """
+    if steps is not None:
+        if not isinstance(steps, int) or steps < 1 or steps > 150:
+            return False, f"Steps must be an integer between 1 and 150, got: {steps}"
+    
+    if cfg is not None:
+        if not isinstance(cfg, (int, float)) or cfg < 1.0 or cfg > 20.0:
+            return False, f"CFG must be a number between 1.0 and 20.0, got: {cfg}"
+    
+    if denoise is not None:
+        if not isinstance(denoise, (int, float)) or denoise < 0.0 or denoise > 1.0:
+            return False, f"Denoise must be a number between 0.0 and 1.0, got: {denoise}"
+    
+    if width is not None:
+        if not isinstance(width, int) or width < 64 or width > 2048:
+            return False, f"Width must be an integer between 64 and 2048, got: {width}"
+        if width % 8 != 0:
+            return False, f"Width must be divisible by 8, got: {width}"
+    
+    if height is not None:
+        if not isinstance(height, int) or height < 64 or height > 2048:
+            return False, f"Height must be an integer between 64 and 2048, got: {height}"
+        if height % 8 != 0:
+            return False, f"Height must be divisible by 8, got: {height}"
+    
+    return True, None
+
+def load_presets():
+    """Load generation presets from presets.yaml.
+    
+    Returns:
+        dict: Presets dictionary or empty dict on failure
+    """
+    presets_path = Path(__file__).parent / "presets.yaml"
+    if not presets_path.exists():
+        return {}
+    
+    try:
+        with open(presets_path, 'r', encoding='utf-8') as f:
+            data = yaml.safe_load(f)
+        return data.get("presets", {}) if data else {}
+    except Exception as e:
+        print(f"[ERROR] Failed to load presets.yaml: {e}")
+        return {}
+
 def queue_workflow(workflow, retry=True):
     """Send workflow to ComfyUI server with retry logic.
     
@@ -1258,6 +1372,17 @@ def main():
     parser.add_argument("--positive-threshold", type=float, default=0.25, help="Minimum CLIP score for positive prompt (default: 0.25)")
     parser.add_argument("--quiet", action="store_true", help="Suppress progress output")
     parser.add_argument("--json-progress", action="store_true", help="Output machine-readable JSON progress")
+    
+    # Advanced generation parameters
+    parser.add_argument("--steps", type=int, help="Number of sampling steps (1-150, default: 20)")
+    parser.add_argument("--cfg", type=float, help="Classifier-free guidance scale (1.0-20.0, default: 7.0)")
+    parser.add_argument("--seed", type=int, help="Random seed for reproducibility (-1 for random, default: random)")
+    parser.add_argument("--width", type=int, help="Output width in pixels (must be divisible by 8)")
+    parser.add_argument("--height", type=int, help="Output height in pixels (must be divisible by 8)")
+    parser.add_argument("--sampler", help="Sampler algorithm (e.g., euler, dpmpp_2m, dpmpp_2m_sde)")
+    parser.add_argument("--scheduler", help="Noise scheduler (e.g., normal, karras, exponential)")
+    parser.add_argument("--preset", help="Use a generation preset (draft, balanced, high-quality)")
+    
     args = parser.parse_args()
     
     # Handle list-loras mode
@@ -1498,6 +1623,60 @@ def main():
         available_models = get_available_models()
         available_loras = available_models.get("loras", []) if available_models else []
         workflow = inject_lora_chain(workflow, lora_specs, available_loras)
+    
+    # Handle generation preset
+    preset_params = {}
+    if args.preset:
+        presets = load_presets()
+        if args.preset in presets:
+            preset_params = presets[args.preset]
+            print(f"[OK] Loaded preset '{args.preset}': {preset_params}")
+        else:
+            available_presets = ', '.join(presets.keys()) if presets else 'none'
+            print(f"[ERROR] Preset not found: {args.preset}")
+            print(f"[ERROR] Available presets: {available_presets}")
+            sys.exit(EXIT_CONFIG_ERROR)
+    
+    # Merge preset with CLI args (CLI args override preset)
+    steps = args.steps if args.steps is not None else preset_params.get('steps')
+    cfg = args.cfg if args.cfg is not None else preset_params.get('cfg')
+    seed = args.seed if args.seed is not None else preset_params.get('seed')
+    width = args.width if args.width is not None else preset_params.get('width')
+    height = args.height if args.height is not None else preset_params.get('height')
+    sampler = args.sampler if args.sampler is not None else preset_params.get('sampler')
+    scheduler = args.scheduler if args.scheduler is not None else preset_params.get('scheduler')
+    
+    # Handle seed=-1 for random seed generation
+    if seed == -1:
+        seed = random.randint(0, 2**32 - 1)
+        print(f"[OK] Generated random seed: {seed}")
+    
+    # Validate parameters
+    is_valid, error_msg = validate_generation_params(
+        steps=steps,
+        cfg=cfg,
+        denoise=args.denoise,
+        width=width,
+        height=height
+    )
+    if not is_valid:
+        print(f"[ERROR] Parameter validation failed: {error_msg}")
+        sys.exit(EXIT_CONFIG_ERROR)
+    
+    # Apply sampler parameters to workflow
+    if any(p is not None for p in [steps, cfg, seed, sampler, scheduler]):
+        workflow = modify_sampler_params(
+            workflow,
+            steps=steps,
+            cfg=cfg,
+            seed=seed,
+            sampler_name=sampler,
+            scheduler=scheduler
+        )
+    
+    # Apply dimension parameters to workflow
+    if width is not None or height is not None:
+        workflow = modify_dimensions(workflow, width=width, height=height)
 
     # Validation and retry loop
     attempt = 0
