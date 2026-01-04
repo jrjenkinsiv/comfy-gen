@@ -301,7 +301,7 @@ def main():
                     sys.exit(1)
                 image_to_process = args.input_image
             
-                # Preprocess image if resize/crop specified
+            # Preprocess image if resize/crop specified
             if args.resize or args.crop:
                 # If using original file, create a temp copy for processing
                 if image_to_process == args.input_image:
