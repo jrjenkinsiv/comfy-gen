@@ -12,6 +12,7 @@ Complete guide for using ComfyGen via CLI and MCP server for AI-driven image and
   - [Parameters](#parameters)
   - [Presets](#presets)
   - [Validation](#validation)
+  - [Quality-Based Refinement](#quality-based-refinement)
 - [MCP Server](#mcp-server)
   - [Setup](#mcp-setup)
   - [Available Tools](#available-tools)
@@ -230,6 +231,118 @@ python3 generate.py \
 - **0.20-0.25**: Marginal match
 - **0.25-0.35**: Acceptable (default threshold)
 - **> 0.35**: Good semantic match
+
+### Quality-Based Refinement
+
+ComfyGen includes iterative refinement that automatically retries generation with adjusted parameters until a quality threshold is met. This mimics how DALL-E/ChatGPT achieves consistent quality.
+
+**Basic Usage:**
+
+```bash
+# Progressive refinement (increase steps/cfg on retry)
+python3 generate.py \
+    --workflow workflows/flux-dev.json \
+    --prompt "a sunset over mountains" \
+    --quality-threshold 7.5 \
+    --max-attempts 3 \
+    --retry-strategy progressive \
+    --output /tmp/sunset.png
+```
+
+**Retry Strategies:**
+
+| Strategy | Description | When to Use |
+|----------|-------------|-------------|
+| `progressive` | Increases steps and CFG on each retry | Default - general quality improvement |
+| `seed_search` | Tries different seeds with same params | When variation needed |
+| `prompt_enhance` | Adds quality tags to prompt | When prompt adherence is low |
+
+**Progressive Strategy Example:**
+```
+Attempt 1: steps=30, cfg=7.0
+Attempt 2: steps=50, cfg=7.5
+Attempt 3: steps=80, cfg=8.0
+```
+
+**Seed Search Example:**
+```
+Attempt 1: seed=42, steps=50
+Attempt 2: seed=1337, steps=50
+Attempt 3: seed=9999, steps=50
+```
+
+**Prompt Enhancement Example:**
+```
+Attempt 1: "a landscape"
+Attempt 2: "a landscape, highly detailed, sharp focus"
+Attempt 3: "a landscape, masterpiece, best quality, 8K, ultra detailed, sharp focus"
+```
+
+**Quality Scoring:**
+
+Images are scored on a 0-10 scale across multiple dimensions:
+
+| Dimension | Weight | What It Measures |
+|-----------|--------|------------------|
+| Prompt Adherence | 25% | Semantic match to prompt (CLIP) |
+| Technical Quality | 30% | Artifacts, noise, blur |
+| Aesthetic Quality | 25% | Visual appeal, composition |
+| Detail Quality | 20% | Fine details, sharpness |
+
+**Composite Score Grades:**
+- **A (8.0-10.0)**: Production ready
+- **B (6.5-7.9)**: Good quality
+- **C (5.0-6.4)**: Acceptable
+- **D (3.0-4.9)**: Poor quality
+- **F (0.0-2.9)**: Failed
+
+**Refinement Options:**
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--quality-threshold` | Float | 7.0 | Minimum quality score (0-10) |
+| `--max-attempts` | Integer | 3 | Maximum generation attempts |
+| `--retry-strategy` | Choice | progressive | Retry strategy to use |
+
+**Advanced Example:**
+
+```bash
+# High quality with seed search
+python3 generate.py \
+    --workflow workflows/flux-dev.json \
+    --prompt "detailed portrait of a warrior" \
+    --negative-prompt "blurry, low quality" \
+    --quality-threshold 8.0 \
+    --max-attempts 5 \
+    --retry-strategy seed_search \
+    --steps 50 \
+    --cfg 7.5 \
+    --output /tmp/warrior.png
+```
+
+**Metadata Tracking:**
+
+Refinement history is automatically saved in JSON metadata:
+
+```json
+{
+  "quality": {
+    "composite_score": 7.8,
+    "grade": "B",
+    "prompt_adherence": 8.2,
+    "technical": 7.5,
+    "aesthetic": 7.9,
+    "detail": 7.6
+  },
+  "refinement": {
+    "attempt": 2,
+    "max_attempts": 3,
+    "strategy": "progressive",
+    "previous_scores": [5.2, 7.8],
+    "final_status": "success"
+  }
+}
+```
 
 ---
 
