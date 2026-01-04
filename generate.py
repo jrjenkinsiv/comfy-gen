@@ -30,6 +30,173 @@ MINIO_ACCESS_KEY = "minioadmin"
 MINIO_SECRET_KEY = "minioadmin"
 BUCKET_NAME = "comfy-gen"
 
+# Exit codes
+EXIT_SUCCESS = 0
+EXIT_FAILURE = 1
+EXIT_CONFIG_ERROR = 2
+
+# Retry configuration
+MAX_RETRIES = 3
+RETRY_DELAY = 2  # seconds
+RETRY_BACKOFF = 2  # exponential backoff multiplier
+
+def check_server_availability():
+    """Check if ComfyUI server is available.
+    
+    Returns:
+        bool: True if server is reachable, False otherwise
+    """
+    try:
+        response = requests.get(f"{COMFYUI_HOST}/system_stats", timeout=5)
+        if response.status_code == 200:
+            print("[OK] ComfyUI server is available")
+            return True
+        else:
+            print(f"[ERROR] ComfyUI server returned status {response.status_code}")
+            return False
+    except requests.ConnectionError:
+        print(f"[ERROR] Cannot connect to ComfyUI server at {COMFYUI_HOST}")
+        print(f"[ERROR] Make sure ComfyUI is running on moira (192.168.1.215:8188)")
+        return False
+    except requests.Timeout:
+        print(f"[ERROR] Connection to ComfyUI server timed out")
+        return False
+    except Exception as e:
+        print(f"[ERROR] Failed to check server availability: {e}")
+        return False
+
+def get_available_models():
+    """Query available models from ComfyUI API.
+    
+    Returns:
+        dict: Dictionary of available models by type, or None on failure
+    """
+    try:
+        response = requests.get(f"{COMFYUI_HOST}/object_info", timeout=10)
+        if response.status_code == 200:
+            object_info = response.json()
+            
+            # Extract model information
+            models = {}
+            
+            # Get checkpoints (CheckpointLoaderSimple)
+            if "CheckpointLoaderSimple" in object_info:
+                checkpoint_info = object_info["CheckpointLoaderSimple"]
+                if "input" in checkpoint_info and "required" in checkpoint_info["input"]:
+                    if "ckpt_name" in checkpoint_info["input"]["required"]:
+                        models["checkpoints"] = checkpoint_info["input"]["required"]["ckpt_name"][0]
+            
+            # Get LoRAs (LoraLoader)
+            if "LoraLoader" in object_info:
+                lora_info = object_info["LoraLoader"]
+                if "input" in lora_info and "required" in lora_info["input"]:
+                    if "lora_name" in lora_info["input"]["required"]:
+                        models["loras"] = lora_info["input"]["required"]["lora_name"][0]
+            
+            # Get VAE models (VAELoader)
+            if "VAELoader" in object_info:
+                vae_info = object_info["VAELoader"]
+                if "input" in vae_info and "required" in vae_info["input"]:
+                    if "vae_name" in vae_info["input"]["required"]:
+                        models["vae"] = vae_info["input"]["required"]["vae_name"][0]
+            
+            print(f"[OK] Retrieved available models from server")
+            return models
+        else:
+            print(f"[ERROR] Failed to get model list: HTTP {response.status_code}")
+            return None
+    except Exception as e:
+        print(f"[ERROR] Failed to query available models: {e}")
+        return None
+
+def find_model_fallbacks(requested_model, available_models, model_type="checkpoints"):
+    """Suggest fallback models when requested model is not found.
+    
+    Args:
+        requested_model: The model that was requested
+        available_models: Dictionary of available models from get_available_models()
+        model_type: Type of model (checkpoints, loras, vae)
+    
+    Returns:
+        list: List of suggested fallback models
+    """
+    if not available_models or model_type not in available_models:
+        return []
+    
+    models = available_models[model_type]
+    if not models:
+        return []
+    
+    # Simple string matching - suggest models with similar names
+    requested_lower = requested_model.lower()
+    suggestions = []
+    
+    # Extract key terms from requested model
+    requested_base = requested_lower.replace('.safetensors', '').replace('.ckpt', '').replace('.pt', '')
+    
+    for model in models:
+        model_base = model.lower().replace('.safetensors', '').replace('.ckpt', '').replace('.pt', '')
+        
+        # Check for substring matches
+        if requested_base in model_base or model_base in requested_base:
+            suggestions.append(model)
+        # Check for common prefixes (e.g., "sd15" matches "sd15-v1-5")
+        elif any(term in model_base for term in requested_base.split('-')):
+            suggestions.append(model)
+    
+    return suggestions[:5]  # Return top 5 suggestions
+
+def validate_workflow_models(workflow, available_models):
+    """Validate that all models referenced in workflow exist.
+    
+    Args:
+        workflow: The workflow dictionary
+        available_models: Dictionary of available models from get_available_models()
+    
+    Returns:
+        tuple: (is_valid, missing_models, suggestions)
+    """
+    if not available_models:
+        print("[WARN] Cannot validate models - model list unavailable")
+        return True, [], {}
+    
+    missing_models = []
+    suggestions = {}
+    
+    for node_id, node in workflow.items():
+        class_type = node.get("class_type", "")
+        inputs = node.get("inputs", {})
+        
+        # Check checkpoint models
+        if class_type == "CheckpointLoaderSimple" and "ckpt_name" in inputs:
+            ckpt = inputs["ckpt_name"]
+            if "checkpoints" in available_models and ckpt not in available_models["checkpoints"]:
+                missing_models.append(("checkpoint", ckpt))
+                fallbacks = find_model_fallbacks(ckpt, available_models, "checkpoints")
+                if fallbacks:
+                    suggestions[ckpt] = fallbacks
+        
+        # Check LoRA models
+        elif class_type == "LoraLoader" and "lora_name" in inputs:
+            lora = inputs["lora_name"]
+            if "loras" in available_models and lora not in available_models["loras"]:
+                missing_models.append(("lora", lora))
+                fallbacks = find_model_fallbacks(lora, available_models, "loras")
+                if fallbacks:
+                    suggestions[lora] = fallbacks
+        
+        # Check VAE models
+        elif class_type == "VAELoader" and "vae_name" in inputs:
+            vae = inputs["vae_name"]
+            if "vae" in available_models and vae not in available_models["vae"]:
+                missing_models.append(("vae", vae))
+                fallbacks = find_model_fallbacks(vae, available_models, "vae")
+                if fallbacks:
+                    suggestions[vae] = fallbacks
+    
+    is_valid = len(missing_models) == 0
+    return is_valid, missing_models, suggestions
+
 def load_workflow(workflow_path):
     """Load workflow JSON."""
     with open(workflow_path, 'r') as f:
@@ -200,18 +367,69 @@ def modify_denoise(workflow, denoise_value):
                 print(f"Updated denoise strength in node {node_id}: {denoise_value}")
     return workflow
 
-def queue_workflow(workflow):
-    """Send workflow to ComfyUI server."""
+def queue_workflow(workflow, retry=True):
+    """Send workflow to ComfyUI server with retry logic.
+    
+    Args:
+        workflow: The workflow dictionary
+        retry: Whether to retry on transient failures
+    
+    Returns:
+        str: prompt_id on success, None on failure
+    """
     url = f"{COMFYUI_HOST}/prompt"
-    response = requests.post(url, json={"prompt": workflow})
-    if response.status_code == 200:
-        result = response.json()
-        prompt_id = result["prompt_id"]
-        print(f"Queued workflow with ID: {prompt_id}")
-        return prompt_id
-    else:
-        print(f"Error queuing workflow: {response.text}")
-        return None
+    
+    max_attempts = MAX_RETRIES if retry else 1
+    delay = RETRY_DELAY
+    
+    for attempt in range(1, max_attempts + 1):
+        try:
+            response = requests.post(url, json={"prompt": workflow}, timeout=30)
+            if response.status_code == 200:
+                result = response.json()
+                prompt_id = result["prompt_id"]
+                print(f"Queued workflow with ID: {prompt_id}")
+                return prompt_id
+            else:
+                print(f"[ERROR] Failed to queue workflow: HTTP {response.status_code}")
+                print(f"[ERROR] Response: {response.text}")
+                
+                # Don't retry on client errors (4xx)
+                if 400 <= response.status_code < 500:
+                    return None
+                
+                # Retry on server errors (5xx)
+                if attempt < max_attempts:
+                    print(f"[INFO] Retrying in {delay} seconds... (attempt {attempt}/{max_attempts})")
+                    time.sleep(delay)
+                    delay *= RETRY_BACKOFF
+                    continue
+                
+                return None
+                
+        except requests.ConnectionError as e:
+            print(f"[ERROR] Connection error: {e}")
+            if attempt < max_attempts:
+                print(f"[INFO] Retrying in {delay} seconds... (attempt {attempt}/{max_attempts})")
+                time.sleep(delay)
+                delay *= RETRY_BACKOFF
+                continue
+            return None
+            
+        except requests.Timeout as e:
+            print(f"[ERROR] Request timed out: {e}")
+            if attempt < max_attempts:
+                print(f"[INFO] Retrying in {delay} seconds... (attempt {attempt}/{max_attempts})")
+                time.sleep(delay)
+                delay *= RETRY_BACKOFF
+                continue
+            return None
+            
+        except Exception as e:
+            print(f"[ERROR] Unexpected error queuing workflow: {e}")
+            return None
+    
+    return None
 
 def wait_for_completion(prompt_id):
     """Wait for workflow to complete."""
@@ -479,6 +697,7 @@ def main():
     parser.add_argument("--crop", choices=['center', 'cover', 'contain'], help="Crop mode for resize")
     parser.add_argument("--denoise", type=float, help="Denoise strength (0.0-1.0) for img2img")
     parser.add_argument("--cancel", metavar="PROMPT_ID", help="Cancel a specific prompt by ID")
+    parser.add_argument("--dry-run", action="store_true", help="Validate workflow without generating")
     parser.add_argument("--validate", action="store_true", help="Run validation after generation")
     parser.add_argument("--auto-retry", action="store_true", help="Automatically retry if validation fails")
     parser.add_argument("--retry-limit", type=int, default=3, help="Maximum retry attempts (default: 3)")
@@ -488,19 +707,66 @@ def main():
     # Handle cancel mode
     if args.cancel:
         if cancel_prompt(args.cancel):
-            sys.exit(0)
+            sys.exit(EXIT_SUCCESS)
         else:
-            sys.exit(1)
+            sys.exit(EXIT_FAILURE)
     
     # Validate required args for generation mode
-    if not args.workflow or not args.prompt:
-        parser.error("--workflow and --prompt are required (unless using --cancel)")
+    if not args.workflow:
+        parser.error("--workflow is required (unless using --cancel)")
+    
+    if not args.dry_run and not args.prompt:
+        parser.error("--prompt is required (unless using --dry-run or --cancel)")
+    
+    # Check server availability first
+    if not check_server_availability():
+        print("[ERROR] ComfyUI server is not available")
+        sys.exit(EXIT_CONFIG_ERROR)
+    
+    # Load workflow
+    try:
+        workflow = load_workflow(args.workflow)
+    except FileNotFoundError:
+        print(f"[ERROR] Workflow file not found: {args.workflow}")
+        sys.exit(EXIT_CONFIG_ERROR)
+    except json.JSONDecodeError as e:
+        print(f"[ERROR] Invalid JSON in workflow file: {e}")
+        sys.exit(EXIT_CONFIG_ERROR)
+    except Exception as e:
+        print(f"[ERROR] Failed to load workflow: {e}")
+        sys.exit(EXIT_CONFIG_ERROR)
+    
+    # Get available models and validate workflow
+    available_models = get_available_models()
+    if available_models:
+        is_valid, missing_models, suggestions = validate_workflow_models(workflow, available_models)
+        
+        if not is_valid:
+            print("[ERROR] Workflow validation failed - missing models:")
+            for model_type, model_name in missing_models:
+                print(f"  - {model_type}: {model_name}")
+                if model_name in suggestions:
+                    print(f"    Suggested fallbacks:")
+                    for suggestion in suggestions[model_name]:
+                        print(f"      * {suggestion}")
+            sys.exit(EXIT_CONFIG_ERROR)
+        else:
+            print("[OK] Workflow validation passed - all models available")
+    
+    # Handle dry-run mode
+    if args.dry_run:
+        print("[OK] Dry-run mode - workflow is valid")
+        print(f"[OK] Workflow: {args.workflow}")
+        if args.prompt:
+            print(f"[OK] Prompt: {args.prompt}")
+        print("[OK] Validation complete - no generation performed")
+        sys.exit(EXIT_SUCCESS)
     
     # Set up Ctrl+C handler
     signal.signal(signal.SIGINT, signal_handler)
     current_output_path = args.output
 
-    workflow = load_workflow(args.workflow)
+    # Modify workflow with prompts
     workflow = modify_prompt(workflow, args.prompt, args.negative_prompt)
     
     # Handle input image if provided
@@ -516,13 +782,13 @@ def main():
                 temp_file.close()
                 if not download_image(args.input_image, temp_file.name):
                     print("[ERROR] Failed to download input image")
-                    sys.exit(1)
+                    sys.exit(EXIT_FAILURE)
                 image_path = temp_file.name
             else:
                 # Use local file
                 if not os.path.exists(args.input_image):
                     print(f"[ERROR] Input image not found: {args.input_image}")
-                    sys.exit(1)
+                    sys.exit(EXIT_CONFIG_ERROR)
                 # Copy to temp file for preprocessing
                 temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=Path(args.input_image).suffix)
                 temp_file.close()
@@ -542,7 +808,7 @@ def main():
                     resize = (int(w), int(h))
                 except (ValueError, IndexError):
                     print(f"[ERROR] Invalid resize format: {args.resize}. Use WxH (e.g., 512x512)")
-                    sys.exit(1)
+                    sys.exit(EXIT_CONFIG_ERROR)
             
             image_path = preprocess_image(image_path, resize=resize, crop=args.crop)
             
@@ -550,7 +816,7 @@ def main():
             uploaded_filename = upload_image_to_comfyui(image_path)
             if not uploaded_filename:
                 print("[ERROR] Failed to upload input image to ComfyUI")
-                sys.exit(1)
+                sys.exit(EXIT_FAILURE)
             
             # Modify workflow to use uploaded image
             workflow = modify_input_image(workflow, uploaded_filename)
@@ -592,7 +858,7 @@ def main():
         if not success:
             print(f"[ERROR] Generation failed on attempt {attempt}")
             if attempt >= max_attempts:
-                sys.exit(1)
+                sys.exit(EXIT_FAILURE)
             continue
         
         # Run validation if requested
