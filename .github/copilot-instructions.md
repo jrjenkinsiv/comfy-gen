@@ -173,14 +173,13 @@ See `docs/AGENT_GUIDE.md` for:
 The `mcp_github_issue_write` tool with `assignees: []` is **ignored** - it does NOT clear assignees.
 The `mcp_github_assign_copilot_to_issue` tool **adds** Copilot to existing assignees (doesn't replace).
 
-To properly reset an issue for Copilot:
+To properly reset an issue for Copilot (correct order: REMOVE first, then ADD):
 ```bash
-# Remove specific user, leaving only Copilot
-gh issue edit <N> --repo <owner>/<repo> --remove-assignee <username>
+# Step 1: Remove ALL assignees including Copilot
+gh issue edit <N> --repo <owner>/<repo> --remove-assignee Copilot,<other_users>
 
-# If Copilot not yet assigned, remove all users then assign:
-gh issue edit <N> --repo <owner>/<repo> --remove-assignee <user1>,<user2>
-# Then use mcp_github_assign_copilot_to_issue
+# Step 2: Assign Copilot fresh (triggers new work from current main)
+# Use mcp_github_assign_copilot_to_issue tool
 ```
 - **ComfyUI not responding:** SSH to moira, check `tasklist | findstr python`, restart with `start_comfyui.py`.
 - **Model not found:** Verify model exists in `C:\Users\jrjen\comfy\models\` and workflow references correct filename.
