@@ -77,6 +77,11 @@ magneto (git push) --> GitHub --> ant-man (runner) --> moira (ComfyUI)
 | `parallel-ok` | Isolated changes (e.g., new workflows, scripts, docs) | **BATCH OK.** Can assign 3-5 simultaneously. |
 | `human-required` | Requires GPU access, ComfyUI runtime, model downloads | **DO NOT ASSIGN.** Report to user. |
 
+**Rate Limiting Prevention:**
+- Assign maximum **3 parallel-ok issues at once** to avoid token exhaustion
+- Wait for at least one PR to complete before assigning more
+- If rate limited, wait 1-2 hours before resuming assignments
+
 **High-conflict files:** `generate.py`, `workflows/flux-dev.json` (base workflow)
 
 ## 5. Build & Test Commands
@@ -155,6 +160,7 @@ See `docs/AGENT_GUIDE.md` for:
 - **Assignment Stuck:** Unassign and reassign `@copilot`.
 - **Dirty Merges:** If a PR has complex conflicts, close it and reassign the issue to trigger a fresh branch.
 - **Stale Branches:** If `main` changes significantly (refactor), close stale PRs and reassign.
+- **Rate Limited (PR Stopped):** Copilot hit token limits. Wait 1-2 hours, then unassign and reassign the issue. The PR branch may be salvageable - check if it has partial progress worth keeping.
 - **ComfyUI not responding:** SSH to moira, check `tasklist | findstr python`, restart with `start_comfyui.py`.
 - **Model not found:** Verify model exists in `C:\Users\jrjen\comfy\models\` and workflow references correct filename.
 - **MinIO access denied:** Bucket policy may have reset. Run `scripts/set_bucket_policy.py`.
