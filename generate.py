@@ -125,12 +125,23 @@ def upload_image_to_comfyui(image_path):
     """
     try:
         # Generate unique filename to avoid conflicts
-        ext = Path(image_path).suffix
+        ext = Path(image_path).suffix.lower()
         filename = f"input_{uuid.uuid4().hex[:8]}{ext}"
+        
+        # Determine MIME type based on extension
+        mime_types = {
+            '.png': 'image/png',
+            '.jpg': 'image/jpeg',
+            '.jpeg': 'image/jpeg',
+            '.gif': 'image/gif',
+            '.webp': 'image/webp',
+            '.bmp': 'image/bmp'
+        }
+        mime_type = mime_types.get(ext, 'image/png')
         
         url = f"{COMFYUI_HOST}/upload/image"
         with open(image_path, 'rb') as f:
-            files = {'image': (filename, f, 'image/png')}
+            files = {'image': (filename, f, mime_type)}
             data = {'overwrite': 'true'}
             response = requests.post(url, files=files, data=data, timeout=30)
         
@@ -416,9 +427,12 @@ def main():
             resize = None
             if args.resize:
                 try:
-                    w, h = args.resize.lower().split('x')
+                    parts = args.resize.lower().split('x', 1)
+                    if len(parts) != 2:
+                        raise ValueError("Invalid format")
+                    w, h = parts
                     resize = (int(w), int(h))
-                except ValueError:
+                except (ValueError, IndexError):
                     print(f"[ERROR] Invalid resize format: {args.resize}. Use WxH (e.g., 512x512)")
                     sys.exit(1)
             
@@ -438,7 +452,7 @@ def main():
             if temp_file and os.path.exists(temp_file.name):
                 try:
                     os.remove(temp_file.name)
-                except:
+                except OSError:
                     pass
     
     # Apply denoise strength if specified
