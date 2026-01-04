@@ -10,6 +10,8 @@ import json
 import requests
 import time
 import sys
+import signal
+import os
 from pathlib import Path
 from minio import Minio
 from minio.error import S3Error
@@ -137,13 +139,99 @@ def upload_to_minio(file_path, object_name):
         print(f"[ERROR] MinIO error: {e}")
         return None
 
+def interrupt_generation():
+    """Interrupt currently running generation."""
+    try:
+        url = f"{COMFYUI_HOST}/interrupt"
+        response = requests.post(url, timeout=10)
+        if response.status_code == 200:
+            print("[OK] Interrupted current generation")
+            return True
+        else:
+            print(f"[ERROR] Failed to interrupt: {response.text}")
+            return False
+    except requests.RequestException as e:
+        print(f"[ERROR] Failed to connect to ComfyUI: {e}")
+        return False
+
+def delete_from_queue(prompt_ids):
+    """Delete specific prompts from queue.
+    
+    Args:
+        prompt_ids: List of prompt IDs to delete
+    """
+    try:
+        url = f"{COMFYUI_HOST}/queue"
+        payload = {"delete": prompt_ids}
+        response = requests.post(url, json=payload, timeout=10)
+        if response.status_code == 200:
+            print(f"[OK] Deleted {len(prompt_ids)} prompt(s) from queue")
+            return True
+        else:
+            print(f"[ERROR] Failed to delete from queue: {response.text}")
+            return False
+    except requests.RequestException as e:
+        print(f"[ERROR] Failed to connect to ComfyUI: {e}")
+        return False
+
+def cancel_prompt(prompt_id):
+    """Cancel a specific prompt by ID."""
+    # First interrupt (in case it's running)
+    interrupt_generation()
+    # Then delete from queue
+    if delete_from_queue([prompt_id]):
+        print(f"[OK] Cancelled prompt {prompt_id}")
+        return True
+    return False
+
+def cleanup_partial_output(output_path):
+    """Remove partial output file if it exists."""
+    if os.path.exists(output_path):
+        try:
+            os.remove(output_path)
+            print(f"[OK] Cleaned up partial output: {output_path}")
+        except Exception as e:
+            print(f"[WARN] Failed to clean up {output_path}: {e}")
+
+# Global variable to track current prompt for signal handler
+current_prompt_id = None
+current_output_path = None
+
+def signal_handler(signum, frame):
+    """Handle Ctrl+C gracefully."""
+    print("\n[INFO] Cancellation requested...")
+    if current_prompt_id:
+        cancel_prompt(current_prompt_id)
+    if current_output_path:
+        cleanup_partial_output(current_output_path)
+    print("[INFO] Cancelled. Exiting.")
+    sys.exit(0)
+
 def main():
+    global current_prompt_id, current_output_path
+    
     parser = argparse.ArgumentParser(description="Generate images with ComfyUI")
-    parser.add_argument("--workflow", required=True, help="Path to workflow JSON")
-    parser.add_argument("--prompt", required=True, help="Positive text prompt")
+    parser.add_argument("--workflow", help="Path to workflow JSON")
+    parser.add_argument("--prompt", help="Positive text prompt")
     parser.add_argument("--negative-prompt", default="", help="Negative text prompt")
     parser.add_argument("--output", default="output.png", help="Output image path")
+    parser.add_argument("--cancel", metavar="PROMPT_ID", help="Cancel a specific prompt by ID")
     args = parser.parse_args()
+    
+    # Handle cancel mode
+    if args.cancel:
+        if cancel_prompt(args.cancel):
+            sys.exit(0)
+        else:
+            sys.exit(1)
+    
+    # Validate required args for generation mode
+    if not args.workflow or not args.prompt:
+        parser.error("--workflow and --prompt are required (unless using --cancel)")
+    
+    # Set up Ctrl+C handler
+    signal.signal(signal.SIGINT, signal_handler)
+    current_output_path = args.output
 
     workflow = load_workflow(args.workflow)
     workflow = modify_prompt(workflow, args.prompt, args.negative_prompt)
@@ -151,6 +239,9 @@ def main():
     prompt_id = queue_workflow(workflow)
     if not prompt_id:
         sys.exit(1)
+    
+    # Track prompt ID for cancellation
+    current_prompt_id = prompt_id
 
     status = wait_for_completion(prompt_id)
     if status:
