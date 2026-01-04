@@ -13,6 +13,9 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from comfygen.config import get_config
 
+# Display constants
+MAX_NEGATIVE_DISPLAY_LENGTH = 50  # Max characters to show for negative prompts
+
 
 def simulate_cli_config(prompt, negative_prompt=None, preset=None, lora_preset=None,
                         steps=None, cfg=None, sampler=None, scheduler=None):
@@ -117,7 +120,8 @@ def compare_configs(cli_config, mcp_config, test_name):
         else:
             # Shorten negative prompt for display
             if field == 'negative_prompt' and cli_val:
-                display_val = cli_val[:50] + "..." if len(cli_val) > 50 else cli_val
+                display_val = (cli_val[:MAX_NEGATIVE_DISPLAY_LENGTH] + "..." 
+                              if len(cli_val) > MAX_NEGATIVE_DISPLAY_LENGTH else cli_val)
                 print(f"{status} {field}: {display_val}")
             else:
                 print(f"{status} {field}: {cli_val}")

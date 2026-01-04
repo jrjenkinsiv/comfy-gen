@@ -50,19 +50,19 @@ def test_preset_parameters():
     # Test 3: LoRA preset resolution
     print("\n[TEST 3] LoRA preset resolution")
     
-    test_lora_presets = ['text_to_video', 'simple_image']
+    lora_presets = config.get_lora_presets()
     
-    for lora_preset_name in test_lora_presets:
-        if lora_preset_name in config.get_lora_presets():
-            loras = config.resolve_lora_preset(lora_preset_name)
-            assert isinstance(loras, list), f"LoRA preset {lora_preset_name} should resolve to list"
-            
-            if loras:
-                print(f"[OK] {lora_preset_name} resolves to {len(loras)} LoRA(s)")
-                for filename, strength in loras[:2]:  # Show first 2
-                    print(f"    - {filename[:45]}... (strength: {strength})")
-            else:
-                print(f"[OK] {lora_preset_name} has no default LoRAs")
+    # Test available LoRA presets dynamically
+    for lora_preset_name in list(lora_presets.keys())[:2]:  # Test first 2
+        loras = config.resolve_lora_preset(lora_preset_name)
+        assert isinstance(loras, list), f"LoRA preset {lora_preset_name} should resolve to list"
+        
+        if loras:
+            print(f"[OK] {lora_preset_name} resolves to {len(loras)} LoRA(s)")
+            for filename, strength in loras[:2]:  # Show first 2
+                print(f"    - {filename[:45]}... (strength: {strength})")
+        else:
+            print(f"[OK] {lora_preset_name} has no default LoRAs")
     
     # Test 4: Validation config
     print("\n[TEST 4] Validation configuration")
