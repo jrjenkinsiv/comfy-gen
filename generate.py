@@ -1258,7 +1258,8 @@ def create_metadata_json(
     loras,
     preset,
     validation_score,
-    minio_url
+    minio_url,
+    quality_scores=None
 ):
     """Create metadata JSON for experiment tracking.
     
@@ -1271,6 +1272,7 @@ def create_metadata_json(
         preset: Preset name if used
         validation_score: CLIP validation score if validation was run
         minio_url: URL to the generated image in MinIO
+        quality_scores: Optional dict of quality scores from QualityScorer
     
     Returns:
         dict: Metadata dictionary ready for JSON serialization
@@ -1292,6 +1294,10 @@ def create_metadata_json(
         "validation_score": validation_score,
         "minio_url": minio_url
     }
+    
+    # Add quality scores if provided
+    if quality_scores:
+        metadata["quality"] = quality_scores
     
     return metadata
 
@@ -1542,6 +1548,7 @@ def main():
     parser.add_argument("--auto-retry", action="store_true", help="Automatically retry if validation fails (default: from config)")
     parser.add_argument("--retry-limit", type=int, default=None, help="Maximum retry attempts (default: from config or 3)")
     parser.add_argument("--positive-threshold", type=float, default=None, help="Minimum CLIP score for positive prompt (default: from config or 0.25)")
+    parser.add_argument("--quality-score", action="store_true", help="Compute multi-dimensional quality scores (technical, aesthetic, detail)")
     parser.add_argument("--quiet", action="store_true", help="Suppress progress output")
     parser.add_argument("--json-progress", action="store_true", help="Output machine-readable JSON progress")
     parser.add_argument("--no-metadata", action="store_true", help="Disable JSON metadata sidecar upload")
@@ -1924,7 +1931,8 @@ def main():
                 loras=loras_metadata,
                 preset=args.preset,
                 validation_score=None,  # Will be updated if validation runs
-                minio_url=None  # Will be updated after upload
+                minio_url=None,  # Will be updated after upload
+                quality_scores=None  # Will be updated if quality scoring runs
             )
         
         # Run generation
@@ -1942,6 +1950,43 @@ def main():
             if attempt >= max_attempts:
                 sys.exit(EXIT_FAILURE)
             continue
+        
+        # Run quality scoring if requested
+        quality_result = None
+        if args.quality_score:
+            try:
+                from comfy_gen.quality import score_image
+                
+                if not args.quiet:
+                    print(f"[INFO] Running quality assessment...")
+                
+                quality_result = score_image(
+                    args.output,
+                    args.prompt,
+                    effective_negative_prompt if effective_negative_prompt else None
+                )
+                
+                # Update metadata with quality scores
+                if metadata and quality_result and "error" not in quality_result:
+                    metadata["quality"] = quality_result
+                
+                if not args.quiet and quality_result:
+                    if "error" in quality_result:
+                        print(f"[ERROR] Quality scoring failed: {quality_result['error']}")
+                    else:
+                        print(f"[OK] Quality Score: {quality_result['composite_score']:.2f}/10.0 (Grade: {quality_result['grade']})")
+                        print(f"  Technical: {quality_result['technical']['composite']:.2f}")
+                        print(f"  Aesthetic: {quality_result['aesthetic']['composite']:.2f}")
+                        print(f"  Detail: {quality_result['detail']['composite']:.2f}")
+                        if quality_result['prompt_adherence']['composite'] > 0:
+                            print(f"  Prompt Adherence: {quality_result['prompt_adherence']['composite']:.2f}")
+                    
+            except ImportError:
+                if not args.quiet:
+                    print("[WARN] Quality scoring module not available. Install dependencies: pip install pyiqa")
+            except Exception as e:
+                if not args.quiet:
+                    print(f"[ERROR] Quality scoring failed: {e}")
         
         # Run validation if requested
         if args.validate:

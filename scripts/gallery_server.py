@@ -101,6 +101,12 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         }
         .tag.lora { background: #5a3a7a; }
         .tag.score { background: #3a5a3a; }
+        .tag.quality { font-weight: bold; padding: 4px 10px; }
+        .tag.quality-a { background: #2d7a2d; color: #fff; }
+        .tag.quality-b { background: #4a7a2d; color: #fff; }
+        .tag.quality-c { background: #7a7a2d; color: #fff; }
+        .tag.quality-d { background: #7a4a2d; color: #fff; }
+        .tag.quality-f { background: #7a2d2d; color: #fff; }
         .modal {
             display: none;
             position: fixed;
@@ -138,10 +144,14 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             <option value="all">All Images</option>
             <option value="lora">With LoRA</option>
             <option value="validated">Validated (score > 0.9)</option>
+            <option value="quality-a">Quality: A (8.0+)</option>
+            <option value="quality-b">Quality: B (6.5-7.9)</option>
+            <option value="quality-c">Quality: C+ (5.0+)</option>
         </select>
         <select id="sort">
             <option value="newest">Newest First</option>
             <option value="oldest">Oldest First</option>
+            <option value="quality">Highest Quality</option>
         </select>
         <button onclick="loadGallery()">Refresh</button>
     </div>
@@ -181,7 +191,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 allImages = [];
                 for (const png of pngFiles) {
                     const jsonKey = png + '.json';
-                    let meta = { prompt: 'No metadata', loras: [], validation_score: null };
+                    let meta = { prompt: 'No metadata', loras: [], validation_score: null, quality: null };
                     
                     if (keys.includes(jsonKey)) {
                         try {
@@ -215,11 +225,20 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 if (search && !img.prompt?.toLowerCase().includes(search)) return false;
                 if (filter === 'lora' && (!img.loras || img.loras.length === 0)) return false;
                 if (filter === 'validated' && (img.validation_score === null || img.validation_score < 0.9)) return false;
+                if (filter === 'quality-a' && (!img.quality || img.quality.composite_score < 8.0)) return false;
+                if (filter === 'quality-b' && (!img.quality || img.quality.composite_score < 6.5 || img.quality.composite_score >= 8.0)) return false;
+                if (filter === 'quality-c' && (!img.quality || img.quality.composite_score < 5.0)) return false;
                 return true;
             });
             
             if (sort === 'oldest') {
                 filtered.sort((a, b) => a.key.localeCompare(b.key));
+            } else if (sort === 'quality') {
+                filtered.sort((a, b) => {
+                    const scoreA = a.quality?.composite_score || 0;
+                    const scoreB = b.quality?.composite_score || 0;
+                    return scoreB - scoreA;
+                });
             } else {
                 filtered.sort((a, b) => b.key.localeCompare(a.key));
             }
@@ -242,7 +261,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                             ${img.steps ? `<span class="tag">steps: ${img.steps}</span>` : ''}
                             ${img.cfg ? `<span class="tag">cfg: ${img.cfg}</span>` : ''}
                             ${img.loras?.map(l => `<span class="tag lora">${l.name.split('.')[0]}:${l.strength}</span>`).join('') || ''}
-                            ${img.validation_score !== null ? `<span class="tag score">score: ${img.validation_score.toFixed(2)}</span>` : ''}
+                            ${img.validation_score !== null ? `<span class="tag score">CLIP: ${img.validation_score.toFixed(2)}</span>` : ''}
+                            ${img.quality ? `<span class="tag quality quality-${img.quality.grade.toLowerCase()}">${img.quality.grade}: ${img.quality.composite_score.toFixed(1)}</span>` : ''}
                         </div>
                     </div>
                 </div>
