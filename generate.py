@@ -330,17 +330,109 @@ def upload_image_to_comfyui(image_path):
         print(f"[ERROR] Failed to upload image to ComfyUI: {e}")
         return None
 
-def modify_prompt(workflow, positive_prompt, negative_prompt=""):
-    """Modify the prompt in the workflow."""
-    # Update positive prompt (node 2)
-    if "2" in workflow and "inputs" in workflow["2"] and "text" in workflow["2"]["inputs"]:
-        workflow["2"]["inputs"]["text"] = positive_prompt
-        print(f"Updated positive prompt in node 2")
+def find_prompt_nodes(workflow):
+    """Find positive and negative prompt nodes in workflow.
     
-    # Update negative prompt (node 3)
-    if "3" in workflow and "inputs" in workflow["3"] and "text" in workflow["3"]["inputs"]:
-        workflow["3"]["inputs"]["text"] = negative_prompt
-        print(f"Updated negative prompt in node 3")
+    Searches for CLIPTextEncode nodes by title patterns:
+    - Positive: "Positive Prompt", "Motion Prompt", or first CLIPTextEncode
+    - Negative: "Negative Prompt"
+    
+    Returns:
+        tuple: (positive_node_id, negative_node_id) where IDs can be None
+    """
+    positive_node = None
+    negative_node = None
+    first_clip_node = None
+    
+    for node_id, node in workflow.items():
+        if node.get("class_type") != "CLIPTextEncode":
+            continue
+            
+        # Track first CLIP node as fallback
+        if first_clip_node is None:
+            first_clip_node = node_id
+        
+        title = node.get("_meta", {}).get("title", "").lower()
+        
+        # Match positive prompt patterns
+        if "positive" in title or "motion prompt" in title:
+            positive_node = node_id
+        # Match negative prompt patterns
+        elif "negative" in title:
+            negative_node = node_id
+    
+    # Fallback: use first CLIP node if no positive found
+    if positive_node is None and first_clip_node is not None:
+        positive_node = first_clip_node
+    
+    return positive_node, negative_node
+
+
+def get_default_negative_prompt(workflow):
+    """Get default negative prompt based on workflow type.
+    
+    Args:
+        workflow (dict): The workflow dictionary
+    
+    Returns:
+        str: Default negative prompt or empty string
+    """
+    # Detect workflow type by examining nodes
+    has_unet_loader = any(
+        node.get("class_type") == "UNETLoader" 
+        for node in workflow.values()
+    )
+    
+    has_video_combine = any(
+        node.get("class_type") == "VHS_VideoCombine"
+        for node in workflow.values()
+    )
+    
+    # Wan 2.2 video workflows (typically don't use negative prompts)
+    if has_unet_loader or has_video_combine:
+        return ""
+    
+    # SD 1.5 and similar checkpoints - use quality-focused negative
+    return "bad quality, blurry, low resolution, watermark, text, deformed, ugly, duplicate"
+
+
+def modify_prompt(workflow, positive_prompt, negative_prompt=""):
+    """Modify the prompt in the workflow.
+    
+    Args:
+        workflow (dict): The workflow dictionary
+        positive_prompt (str): Positive prompt text
+        negative_prompt (str): Negative prompt text (optional)
+    
+    Returns:
+        dict: Modified workflow
+    """
+    # Find prompt nodes intelligently
+    pos_node, neg_node = find_prompt_nodes(workflow)
+    
+    # Update positive prompt
+    if pos_node and "inputs" in workflow[pos_node] and "text" in workflow[pos_node]["inputs"]:
+        workflow[pos_node]["inputs"]["text"] = positive_prompt
+        print(f"[OK] Updated positive prompt in node {pos_node}")
+    else:
+        print("[WARN] No positive prompt node found in workflow")
+    
+    # Handle negative prompt
+    if neg_node:
+        # Node exists, update it
+        if "inputs" in workflow[neg_node] and "text" in workflow[neg_node]["inputs"]:
+            # Use provided negative or default
+            if not negative_prompt:
+                negative_prompt = get_default_negative_prompt(workflow)
+            workflow[neg_node]["inputs"]["text"] = negative_prompt
+            if negative_prompt:
+                print(f"[OK] Updated negative prompt in node {neg_node}")
+            else:
+                print(f"[OK] Cleared negative prompt in node {neg_node}")
+    else:
+        # No negative node in workflow
+        if negative_prompt:
+            print("[WARN] Workflow has no negative prompt node (this is normal for Wan 2.2 workflows)")
     
     return workflow
 
@@ -694,7 +786,7 @@ def main():
     parser = argparse.ArgumentParser(description="Generate images with ComfyUI")
     parser.add_argument("--workflow", help="Path to workflow JSON")
     parser.add_argument("--prompt", help="Positive text prompt")
-    parser.add_argument("--negative-prompt", default="", help="Negative text prompt")
+    parser.add_argument("--negative-prompt", "-n", default="", help="Negative text prompt (what to avoid). If not specified, SD workflows use default: 'bad quality, blurry, low resolution, watermark, text, deformed, ugly, duplicate'")
     parser.add_argument("--output", default="output.png", help="Output image path")
     parser.add_argument("--input-image", "-i", help="Input image path (local file or URL) for img2img/I2V")
     parser.add_argument("--resize", help="Resize input image to WxH (e.g., 512x512)")

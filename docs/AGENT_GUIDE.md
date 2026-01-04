@@ -248,8 +248,43 @@ a red Porsche 911 on a mountain road, cinematic photography, golden hour lightin
 ```
 
 **Negative prompt (always include):**
+
+ComfyGen automatically applies default negative prompts for SD 1.5 workflows when none is specified. You can override with `--negative-prompt` or `-n`.
+
+**Default negative prompt (SD 1.5):**
 ```
-bad quality, blurry, low resolution, watermark, text
+bad quality, blurry, low resolution, watermark, text, deformed, ugly, duplicate
+```
+
+**Common negative prompt additions:**
+
+For photorealism:
+```
+cartoon, anime, illustration, painting, sketch, 3d render
+```
+
+For avoiding duplicates (cars, people, objects):
+```
+multiple objects, duplicate, cloned, ghosting, mirrored, two cars, extra person
+```
+
+For avoiding artifacts:
+```
+distorted, malformed, disfigured, jpeg artifacts, compression artifacts
+```
+
+For clean composition:
+```
+cropped, out of frame, cut off, signatures, frames, borders
+```
+
+**Complete example with custom negative:**
+```bash
+python3 generate.py \
+    --workflow workflows/flux-dev.json \
+    --prompt "a red Porsche 911 on a mountain road, cinematic photography" \
+    --negative-prompt "bad quality, blurry, cartoon, anime, duplicate cars, watermark" \
+    --output /tmp/car.png
 ```
 
 ### For Video (Wan 2.2)
@@ -263,6 +298,8 @@ bad quality, blurry, low resolution, watermark, text
 ```
 a car driving along a coastal highway, waves crashing, drone shot following
 ```
+
+**Note:** Wan 2.2 workflows typically do not use negative prompts. The model architecture handles quality through the positive prompt and sampling parameters. If you specify a negative prompt with Wan workflows, it will be ignored.
 
 ---
 
