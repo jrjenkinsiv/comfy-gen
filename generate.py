@@ -996,6 +996,29 @@ def load_presets():
         print(f"[ERROR] Failed to load presets.yaml: {e}")
         return {}
 
+
+def load_config():
+    """Load full configuration from presets.yaml including validation settings.
+    
+    Returns:
+        dict: Full config with keys: presets, default_negative_prompt, validation
+    """
+    presets_path = Path(__file__).parent / "presets.yaml"
+    if not presets_path.exists():
+        return {"presets": {}, "default_negative_prompt": "", "validation": {}}
+    
+    try:
+        with open(presets_path, 'r', encoding='utf-8') as f:
+            data = yaml.safe_load(f) or {}
+        return {
+            "presets": data.get("presets", {}),
+            "default_negative_prompt": data.get("default_negative_prompt", ""),
+            "validation": data.get("validation", {})
+        }
+    except Exception as e:
+        print(f"[ERROR] Failed to load presets.yaml: {e}")
+        return {"presets": {}, "default_negative_prompt": "", "validation": {}}
+
 def queue_workflow(workflow, retry=True):
     """Send workflow to ComfyUI server with retry logic.
     
@@ -1514,10 +1537,11 @@ def main():
                         help="List available LoRAs and presets, then exit")
     parser.add_argument("--cancel", metavar="PROMPT_ID", help="Cancel a specific prompt by ID")
     parser.add_argument("--dry-run", action="store_true", help="Validate workflow without generating")
-    parser.add_argument("--validate", action="store_true", help="Run validation after generation")
-    parser.add_argument("--auto-retry", action="store_true", help="Automatically retry if validation fails")
-    parser.add_argument("--retry-limit", type=int, default=3, help="Maximum retry attempts (default: 3)")
-    parser.add_argument("--positive-threshold", type=float, default=0.25, help="Minimum CLIP score for positive prompt (default: 0.25)")
+    parser.add_argument("--validate", action="store_true", help="Run validation after generation (default: from config)")
+    parser.add_argument("--no-validate", action="store_true", help="Disable validation even if config enables it")
+    parser.add_argument("--auto-retry", action="store_true", help="Automatically retry if validation fails (default: from config)")
+    parser.add_argument("--retry-limit", type=int, default=None, help="Maximum retry attempts (default: from config or 3)")
+    parser.add_argument("--positive-threshold", type=float, default=None, help="Minimum CLIP score for positive prompt (default: from config or 0.25)")
     parser.add_argument("--quiet", action="store_true", help="Suppress progress output")
     parser.add_argument("--json-progress", action="store_true", help="Output machine-readable JSON progress")
     parser.add_argument("--no-metadata", action="store_true", help="Disable JSON metadata sidecar upload")
@@ -1533,6 +1557,32 @@ def main():
     parser.add_argument("--preset", help="Use a generation preset (draft, balanced, high-quality)")
     
     args = parser.parse_args()
+    
+    # Load configuration for defaults
+    config = load_config()
+    validation_config = config.get("validation", {})
+    
+    # Apply config defaults to args (CLI args override config)
+    # Validation: --validate forces on, --no-validate forces off, otherwise use config
+    if args.no_validate:
+        args.validate = False
+    elif not args.validate:
+        args.validate = validation_config.get("enabled", False)
+    
+    # Auto-retry: CLI overrides config
+    if not args.auto_retry:
+        args.auto_retry = validation_config.get("auto_retry", False)
+    
+    # Retry limit: CLI overrides config
+    if args.retry_limit is None:
+        args.retry_limit = validation_config.get("retry_limit", 3)
+    
+    # Positive threshold: CLI overrides config
+    if args.positive_threshold is None:
+        args.positive_threshold = validation_config.get("positive_threshold", 0.25)
+    
+    # Default negative prompt from config (applied later if user didn't provide one)
+    config_negative_prompt = config.get("default_negative_prompt", "")
     
     # Handle list-loras mode
     if args.list_loras:
@@ -1640,8 +1690,15 @@ def main():
     signal.signal(signal.SIGINT, signal_handler)
     current_output_path = args.output
 
+    # Apply default negative prompt from config if not provided
+    effective_negative_prompt = args.negative_prompt
+    if not effective_negative_prompt and config_negative_prompt:
+        effective_negative_prompt = config_negative_prompt
+        if not args.quiet:
+            print(f"[OK] Using default negative prompt from config")
+
     # Modify workflow with prompts
-    workflow = modify_prompt(workflow, args.prompt, args.negative_prompt)
+    workflow = modify_prompt(workflow, args.prompt, effective_negative_prompt)
     
     # Handle input image if provided
     temp_file = None
@@ -1845,7 +1902,7 @@ def main():
                 print(f"\n[INFO] Retry attempt {attempt}/{max_attempts}")
             # Adjust prompts for retry
             adjusted_positive, adjusted_negative = adjust_prompt_for_retry(
-                args.prompt, args.negative_prompt, attempt - 1
+                args.prompt, effective_negative_prompt, attempt - 1
             )
             if not args.quiet:
                 print(f"[INFO] Adjusted positive prompt: {adjusted_positive}")
@@ -1857,7 +1914,7 @@ def main():
         if not args.no_metadata:
             # Get current prompt (may be adjusted for retry)
             current_positive = args.prompt if attempt == 1 else adjusted_positive
-            current_negative = args.negative_prompt if attempt == 1 else adjusted_negative
+            current_negative = effective_negative_prompt if attempt == 1 else adjusted_negative
             
             metadata = create_metadata_json(
                 workflow_path=args.workflow,
@@ -1896,7 +1953,7 @@ def main():
                 validation_result = validate_image(
                     args.output,
                     args.prompt,
-                    args.negative_prompt if args.negative_prompt else None,
+                    effective_negative_prompt if effective_negative_prompt else None,
                     positive_threshold=args.positive_threshold
                 )
                 

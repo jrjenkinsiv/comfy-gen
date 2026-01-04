@@ -3,6 +3,16 @@
 # Presets can be used with the --preset flag, and individual parameters can be
 # overridden with specific CLI arguments.
 
+# Default negative prompt applied to all generations unless overridden
+default_negative_prompt: "bad quality, blurry, low resolution, watermark, text, deformed, ugly, duplicate, multiple subjects, crowd, extra limbs, mutated, disfigured"
+
+# Validation settings
+validation:
+  enabled: true                # Enable validation by default
+  auto_retry: true             # Retry failed generations automatically
+  retry_limit: 3               # Max retry attempts
+  positive_threshold: 0.25     # Minimum CLIP score for positive prompt
+
 presets:
   # Fast draft generation - lower quality but faster
   draft:
@@ -10,6 +20,7 @@ presets:
     cfg: 5.0
     sampler: euler
     scheduler: normal
+    validate: false            # Skip validation for drafts
     
   # Balanced generation - good quality/speed tradeoff (default-like settings)
   balanced:
@@ -17,6 +28,7 @@ presets:
     cfg: 7.0
     sampler: euler_ancestral
     scheduler: normal
+    validate: true
     
   # High quality generation - slower but better results
   high-quality:
@@ -24,6 +36,8 @@ presets:
     cfg: 7.5
     sampler: dpmpp_2m_sde
     scheduler: karras
+    validate: true
+    auto_retry: true
     
   # Fast sampler with good quality
   fast:
@@ -31,6 +45,7 @@ presets:
     cfg: 7.0
     sampler: dpmpp_2m
     scheduler: normal
+    validate: false
     
   # Maximum quality - very slow
   ultra:
@@ -38,3 +53,6 @@ presets:
     cfg: 8.0
     sampler: dpmpp_2m_sde
     scheduler: karras
+    validate: true
+    auto_retry: true
+    positive_threshold: 0.30   # Higher threshold for ultra quality
