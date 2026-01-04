@@ -49,3 +49,4 @@ gallery.html
 # Temporary files
 *.log
 *.tmp
+.env

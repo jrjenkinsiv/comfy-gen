@@ -175,6 +175,16 @@ loras:
     notes: "Use trigger word 'pixarfk' or 'pixel art style' in prompt"
     source: "HuggingFace artificialguybr/pixelartredmond-1-5v-pixel-art-loras-for-sd-1-5"
 
+  - filename: "GothicPixelArtV1.1.safetensors"
+    tags: ["game", "pixel-art", "gothic", "dark", "sprite", "illustrious"]
+    compatible_with: ["v1-5-pruned-emaonly-fp16.safetensors"]
+    recommended_strength: 0.8  # Range: 0.6-1.0
+    description: "Gothic pixel art style - darker aesthetic pixel art"
+    use_cases: ["dark pixel art", "gothic games", "retro horror", "dark fantasy sprites"]
+    trigger_words: ["gothic pixel art", "dark pixel", "pixel art"]
+    notes: "Best for darker, moodier pixel art aesthetics"
+    source: "CivitAI ID 2264335"
+
   # ========================================
   # NSFW/ADULT LoRAs (18+)
   # ========================================

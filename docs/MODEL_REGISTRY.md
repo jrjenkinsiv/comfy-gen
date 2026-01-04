@@ -84,6 +84,7 @@ LoRA files are stored in `C:\Users\jrjen\comfy\models\loras\`.
 |----------|----------------|-------|
 | `vector_icons_game_assets.safetensors` | SD 1.5 | Vector-style game icons, flat design. Strength 0.8. Source: CivitAI 2251918 |
 | `PixelArtRedmond15V-PixelArt-PIXARFK.safetensors` | SD 1.5 | Pixel art style. Trigger: "pixarfk". Source: HuggingFace artificialguybr |
+| `GothicPixelArtV1.1.safetensors` | SD 1.5 | Gothic/dark pixel art style. Strength 0.8. Source: CivitAI 2264335 |
 
 **Game Asset Usage Notes:**
 - Use with SD 1.5 workflow (`flux-dev.json` uses v1-5-pruned-emaonly-fp16)
