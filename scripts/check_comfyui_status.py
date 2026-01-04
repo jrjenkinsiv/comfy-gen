@@ -16,7 +16,7 @@ def check_api_health():
     try:
         response = requests.get(f"{COMFYUI_URL}/system_stats", timeout=5)
         return response.status_code == 200
-    except (requests.RequestException, requests.Timeout):
+    except requests.RequestException:
         return False
 
 
