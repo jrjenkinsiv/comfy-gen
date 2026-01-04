@@ -15,6 +15,7 @@ from comfygen.config import get_config
 
 # Display constants
 MAX_NEGATIVE_DISPLAY_LENGTH = 50  # Max characters to show for negative prompts
+MAX_LORA_NAME_DISPLAY = 45  # Max characters to show for LoRA names
 
 
 def simulate_cli_config(prompt, negative_prompt=None, preset=None, lora_preset=None,
@@ -137,7 +138,8 @@ def compare_configs(cli_config, mcp_config, test_name):
         for lora in cli_loras[:2]:  # Show first 2
             if isinstance(lora, tuple):
                 name, strength = lora
-                print(f"    - {name[:45]}... (strength: {strength})")
+                name_display = name[:MAX_LORA_NAME_DISPLAY] + "..." if len(name) > MAX_LORA_NAME_DISPLAY else name
+                print(f"    - {name_display} (strength: {strength})")
     else:
         all_match = False
         print(f"{status} loras:")

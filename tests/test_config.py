@@ -9,6 +9,9 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from comfygen.config import Config, get_config
 
+# Display constants
+MAX_LORA_NAME_DISPLAY = 40  # Max characters to display for LoRA names
+
 
 def test_config_loading():
     """Test that config loads successfully."""
@@ -101,7 +104,8 @@ def test_lora_preset_resolution():
         assert lora_filename.endswith('.safetensors'), "LoRA should be a safetensors file"
     
     print(f"[OK] text_to_video preset resolved to {len(t2v)} LoRAs")
-    print(f"    First LoRA: {t2v[0][0][:40]}... (strength: {t2v[0][1]})")
+    lora_display = t2v[0][0][:MAX_LORA_NAME_DISPLAY] + "..." if len(t2v[0][0]) > MAX_LORA_NAME_DISPLAY else t2v[0][0]
+    print(f"    First LoRA: {lora_display} (strength: {t2v[0][1]})")
 
 
 def test_validation_config():
@@ -159,7 +163,8 @@ def test_lora_info():
             assert info.get('filename') == filename, "Returned info should match requested filename"
             assert 'recommended_strength' in info, "LoRA info should have recommended_strength"
             
-            print(f"[OK] Found LoRA info for {filename[:40]}...")
+            lora_display = filename[:MAX_LORA_NAME_DISPLAY] + "..." if len(filename) > MAX_LORA_NAME_DISPLAY else filename
+            print(f"[OK] Found LoRA info for {lora_display}")
             print(f"    Strength: {info['recommended_strength']}")
     else:
         print("[SKIP] No LoRAs in catalog to test")
