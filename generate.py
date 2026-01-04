@@ -126,7 +126,7 @@ def inject_loras(workflow: Dict[str, Any], loras: List[Tuple[str, float]]) -> Di
     print(f"[INFO] CLIP consumers: {clip_consumers}")
     
     # Find the highest node ID
-    max_id = max(int(k) for k in workflow.keys())
+    max_id = max((int(k) for k in workflow.keys()), default=0)
     
     # Chain LoRAs
     current_model_source = [checkpoint_node_id, 0]
