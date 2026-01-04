@@ -31,6 +31,7 @@ Generate images and videos via text prompts without using the ComfyUI GUI. This 
 | **Image-to-Image** | Transform images with prompts and denoise control | [Input Images](#input-image-options) |
 | **Text-to-Video** | Create videos from prompts with Wan 2.2 | [Model Registry](docs/MODEL_REGISTRY.md) |
 | **Image-to-Video** | Animate existing images | [Agent Guide](docs/AGENT_GUIDE.md) |
+| **Dynamic LoRA Injection** | Add LoRAs via CLI without modifying workflows | [LoRA Injection](docs/LORA_INJECTION.md) |
 | **Image Validation** | CLIP-based semantic similarity scoring | [Validation](#image-validation--auto-retry) |
 | **Auto-Retry** | Automatic retry with prompt adjustment on failure | [Validation](#image-validation--auto-retry) |
 | **Model Validation** | Pre-flight checks for missing models | [Error Handling](docs/ERROR_HANDLING.md) |
@@ -71,6 +72,16 @@ python3 generate.py --workflow workflows/flux-dev.json \
     --negative-prompt "multiple cars, duplicate, cloned, ghosting" \
     --output /tmp/porsche.png \
     --validate --auto-retry --retry-limit 3
+
+# Add LoRAs dynamically (no workflow modification needed)
+python3 generate.py --workflow workflows/wan22-t2v.json \
+    --prompt "dancer performing, dynamic movement" \
+    --lora "BoobPhysics_WAN_v6.safetensors:0.7" \
+    --lora "BounceHighWan2_2.safetensors:0.6" \
+    --output /tmp/dance.mp4
+
+# List available LoRAs and presets
+python3 generate.py --list-loras
 
 # View in browser
 open "http://192.168.1.215:9000/comfy-gen/"
