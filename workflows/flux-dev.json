@@ -103,5 +103,23 @@
     "_meta": {
       "title": "Save Image"
     }
+  },
+  "_workflow_metadata": {
+    "workflow_name": "SD 1.5 Basic Generation",
+    "description": "Simple text-to-image generation using Stable Diffusion 1.5",
+    "model": "v1-5-pruned-emaonly-fp16.safetensors",
+    "output_resolution": "512x512",
+    "default_steps": 30,
+    "use_case": "Fast general-purpose image generation",
+    "estimated_time": "10-15 seconds on RTX 5090",
+    "nodes": {
+      "1": "Checkpoint Loader - Loads SD 1.5 model",
+      "2": "Positive Prompt - Text prompt for what to generate",
+      "3": "Negative Prompt - Text prompt for what to avoid",
+      "4": "Empty Latent - Creates blank 512x512 latent image",
+      "5": "KSampler - Performs diffusion sampling",
+      "6": "VAE Decode - Converts latent to pixel image",
+      "7": "Save Image - Saves output to disk"
+    }
   }
 }

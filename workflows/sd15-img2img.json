@@ -118,5 +118,26 @@
     "_meta": {
       "title": "Save Image"
     }
+  },
+  "_workflow_metadata": {
+    "workflow_name": "SD 1.5 Image-to-Image",
+    "description": "Transform existing images with text prompts using Stable Diffusion 1.5",
+    "model": "v1-5-pruned-emaonly-fp16.safetensors",
+    "input_requirements": "Requires input image (--input-image flag)",
+    "output_resolution": "Matches input (or --resize target)",
+    "denoise_range": "0.3-0.5 (subtle), 0.7-0.9 (creative)",
+    "use_case": "Image transformation, style transfer, modifications",
+    "estimated_time": "10-20 seconds on RTX 5090",
+    "preprocessing_options": "Supports --resize, --crop, --denoise",
+    "nodes": {
+      "1": "Checkpoint Loader - Loads SD 1.5 model",
+      "2": "Positive Prompt - Transformation style/target",
+      "3": "Negative Prompt - What to avoid in transformation",
+      "5": "Load Image - Loads input image from ComfyUI input folder",
+      "6": "VAE Encode - Converts input image to latent space",
+      "7": "KSampler - Performs diffusion with denoise control",
+      "8": "VAE Decode - Converts result back to pixel image",
+      "9": "Save Image - Saves output"
+    }
   }
 }

@@ -2,13 +2,42 @@
 
 Programmatic image/video generation using ComfyUI workflows on home lab infrastructure.
 
+## Table of Contents
+
+- [Overview](#overview)
+- [Features](#features)
+- [Quick Start](#quick-start)
+- [Architecture](#architecture)
+- [CLI Reference](#cli-reference)
+- [Documentation](#documentation)
+- [Examples](#examples)
+- [Infrastructure](#infrastructure)
+- [Development](#development)
+
 ## Overview
 
 Generate images and videos via text prompts without using the ComfyUI GUI. This project provides:
 
-- **CLI Tool**: `generate.py` for local generation
+- **CLI Tool**: `generate.py` for local generation with validation and auto-retry
+- **MCP Server**: AI assistant integration for service management
 - **CI/CD Pipeline**: GitHub Actions workflow for automated generation
-- **Storage**: MinIO bucket for generated assets
+- **Storage**: MinIO bucket for generated assets with public URLs
+
+## Features
+
+| Feature | Description | Documentation |
+|---------|-------------|---------------|
+| **Text-to-Image** | Generate images from text prompts using Flux/SD 1.5 | [Quick Start](#quick-start) |
+| **Image-to-Image** | Transform images with prompts and denoise control | [Input Images](#input-image-options) |
+| **Text-to-Video** | Create videos from prompts with Wan 2.2 | [Model Registry](docs/MODEL_REGISTRY.md) |
+| **Image-to-Video** | Animate existing images | [Agent Guide](docs/AGENT_GUIDE.md) |
+| **Image Validation** | CLIP-based semantic similarity scoring | [Validation](#image-validation--auto-retry) |
+| **Auto-Retry** | Automatic retry with prompt adjustment on failure | [Validation](#image-validation--auto-retry) |
+| **Model Validation** | Pre-flight checks for missing models | [Error Handling](docs/ERROR_HANDLING.md) |
+| **Dry-Run Mode** | Validate workflows without generation | [Error Handling](docs/ERROR_HANDLING.md) |
+| **MCP Server** | AI assistant integration (Claude, VS Code) | [MCP Server](docs/MCP_SERVER.md) |
+| **Generation Cancel** | Interrupt running jobs with cleanup | [Canceling](#canceling-generation) |
+| **Error Recovery** | Automatic retry with exponential backoff | [Error Handling](docs/ERROR_HANDLING.md) |
 
 ## Quick Start
 
@@ -50,14 +79,27 @@ open "http://192.168.1.215:9000/comfy-gen/"
 ## Architecture
 
 ```
-magneto (dev) --> GitHub --> ant-man (runner) --> moira (ComfyUI + RTX 5090)
-                                                        |
-                                                        v
-                                                   MinIO bucket
-                                                        |
-                                                        v
-                                      http://192.168.1.215:9000/comfy-gen/
+┌──────────────┐      ┌───────────┐      ┌─────────────┐      ┌──────────────────────┐
+│   magneto    │─────▶│  GitHub   │─────▶│   ant-man   │─────▶│   moira (ComfyUI)    │
+│ (dev machine)│ push │(workflows)│ CI/CD│  (runner)   │ exec │   + RTX 5090 GPU     │
+└──────────────┘      └───────────┘      └─────────────┘      └──────────┬───────────┘
+                                                                          │
+                                                                          ▼
+                                                              ┌─────────────────────┐
+                                                              │   MinIO Storage     │
+                                                              │   Public Bucket     │
+                                                              └─────────────────────┘
+                                                                          │
+                                                                          ▼
+                                                    http://192.168.1.215:9000/comfy-gen/
 ```
+
+**Data Flow:**
+1. Developer pushes code or triggers workflow from magneto (192.168.1.124)
+2. GitHub Actions runs on ant-man runner (192.168.1.253)
+3. Runner executes generation on moira's ComfyUI API (192.168.1.215:8188)
+4. Generated images/videos uploaded to MinIO bucket
+5. Assets publicly accessible via HTTP
 
 ## Infrastructure
 
@@ -91,6 +133,110 @@ http://192.168.1.215:9000/comfy-gen/<filename>.png
 List all images:
 ```bash
 curl -s http://192.168.1.215:9000/comfy-gen/ | grep -oP '(?<=<Key>)[^<]+'
+```
+
+## CLI Reference
+
+### Basic Usage
+
+```bash
+python3 generate.py --workflow <workflow.json> --prompt "<prompt>" [OPTIONS]
+```
+
+### Core Arguments
+
+| Argument | Type | Description |
+|----------|------|-------------|
+| `--workflow` | path | Path to workflow JSON file (required) |
+| `--prompt` | string | Positive text prompt for generation (required unless --dry-run) |
+| `--negative-prompt` | string | Negative text prompt (default: "") |
+| `--output` | path | Output file path (default: output.png) |
+
+### Input Image Options
+
+| Argument | Type | Description |
+|----------|------|-------------|
+| `-i, --input-image` | path/URL | Input image for img2img or I2V workflows |
+| `--resize` | WxH | Resize input to dimensions (e.g., 512x512) |
+| `--crop` | mode | Crop mode: `center`, `cover`, `contain` |
+| `--denoise` | float | Denoise strength 0.0-1.0 (lower = more faithful to input) |
+
+### Validation Options
+
+| Argument | Type | Description |
+|----------|------|-------------|
+| `--validate` | flag | Run CLIP validation after generation |
+| `--auto-retry` | flag | Automatically retry if validation fails |
+| `--retry-limit` | int | Maximum retry attempts (default: 3) |
+| `--positive-threshold` | float | Minimum CLIP score for positive prompt (default: 0.25) |
+
+### Control Options
+
+| Argument | Type | Description |
+|----------|------|-------------|
+| `--dry-run` | flag | Validate workflow without generating |
+| `--cancel` | prompt_id | Cancel a specific queued/running job |
+
+### Exit Codes
+
+| Code | Meaning | Example Causes |
+|------|---------|----------------|
+| 0 | Success | Generation completed successfully |
+| 1 | Runtime failure | Network error, timeout, generation failed |
+| 2 | Configuration error | Server down, missing models, invalid workflow |
+
+### Common Workflows
+
+**Simple image generation:**
+```bash
+python3 generate.py \
+    --workflow workflows/flux-dev.json \
+    --prompt "a sunset over mountains" \
+    --output /tmp/sunset.png
+```
+
+**Image transformation (img2img):**
+```bash
+python3 generate.py \
+    --workflow workflows/sd15-img2img.json \
+    --input-image /path/to/source.png \
+    --prompt "oil painting style" \
+    --denoise 0.7 \
+    --output /tmp/result.png
+```
+
+**Text-to-video:**
+```bash
+python3 generate.py \
+    --workflow workflows/wan22-t2v.json \
+    --prompt "a person walking through a park on a sunny day" \
+    --output /tmp/video.mp4
+```
+
+**Image-to-video:**
+```bash
+python3 generate.py \
+    --workflow workflows/wan22-i2v.json \
+    --input-image /path/to/frame.png \
+    --prompt "camera slowly pans right" \
+    --output /tmp/result.mp4
+```
+
+**Validated generation with auto-retry:**
+```bash
+python3 generate.py \
+    --workflow workflows/flux-dev.json \
+    --prompt "(Porsche 911:2.0) single car, driving down a country road" \
+    --negative-prompt "multiple cars, duplicate, cloned" \
+    --output /tmp/porsche.png \
+    --validate --auto-retry --retry-limit 3
+```
+
+**Dry-run validation:**
+```bash
+python3 generate.py \
+    --workflow workflows/flux-dev.json \
+    --dry-run
 ```
 
 ## Input Image Options
@@ -266,6 +412,35 @@ See [docs/ERROR_HANDLING.md](docs/ERROR_HANDLING.md) for complete documentation.
 If ComfyUI is not running:
 ```bash
 ssh moira "C:\\Users\\jrjen\\comfy\\.venv\\Scripts\\python.exe C:\\Users\\jrjen\\comfy-gen\\scripts\\start_comfyui.py"
+```
+
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [MCP_SERVER.md](docs/MCP_SERVER.md) | MCP server setup for AI assistant integration (Claude, VS Code) |
+| [AGENT_GUIDE.md](docs/AGENT_GUIDE.md) | Guide for AI agents: model selection, workflows, prompts |
+| [MODEL_REGISTRY.md](docs/MODEL_REGISTRY.md) | Complete model inventory and compatibility matrix |
+| [WORKFLOWS.md](docs/WORKFLOWS.md) | Detailed workflow documentation with parameters and examples |
+| [ERROR_HANDLING.md](docs/ERROR_HANDLING.md) | Error handling, validation, dry-run mode, retry logic |
+| [LORA_CATALOG.md](docs/LORA_CATALOG.md) | LoRA metadata and intelligent selection system |
+| [API_REFERENCE.md](docs/API_REFERENCE.md) | Internal module and function documentation |
+
+## Examples
+
+Working code examples are in the `examples/` directory:
+
+| Example | Description |
+|---------|-------------|
+| `basic_generation.py` | Simple text-to-image generation |
+| `img2img_workflow.py` | Image transformation workflow |
+| `video_generation.py` | Wan 2.2 text-to-video and image-to-video |
+| `validation_workflow.py` | Auto-retry loop with validation |
+| `mcp_usage_example.py` | MCP server tool usage |
+
+Run any example:
+```bash
+python3 examples/basic_generation.py
 ```
 
 ## MCP Server for Service Management

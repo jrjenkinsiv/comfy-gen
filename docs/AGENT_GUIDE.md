@@ -2,6 +2,18 @@
 
 This guide is for AI agents and low-level workers to understand how to generate images and videos using ComfyGen.
 
+## Table of Contents
+
+- [Quick Reference](#quick-reference)
+- [Decision Tree](#decision-tree)
+- [Understanding Workflows](#understanding-workflows)
+- [Available Models](#available-models)
+- [Using LoRAs](#using-loras)
+- [Prompt Engineering](#prompt-engineering)
+- [Validation and Quality Control](#validation-and-quality-control)
+- [Error Handling](#error-handling)
+- [End-to-End Examples](#end-to-end-examples)
+
 ## Quick Reference
 
 ### Simple Image Generation (SD 1.5)
@@ -9,7 +21,7 @@ This guide is for AI agents and low-level workers to understand how to generate 
 ```bash
 # From magneto or any machine with SSH access
 python3 generate.py \
-    --workflow workflows/sd15-basic.json \
+    --workflow workflows/flux-dev.json \
     --prompt "a red sports car on a mountain road, cinematic lighting" \
     --output /tmp/car.png
 ```
@@ -30,6 +42,69 @@ List all images:
 ```bash
 curl -s http://192.168.1.215:9000/comfy-gen/ | grep -oP '(?<=<Key>)[^<]+'
 ```
+
+---
+
+## Decision Tree
+
+Use this flowchart to select the appropriate model and workflow:
+
+```
+START: User requests generation
+    |
+    ├─ Contains "video", "animation", "motion"?
+    |   YES -> Is there an input image?
+    |           YES -> Use Wan 2.2 I2V
+    |           |      Workflow: workflows/wan22-i2v.json
+    |           |      Model: wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors
+    |           |      LoRA: wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise.safetensors
+    |           |      Steps: 4, Duration: ~10 seconds
+    |           |
+    |           NO  -> Use Wan 2.2 T2V
+    |                  Workflow: workflows/wan22-t2v.json
+    |                  Model: wan2.2_t2v_high_noise_14B_fp8_scaled.safetensors
+    |                  LoRA: wan2.2_t2v_lightx2v_4steps_lora_v1.1_high_noise.safetensors
+    |                  Steps: 4, Duration: ~10 seconds
+    |
+    ├─ Is there an input image to transform?
+    |   YES -> Use SD 1.5 img2img
+    |          Workflow: workflows/sd15-img2img.json
+    |          Model: v1-5-pruned-emaonly-fp16.safetensors
+    |          Denoise: 0.3-0.5 (subtle), 0.7-0.9 (creative)
+    |          Duration: 10-30 seconds
+    |
+    NO -> Use SD 1.5 / Flux
+          Workflow: workflows/flux-dev.json
+          Model: v1-5-pruned-emaonly-fp16.safetensors
+          Duration: 10-30 seconds
+
+ADDITIONAL CONSIDERATIONS:
+- Need quality validation? Add --validate --auto-retry
+- Need specific physics/motion? Check LoRA catalog for enhancement LoRAs
+- Fast generation priority? Ensure acceleration LoRAs are used (4-step)
+```
+
+### Decision Examples
+
+**Request:** "Generate a video of a person walking"
+- Contains "video" → YES
+- Input image? → NO
+- **Decision:** Wan 2.2 T2V, workflow: `wan22-t2v.json`
+
+**Request:** "Transform this image to oil painting style"
+- Video request? → NO
+- Input image? → YES
+- **Decision:** SD 1.5 img2img, workflow: `sd15-img2img.json`, denoise: 0.7
+
+**Request:** "Create an image of a sunset"
+- Video request? → NO
+- Input image? → NO
+- **Decision:** SD 1.5, workflow: `flux-dev.json`
+
+**Request:** "Animate this photo with camera movement"
+- Contains "animate" → YES (video)
+- Input image? → YES
+- **Decision:** Wan 2.2 I2V, workflow: `wan22-i2v.json`
 
 ---
 
@@ -347,7 +422,7 @@ To create a new workflow:
 
 ---
 
-## Image Validation and Auto-Retry
+## Validation and Quality Control
 
 ### Overview
 
@@ -458,3 +533,249 @@ pip install transformers
 - Reduce retry limit: `--retry-limit 2`
 - Review prompt for contradictions
 - Consider if validation threshold is too strict
+
+---
+
+## Error Handling
+
+### Best Practices
+
+1. **Always check server availability first**
+   ```python
+   if not check_server_availability():
+       print("[ERROR] Server is down")
+       sys.exit(2)
+   ```
+
+2. **Use dry-run mode for new workflows**
+   ```bash
+   python3 generate.py --workflow new_workflow.json --dry-run
+   ```
+
+3. **Handle missing models gracefully**
+   ```python
+   models = get_available_models()
+   is_valid, missing, suggestions = validate_workflow_models(workflow, models)
+   if not is_valid:
+       print(f"Missing: {missing}")
+       print(f"Suggestions: {suggestions}")
+   ```
+
+4. **Use automatic retry for transient failures**
+   - Built-in retry logic handles network errors automatically
+   - 3 retries with exponential backoff (2s, 4s, 8s)
+
+5. **Clean up on cancellation**
+   ```python
+   import signal
+   
+   def signal_handler(signum, frame):
+       cancel_prompt(current_prompt_id)
+       cleanup_partial_output(output_path)
+       sys.exit(0)
+   
+   signal.signal(signal.SIGINT, signal_handler)
+   ```
+
+### Common Error Scenarios
+
+| Error | Cause | Solution |
+|-------|-------|----------|
+| "Cannot connect to server" | ComfyUI down | Start via `scripts/start_comfyui.py` |
+| "Workflow validation failed" | Missing models | Check MODEL_REGISTRY.md, use suggested fallbacks |
+| "Invalid JSON in workflow" | Malformed workflow | Re-export from ComfyUI |
+| "Input image not found" | Wrong path | Verify file exists, use absolute paths |
+| "Failed to upload to MinIO" | MinIO down/misconfigured | Check MinIO at 192.168.1.215:9000 |
+
+### Exit Codes
+
+- **0**: Success
+- **1**: Generation or runtime failure
+- **2**: Configuration error (server down, missing models, etc.)
+
+Use exit codes in scripts:
+```bash
+python3 generate.py ... || echo "Generation failed with code $?"
+```
+
+---
+
+## End-to-End Examples
+
+### Example 1: Simple Image with Validation
+
+**Goal**: Generate a high-quality image with automatic retry
+
+```bash
+python3 generate.py \
+    --workflow workflows/flux-dev.json \
+    --prompt "a serene mountain lake at sunset, reflection in water, photorealistic, 8k" \
+    --negative-prompt "blurry, low quality, distorted, watermark" \
+    --output /tmp/lake.png \
+    --validate \
+    --auto-retry \
+    --retry-limit 3 \
+    --positive-threshold 0.28
+```
+
+**Expected output:**
+- Initial generation attempt
+- CLIP validation score
+- Automatic retry if score < 0.28
+- Final validated image uploaded to MinIO
+
+**Use when:**
+- Quality is critical
+- Subject is simple and well-defined
+- You want consistency
+
+---
+
+### Example 2: Image Transformation
+
+**Goal**: Transform a photo to artistic style
+
+```bash
+python3 generate.py \
+    --workflow workflows/sd15-img2img.json \
+    --input-image http://192.168.1.215:9000/comfy-gen/original_photo.png \
+    --resize 512x512 \
+    --crop cover \
+    --denoise 0.7 \
+    --prompt "watercolor painting, soft colors, artistic, impressionist style" \
+    --negative-prompt "photograph, realistic, sharp, detailed" \
+    --output /tmp/artistic.png
+```
+
+**Expected output:**
+- Downloads original_photo.png
+- Resizes to 512x512 with cover crop
+- Transforms to watercolor style
+- Denoise 0.7 allows creative freedom while maintaining composition
+
+**Use when:**
+- You have an existing image to transform
+- You want to maintain the basic structure but change style
+- Artistic effects needed
+
+---
+
+### Example 3: Video Generation
+
+**Goal**: Create a 10-second video from text
+
+```bash
+python3 generate.py \
+    --workflow workflows/wan22-t2v.json \
+    --prompt "a drone shot flying over a coastal highway, waves crashing, sunset lighting, cinematic" \
+    --output /tmp/coastal_video.mp4
+```
+
+**Expected output:**
+- 848x480 resolution video
+- 81 frames at 8 fps (~10 seconds)
+- 4-step generation (fast with acceleration LoRA)
+- Cinematic drone movement
+
+**Use when:**
+- Video/animation is requested
+- No input image available
+- Scene involves motion or camera movement
+
+**Note**: Generation time is 2-5 minutes depending on GPU load
+
+---
+
+### Example 4: Dry-Run Validation
+
+**Goal**: Validate a new workflow before running
+
+```bash
+python3 generate.py \
+    --workflow workflows/custom_workflow.json \
+    --dry-run
+```
+
+**Expected output:**
+- Server availability check: PASS
+- Workflow load: PASS  
+- Model validation: PASS or FAIL with suggestions
+- No generation performed
+
+**Use when:**
+- Testing a new workflow
+- Verifying model availability
+- Batch validation of multiple workflows
+
+**Example batch validation:**
+```bash
+for workflow in workflows/*.json; do
+    echo "Validating $workflow..."
+    python3 generate.py --workflow "$workflow" --dry-run || echo "FAILED: $workflow"
+done
+```
+
+---
+
+### Example 5: Programmatic Generation
+
+**Goal**: Generate multiple images in a Python script
+
+```python
+#!/usr/bin/env python3
+from generate import *
+
+prompts = [
+    "a sunset over mountains",
+    "a sports car on a highway",
+    "a serene lake with reflections",
+]
+
+workflow = load_workflow("workflows/flux-dev.json")
+
+for i, prompt in enumerate(prompts):
+    print(f"Generating {i+1}/{len(prompts)}: {prompt}")
+    
+    workflow = modify_prompt(workflow, prompt, "blurry, low quality")
+    prompt_id = queue_workflow(workflow)
+    
+    if prompt_id:
+        status = wait_for_completion(prompt_id)
+        output_path = f"/tmp/batch_{i}.png"
+        
+        if download_output(status, output_path):
+            url = upload_to_minio(output_path, f"batch_{i}.png")
+            print(f"Done: {url}")
+```
+
+**Use when:**
+- Batch generation needed
+- Programmatic control required
+- Integration with other systems
+
+---
+
+## Summary Checklist
+
+Before generating, ensure:
+
+- [ ] ComfyUI server is running (check with `check_server_availability()`)
+- [ ] Correct workflow selected based on decision tree
+- [ ] Models exist (use `--dry-run` or `validate_workflow_models()`)
+- [ ] Prompts are well-structured (see Prompt Engineering section)
+- [ ] Input images are prepared if needed (resize, crop)
+- [ ] Validation enabled if quality is critical (`--validate`)
+- [ ] Output path is writable
+- [ ] MinIO is accessible for upload
+
+After generation:
+
+- [ ] Check exit code (0 = success, 1 = failure, 2 = config error)
+- [ ] Verify MinIO URL is accessible
+- [ ] Review validation scores if enabled
+- [ ] Clean up temporary files
+
+For more details, see:
+- [ERROR_HANDLING.md](ERROR_HANDLING.md) - Comprehensive error handling guide
+- [API_REFERENCE.md](API_REFERENCE.md) - Function-level documentation
+- [MODEL_REGISTRY.md](MODEL_REGISTRY.md) - Model inventory and specs
