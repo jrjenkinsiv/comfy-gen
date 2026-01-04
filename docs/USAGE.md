@@ -12,6 +12,7 @@ Complete guide for using ComfyGen via CLI and MCP server for AI-driven image and
   - [Parameters](#parameters)
   - [Presets](#presets)
   - [Validation](#validation)
+  - [Quality Scoring](#quality-scoring)
 - [MCP Server](#mcp-server)
   - [Setup](#mcp-setup)
   - [Available Tools](#available-tools)
@@ -230,6 +231,131 @@ python3 generate.py \
 - **0.20-0.25**: Marginal match
 - **0.25-0.35**: Acceptable (default threshold)
 - **> 0.35**: Good semantic match
+
+---
+
+### Quality Scoring
+
+ComfyGen includes multi-dimensional quality assessment using pyiqa for comprehensive image quality analysis.
+
+#### Installation
+
+```bash
+pip install pyiqa
+```
+
+#### Basic Usage
+
+```bash
+# Generate with quality assessment
+python3 generate.py \
+    --workflow workflows/flux-dev.json \
+    --prompt "a majestic lion in golden hour lighting" \
+    --output /tmp/lion.png \
+    --quality-score
+
+# Output:
+# [OK] Quality Grade: B (Score: 7.8/10)
+# [INFO] Technical: 7.2/10, Aesthetic: 8.1/10, Detail: 7.8/10
+# [INFO] Prompt Adherence: 8.5/10 (CLIP)
+```
+
+#### Standalone Quality Assessment
+
+Score existing images:
+
+```bash
+# Score an image without prompt
+python3 -m comfy_gen.quality /path/to/image.png
+
+# Score with prompt for adherence checking
+python3 -m comfy_gen.quality /path/to/image.png "a majestic lion"
+
+# Output:
+# ============================================================
+# Quality Assessment Results
+# ============================================================
+# 
+# Overall Grade: B (Composite Score: 7.8/10)
+# 
+# Dimension Breakdown:
+#   Technical Quality:    7.2/10 (BRISQUE)
+#                         6.8/10 (NIQE)
+#   Aesthetic Quality:    8.1/10
+#   Detail Quality:       7.8/10
+#   Prompt Adherence:     8.5/10 (CLIP)
+# 
+# Grade Scale:
+#   A (8.0-10.0): Production ready
+#   B (6.5-7.9):  Good, minor issues
+#   C (5.0-6.4):  Acceptable
+#   D (3.0-4.9):  Poor
+#   F (0.0-2.9):  Failed
+# ============================================================
+```
+
+#### Quality Dimensions
+
+| Dimension | Metrics | What It Measures |
+|-----------|---------|------------------|
+| **Technical** | BRISQUE, NIQE | Artifacts, noise, blur, jaggedness |
+| **Aesthetic** | LAION Aesthetic | Visual appeal, composition |
+| **Prompt Adherence** | CLIP | Does image match text description |
+| **Detail** | TOPIQ | Fine detail preservation, textures |
+
+#### Composite Score Formula
+
+```python
+quality_score = (
+    0.30 * technical_score +    # Artifacts, sharpness
+    0.25 * aesthetic_score +    # Visual appeal
+    0.25 * prompt_adherence +   # Matches request
+    0.20 * detail_score         # Fine details
+)
+```
+
+#### Grade Thresholds
+
+| Grade | Score Range | Description |
+|-------|-------------|-------------|
+| **A** | 8.0 - 10.0 | Production ready |
+| **B** | 6.5 - 7.9 | Good, minor issues |
+| **C** | 5.0 - 6.4 | Acceptable |
+| **D** | 3.0 - 4.9 | Poor |
+| **F** | 0.0 - 2.9 | Failed |
+
+#### Metadata Integration
+
+Quality scores are automatically stored in metadata JSON:
+
+```json
+{
+  "quality": {
+    "composite_score": 7.8,
+    "grade": "B",
+    "technical": {
+      "brisque": 7.2,
+      "niqe": 6.8
+    },
+    "aesthetic": 8.1,
+    "detail": 7.8,
+    "prompt_adherence": {
+      "clip": 8.5
+    }
+  }
+}
+```
+
+#### Gallery Display
+
+The gallery server automatically displays quality grades with color-coded badges:
+- **A** (Green) - Production ready
+- **B** (Light green) - Good quality
+- **C** (Yellow) - Acceptable
+- **D** (Orange) - Poor
+- **F** (Red) - Failed
+
+Visit `http://localhost:8080` after running `python3 scripts/gallery_server.py`
 
 ---
 
