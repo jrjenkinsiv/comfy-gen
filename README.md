@@ -1,38 +1,93 @@
-# Comfy-Gen
+# ComfyGen
 
-Programmatic image generation using ComfyUI workflows on our home lab infrastructure.
+Programmatic image/video generation using ComfyUI workflows on home lab infrastructure.
 
 ## Overview
 
-This project provides a pipeline to generate images using ComfyUI workflows programmatically, leveraging our self-hosted ML infrastructure:
+Generate images and videos via text prompts without using the ComfyUI GUI. This project provides:
 
-- **Trigger**: Push code from magneto (dev machine)
-- **CI/CD**: GitHub Actions on ant-man (Jetson runner)
-- **Compute**: Image generation on moira (Windows GPU machine)
-- **Storage**: Artifacts stored in MinIO on moira
+- **CLI Tool**: `generate.py` for local generation
+- **CI/CD Pipeline**: GitHub Actions workflow for automated generation
+- **Storage**: MinIO bucket for generated assets
+
+## Quick Start
+
+```bash
+# Generate an image locally (from magneto)
+python3 generate.py --workflow workflows/flux-dev.json \
+    --prompt "a sunset over mountains" \
+    --output /tmp/sunset.png
+
+# View in browser
+open "http://192.168.1.215:9000/comfy-gen/"
+```
 
 ## Architecture
 
 ```
-magneto (dev) -> GitHub -> ant-man (runner) -> moira (ComfyUI + GPU)
+magneto (dev) --> GitHub --> ant-man (runner) --> moira (ComfyUI + RTX 5090)
+                                                        |
+                                                        v
+                                                   MinIO bucket
+                                                        |
+                                                        v
+                                      http://192.168.1.215:9000/comfy-gen/
 ```
 
-## Setup
+## Infrastructure
 
-ComfyUI is assumed to be already running on moira at localhost:8188.
+| Machine | Role | IP |
+|---------|------|-----|
+| magneto | Development | 192.168.1.124 |
+| moira | ComfyUI + MinIO + GPU | 192.168.1.215 |
+| ant-man | GitHub Runner | 192.168.1.253 |
 
-## Usage
+## Services
 
-Trigger the "Generate Images" workflow with a prompt and workflow file.
+| Service | URL | Status Check |
+|---------|-----|--------------|
+| ComfyUI API | http://192.168.1.215:8188 | `curl http://192.168.1.215:8188/system_stats` |
+| MinIO | http://192.168.1.215:9000 | `curl http://192.168.1.215:9000/minio/health/live` |
+| MinIO Console | http://192.168.1.215:9001 | Login: minioadmin/minioadmin |
 
-Generated images are stored in MinIO on moira. Access via:
-- MinIO Console: http://192.168.1.215:9000 (login with minioadmin/minioadmin)
-- Bucket: comfy-gen
-- Direct URL: Logged in workflow output
+## Models
 
-## Infrastructure Integration
+All models stored in: `C:\Users\jrjen\comfy\models\` on moira.
 
-Uses the deploy pipeline from github-runner-manager:
-- Runner on ant-man executes CI
-- Deploys to moira via SSH/tar extract
-- GPU acceleration on RTX 5090
+See [docs/MODEL_REGISTRY.md](docs/MODEL_REGISTRY.md) for complete inventory.
+
+## Viewing Images
+
+Generated images are publicly accessible at:
+```
+http://192.168.1.215:9000/comfy-gen/<filename>.png
+```
+
+List all images:
+```bash
+curl -s http://192.168.1.215:9000/comfy-gen/ | grep -oP '(?<=<Key>)[^<]+'
+```
+
+## Starting ComfyUI
+
+If ComfyUI is not running:
+```bash
+ssh moira "C:\\Users\\jrjen\\comfy\\.venv\\Scripts\\python.exe C:\\Users\\jrjen\\comfy-gen\\scripts\\start_comfyui.py"
+```
+
+## Scripts
+
+| Script | Purpose |
+|--------|---------|
+| `scripts/start_comfyui.py` | Start ComfyUI server on moira (run via SSH) |
+| `scripts/set_bucket_policy.py` | Make MinIO bucket publicly readable |
+| `scripts/create_bucket.py` | Create the comfy-gen MinIO bucket |
+
+## Development
+
+See [.github/copilot-instructions.md](.github/copilot-instructions.md) for contribution guidelines.
+
+**Key Rules:**
+- All scripts must be Python (no batch/PowerShell)
+- No NSFW content in repository
+- Track work via GitHub issues
