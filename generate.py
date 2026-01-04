@@ -95,7 +95,7 @@ def download_output(status, output_path):
     return False
 
 def upload_to_minio(file_path, object_name):
-    """Upload file to MinIO."""
+    """Upload file to MinIO with correct content type for browser viewing."""
     try:
         client = Minio(
             MINIO_ENDPOINT,
@@ -107,14 +107,32 @@ def upload_to_minio(file_path, object_name):
         # Make bucket if not exists
         if not client.bucket_exists(BUCKET_NAME):
             client.make_bucket(BUCKET_NAME)
-            print(f"Created bucket {BUCKET_NAME}")
+            print(f"[INFO] Created bucket {BUCKET_NAME}")
 
-        # Upload
-        client.fput_object(BUCKET_NAME, object_name, file_path)
-        print(f"Uploaded {file_path} to MinIO bucket {BUCKET_NAME} as {object_name}")
+        # Determine content type based on extension
+        ext = Path(file_path).suffix.lower()
+        content_types = {
+            ".png": "image/png",
+            ".jpg": "image/jpeg",
+            ".jpeg": "image/jpeg",
+            ".gif": "image/gif",
+            ".webp": "image/webp",
+            ".mp4": "video/mp4",
+            ".webm": "video/webm",
+        }
+        content_type = content_types.get(ext, "application/octet-stream")
+
+        # Upload with correct content type so browser displays instead of downloads
+        client.fput_object(
+            BUCKET_NAME, 
+            object_name, 
+            file_path,
+            content_type=content_type
+        )
+        print(f"[OK] Uploaded {file_path} to MinIO as {object_name}")
         return f"http://192.168.1.215:9000/{BUCKET_NAME}/{object_name}"
     except S3Error as e:
-        print(f"MinIO error: {e}")
+        print(f"[ERROR] MinIO error: {e}")
         return None
 
 def main():

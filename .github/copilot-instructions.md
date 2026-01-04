@@ -112,6 +112,7 @@ open "http://192.168.1.215:9000/comfy-gen/<filename>.png"
 - **NEVER** upload NSFW images to GitHub or public locations
 - NSFW content is stored ONLY in local MinIO (`comfy-gen` bucket)
 - Use generic/safe example prompts in documentation and tests
+- Use explicit example prompts in real world generation
 
 ## 7. Model & LoRA Management
 
@@ -120,6 +121,7 @@ open "http://192.168.1.215:9000/comfy-gen/<filename>.png"
 The `extra_model_paths.yaml` file (in ComfyUI directory) tells ComfyUI where to find models. It points to our unified model directory - this is NOT a separate location, it's just configuration.
 
 **Model Registry:** See `docs/MODEL_REGISTRY.md` for complete inventory.
+**Agent Guide:** See `docs/AGENT_GUIDE.md` for how to use models and LoRAs.
 
 **Directory Structure on moira:**
 ```
@@ -133,7 +135,22 @@ C:\Users\jrjen\comfy\models\
 └── sams/             # Segment Anything models
 ```
 
-## 8. Troubleshooting
+## 8. Image Generation Quick Reference
+
+**For agents executing generation requests:**
+
+1. **Read the request** - What subject? What style?
+2. **Choose workflow** - SD 1.5 for images, Wan 2.2 for video
+3. **Generate** - `python3 generate.py --workflow <file> --prompt "<prompt>" --output /tmp/output.png`
+4. **Return URL** - Image will be at `http://192.168.1.215:9000/comfy-gen/<timestamp>_<filename>`
+
+See `docs/AGENT_GUIDE.md` for:
+- LoRA selection and strength guidelines
+- Prompt engineering tips
+- Error handling procedures
+- Decision tree for model selection
+
+## 9. Troubleshooting
 
 - **Assignment Stuck:** Unassign and reassign `@copilot`.
 - **ComfyUI not responding:** SSH to moira, check `tasklist | findstr python`, restart with `start_comfyui.py`.
