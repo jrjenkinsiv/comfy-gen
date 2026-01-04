@@ -46,7 +46,9 @@ def get_images(client: Minio, pattern: str = None) -> List[Dict]:
                 continue
             
             # Get file extension
-            ext = obj.object_name.lower().split('.')[-1]
+            if '.' not in obj.object_name:
+                continue
+            ext = obj.object_name.lower().rsplit('.', 1)[-1]
             
             # Separate images and videos
             is_image = ext in ['png', 'jpg', 'jpeg', 'gif', 'webp']
