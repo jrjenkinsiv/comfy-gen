@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
-"""MCP Server for ComfyUI Service Management.
+"""Comprehensive MCP Server for ComfyUI Image/Video Generation.
 
-This server exposes tools for managing ComfyUI service lifecycle:
-- start_comfyui: Start the ComfyUI server
-- stop_comfyui: Stop the ComfyUI server
-- restart_comfyui: Restart the ComfyUI server
-- check_comfyui_status: Check if ComfyUI is running and healthy
+This server exposes tools for:
+- Image generation (generate_image, img2img, inpaint, upscale, face_restore)
+- Video generation (generate_video, image_to_video)
+- Model management (list_models, suggest_model, search_civitai, download_model)
+- Gallery management (list_images, get_image_info, delete_image, get_history)
+- Prompt engineering (build_prompt, suggest_negative, analyze_prompt)
+- Progress/control (get_progress, cancel, get_queue, get_system_status)
+- Service management (start, stop, restart, check status)
 
-Run this server to allow MCP clients (like Claude Desktop) to control ComfyUI.
+Run this server to allow MCP clients (like Claude Desktop) to generate images/videos.
 """
 
 import sys
@@ -26,8 +29,11 @@ import stop_comfyui
 import restart_comfyui
 import check_comfyui_status
 
+# Import generation tools
+from comfygen.tools import generation, video, models, gallery, prompts, control
+
 # Initialize FastMCP server
-mcp = FastMCP("ComfyUI Service Manager")
+mcp = FastMCP("ComfyUI Comprehensive Generation Server")
 
 
 @mcp.tool()
@@ -111,6 +117,443 @@ def check_comfyui_service_status() -> str:
         return output
     except Exception as e:
         return f"Error checking ComfyUI status: {str(e)}"
+
+
+# ============================================================================
+# IMAGE GENERATION TOOLS
+# ============================================================================
+
+@mcp.tool()
+async def generate_image(
+    prompt: str,
+    negative_prompt: str = "blurry, low quality, watermark",
+    model: str = "sd15",
+    width: int = 512,
+    height: int = 512,
+    steps: int = 20,
+    cfg: float = 7.0,
+    sampler: str = "euler",
+    scheduler: str = "normal",
+    seed: int = -1,
+) -> dict:
+    """Generate image from text prompt.
+    
+    Args:
+        prompt: Positive text prompt describing what to generate
+        negative_prompt: Negative prompt (what to avoid)
+        model: Model to use (sd15, flux, sdxl)
+        width: Output width in pixels (default: 512)
+        height: Output height in pixels (default: 512)
+        steps: Number of sampling steps (default: 20)
+        cfg: CFG scale (default: 7.0)
+        sampler: Sampler algorithm (default: euler)
+        scheduler: Scheduler type (default: normal)
+        seed: Random seed, -1 for random (default: -1)
+    
+    Returns:
+        Dictionary with status, url, and generation metadata
+    """
+    return await generation.generate_image(
+        prompt=prompt,
+        negative_prompt=negative_prompt,
+        model=model,
+        width=width,
+        height=height,
+        steps=steps,
+        cfg=cfg,
+        sampler=sampler,
+        scheduler=scheduler,
+        seed=seed
+    )
+
+
+@mcp.tool()
+async def img2img(
+    input_image: str,
+    prompt: str,
+    negative_prompt: str = "",
+    denoise: float = 0.7,
+    model: str = "sd15",
+    steps: int = 20,
+    cfg: float = 7.0,
+    seed: int = -1,
+) -> dict:
+    """Transform existing image with prompt guidance.
+    
+    Args:
+        input_image: URL or path to input image
+        prompt: Positive text prompt for transformation
+        negative_prompt: Negative prompt
+        denoise: Denoise strength 0.0-1.0 (lower preserves more original, default: 0.7)
+        model: Model to use (default: sd15)
+        steps: Number of sampling steps (default: 20)
+        cfg: CFG scale (default: 7.0)
+        seed: Random seed, -1 for random (default: -1)
+    
+    Returns:
+        Dictionary with status, url, and generation metadata
+    """
+    return await generation.img2img(
+        input_image=input_image,
+        prompt=prompt,
+        negative_prompt=negative_prompt,
+        denoise=denoise,
+        model=model,
+        steps=steps,
+        cfg=cfg,
+        seed=seed
+    )
+
+
+# ============================================================================
+# VIDEO GENERATION TOOLS
+# ============================================================================
+
+@mcp.tool()
+async def generate_video(
+    prompt: str,
+    negative_prompt: str = "static, blurry, watermark",
+    width: int = 832,
+    height: int = 480,
+    frames: int = 81,
+    fps: int = 16,
+    steps: int = 30,
+    cfg: float = 6.0,
+    seed: int = -1,
+) -> dict:
+    """Generate video from text prompt using Wan 2.2 T2V.
+    
+    Args:
+        prompt: Positive text prompt describing the video
+        negative_prompt: Negative prompt (default: "static, blurry, watermark")
+        width: Video width in pixels (default: 832)
+        height: Video height in pixels (default: 480)
+        frames: Number of frames, ~5 sec at 16fps = 81 frames (default: 81)
+        fps: Frames per second (default: 16)
+        steps: Number of sampling steps (default: 30)
+        cfg: CFG scale (default: 6.0)
+        seed: Random seed, -1 for random (default: -1)
+    
+    Returns:
+        Dictionary with status, url, and generation metadata
+    """
+    return await video.generate_video(
+        prompt=prompt,
+        negative_prompt=negative_prompt,
+        width=width,
+        height=height,
+        frames=frames,
+        fps=fps,
+        steps=steps,
+        cfg=cfg,
+        seed=seed
+    )
+
+
+@mcp.tool()
+async def image_to_video(
+    input_image: str,
+    prompt: str,
+    negative_prompt: str = "",
+    motion_strength: float = 1.0,
+    frames: int = 81,
+    fps: int = 16,
+    steps: int = 30,
+    seed: int = -1,
+) -> dict:
+    """Animate image to video using Wan 2.2 I2V.
+    
+    Args:
+        input_image: URL or path to input image
+        prompt: Positive text prompt describing desired motion
+        negative_prompt: Negative prompt
+        motion_strength: How much movement 0.0-1.0+ (default: 1.0)
+        frames: Number of frames (default: 81)
+        fps: Frames per second (default: 16)
+        steps: Number of sampling steps (default: 30)
+        seed: Random seed, -1 for random (default: -1)
+    
+    Returns:
+        Dictionary with status, url, and generation metadata
+    """
+    return await video.image_to_video(
+        input_image=input_image,
+        prompt=prompt,
+        negative_prompt=negative_prompt,
+        motion_strength=motion_strength,
+        frames=frames,
+        fps=fps,
+        steps=steps,
+        seed=seed
+    )
+
+
+# ============================================================================
+# MODEL MANAGEMENT TOOLS
+# ============================================================================
+
+@mcp.tool()
+async def list_models() -> dict:
+    """List all installed checkpoint models.
+    
+    Returns:
+        Dictionary with list of available models
+    """
+    return await models.list_models()
+
+
+@mcp.tool()
+async def list_loras() -> dict:
+    """List all installed LoRAs with compatibility information.
+    
+    Returns:
+        Dictionary with list of LoRAs and their metadata
+    """
+    return await models.list_loras()
+
+
+@mcp.tool()
+async def get_model_info(model_name: str) -> dict:
+    """Get detailed information about a specific model.
+    
+    Args:
+        model_name: Model filename
+    
+    Returns:
+        Dictionary with model metadata
+    """
+    return await models.get_model_info(model_name)
+
+
+@mcp.tool()
+async def suggest_model(
+    task: str,
+    style: str = None,
+    subject: str = None,
+) -> dict:
+    """Recommend best model for a task.
+    
+    Args:
+        task: Task type (portrait, landscape, anime, video, text-to-video, image-to-video)
+        style: Optional style preference
+        subject: Optional subject matter
+    
+    Returns:
+        Dictionary with recommended model and alternatives
+    """
+    return await models.suggest_model(task, style, subject)
+
+
+@mcp.tool()
+async def suggest_loras(
+    prompt: str,
+    model: str,
+    max_suggestions: int = 3,
+) -> dict:
+    """Recommend LoRAs based on prompt content and model.
+    
+    Args:
+        prompt: Generation prompt
+        model: Model being used
+        max_suggestions: Maximum number of suggestions (default: 3)
+    
+    Returns:
+        Dictionary with LoRA suggestions
+    """
+    return await models.suggest_loras(prompt, model, max_suggestions)
+
+
+@mcp.tool()
+async def search_civitai(
+    query: str,
+    model_type: str = "all",
+    base_model: str = None,
+    sort: str = "Most Downloaded",
+    nsfw: bool = True,
+    limit: int = 10,
+) -> dict:
+    """Search CivitAI for models and LoRAs.
+    
+    Args:
+        query: Search query
+        model_type: Filter by type - all, checkpoint, lora, vae (default: all)
+        base_model: Filter by base model - SD 1.5, SDXL, etc. (optional)
+        sort: Sort method - Most Downloaded, Highest Rated, Newest (default: Most Downloaded)
+        nsfw: Include NSFW results (default: True)
+        limit: Maximum results (default: 10)
+    
+    Returns:
+        Dictionary with search results
+    """
+    return await models.search_civitai(
+        query=query,
+        model_type=model_type,
+        base_model=base_model,
+        sort=sort,
+        nsfw=nsfw,
+        limit=limit
+    )
+
+
+# ============================================================================
+# GALLERY & HISTORY TOOLS
+# ============================================================================
+
+@mcp.tool()
+async def list_images(
+    limit: int = 20,
+    prefix: str = "",
+    sort: str = "newest",
+) -> dict:
+    """Browse generated images from storage.
+    
+    Args:
+        limit: Maximum number of images to return (default: 20)
+        prefix: Filter by filename prefix (optional)
+        sort: Sort order - newest, oldest, name (default: newest)
+    
+    Returns:
+        Dictionary with list of images
+    """
+    return await gallery.list_images(limit, prefix, sort)
+
+
+@mcp.tool()
+async def get_image_info(image_name: str) -> dict:
+    """Get generation parameters and metadata for an image.
+    
+    Args:
+        image_name: Image filename in storage
+    
+    Returns:
+        Dictionary with image metadata and generation parameters
+    """
+    return await gallery.get_image_info(image_name)
+
+
+@mcp.tool()
+async def delete_image(image_name: str) -> dict:
+    """Remove image from storage.
+    
+    Args:
+        image_name: Image filename to delete
+    
+    Returns:
+        Dictionary with deletion status
+    """
+    return await gallery.delete_image(image_name)
+
+
+@mcp.tool()
+async def get_history(limit: int = 10) -> dict:
+    """Get recent generations with full parameters.
+    
+    Args:
+        limit: Maximum number of history entries (default: 10)
+    
+    Returns:
+        Dictionary with generation history
+    """
+    return await gallery.get_history(limit)
+
+
+# ============================================================================
+# PROMPT ENGINEERING TOOLS
+# ============================================================================
+
+@mcp.tool()
+async def build_prompt(
+    subject: str,
+    style: str = None,
+    setting: str = None,
+) -> dict:
+    """Construct a well-formed prompt from components.
+    
+    Args:
+        subject: Main subject of the image
+        style: Art style or aesthetic (optional)
+        setting: Scene or environment (optional)
+    
+    Returns:
+        Dictionary with constructed prompt
+    """
+    return await prompts.build_prompt(subject, style, setting)
+
+
+@mcp.tool()
+async def suggest_negative(model_type: str = "sd15") -> dict:
+    """Get recommended negative prompt for model type.
+    
+    Args:
+        model_type: Model type - sd15, sdxl, flux, wan (default: sd15)
+    
+    Returns:
+        Dictionary with negative prompt suggestions
+    """
+    return await prompts.suggest_negative(model_type)
+
+
+@mcp.tool()
+async def analyze_prompt(prompt: str) -> dict:
+    """Analyze prompt and suggest improvements.
+    
+    Args:
+        prompt: Prompt to analyze
+    
+    Returns:
+        Dictionary with analysis and suggestions
+    """
+    return await prompts.analyze_prompt(prompt)
+
+
+# ============================================================================
+# PROGRESS & CONTROL TOOLS
+# ============================================================================
+
+@mcp.tool()
+async def get_progress(prompt_id: str = None) -> dict:
+    """Get current generation progress.
+    
+    Args:
+        prompt_id: Optional specific prompt ID to check
+    
+    Returns:
+        Dictionary with progress information
+    """
+    return await control.get_progress(prompt_id)
+
+
+@mcp.tool()
+async def cancel(prompt_id: str = None) -> dict:
+    """Cancel current or specific generation job.
+    
+    Args:
+        prompt_id: Optional specific prompt ID to cancel (cancels current if not provided)
+    
+    Returns:
+        Dictionary with cancellation status
+    """
+    return await control.cancel(prompt_id)
+
+
+@mcp.tool()
+async def get_queue() -> dict:
+    """View queued jobs.
+    
+    Returns:
+        Dictionary with queue information
+    """
+    return await control.get_queue()
+
+
+@mcp.tool()
+async def get_system_status() -> dict:
+    """Get GPU/VRAM/server health information.
+    
+    Returns:
+        Dictionary with system status
+    """
+    return await control.get_system_status()
 
 
 if __name__ == "__main__":
