@@ -27,6 +27,10 @@ from minio import Minio
 from minio.error import S3Error
 from PIL import Image
 
+# Import shared config loader
+sys.path.insert(0, str(Path(__file__).parent))
+from comfygen.config import load_presets_config as load_shared_config
+
 COMFYUI_HOST = "http://192.168.1.215:8188"  # ComfyUI running on moira
 
 # MinIO configuration
@@ -401,18 +405,9 @@ def load_lora_presets():
         dict: Catalog dictionary with 'loras' (list of LoRA metadata) and 
               'model_suggestions' (dict of presets), or empty dict on failure
     """
-    catalog_path = Path(__file__).parent / "lora_catalog.yaml"
-    if not catalog_path.exists():
-        print("[WARN] lora_catalog.yaml not found")
-        return {}
-    
-    try:
-        with open(catalog_path, 'r') as f:
-            catalog = yaml.safe_load(f)
-        return catalog or {}
-    except Exception as e:
-        print(f"[ERROR] Failed to load lora_catalog.yaml: {e}")
-        return {}
+    # Use shared config loader
+    from comfygen.config import load_lora_catalog
+    return load_lora_catalog()
 
 def list_available_loras(available_models=None):
     """List available LoRAs from ComfyUI server and catalog.
@@ -984,17 +979,9 @@ def load_presets():
     Returns:
         dict: Presets dictionary or empty dict on failure
     """
-    presets_path = Path(__file__).parent / "presets.yaml"
-    if not presets_path.exists():
-        return {}
-    
-    try:
-        with open(presets_path, 'r', encoding='utf-8') as f:
-            data = yaml.safe_load(f)
-        return data.get("presets", {}) if data else {}
-    except Exception as e:
-        print(f"[ERROR] Failed to load presets.yaml: {e}")
-        return {}
+    # Use shared config loader
+    config = load_shared_config()
+    return config.get("presets", {})
 
 
 def load_config():
@@ -1003,21 +990,8 @@ def load_config():
     Returns:
         dict: Full config with keys: presets, default_negative_prompt, validation
     """
-    presets_path = Path(__file__).parent / "presets.yaml"
-    if not presets_path.exists():
-        return {"presets": {}, "default_negative_prompt": "", "validation": {}}
-    
-    try:
-        with open(presets_path, 'r', encoding='utf-8') as f:
-            data = yaml.safe_load(f) or {}
-        return {
-            "presets": data.get("presets", {}),
-            "default_negative_prompt": data.get("default_negative_prompt", ""),
-            "validation": data.get("validation", {})
-        }
-    except Exception as e:
-        print(f"[ERROR] Failed to load presets.yaml: {e}")
-        return {"presets": {}, "default_negative_prompt": "", "validation": {}}
+    # Use shared config loader for consistency with MCP server
+    return load_shared_config()
 
 def queue_workflow(workflow, retry=True):
     """Send workflow to ComfyUI server with retry logic.
