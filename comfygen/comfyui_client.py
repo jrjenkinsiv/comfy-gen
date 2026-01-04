@@ -398,7 +398,9 @@ class ComfyUIClient:
                 })
         
         def on_error(ws, error):
-            if not isinstance(error, websocket.WebSocketConnectionClosedException):
+            if not isinstance(error, (websocket.WebSocketConnectionClosedException, 
+                                     ConnectionResetError, 
+                                     BrokenPipeError)):
                 progress_callback({
                     "type": "error",
                     "prompt_id": prompt_id,

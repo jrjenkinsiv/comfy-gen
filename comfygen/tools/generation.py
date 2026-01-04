@@ -240,9 +240,9 @@ async def generate_image(
             
             # Load appropriate workflow
             workflow_map = {
-                "sd15": "flux-dev.json",  # Using flux-dev as base SD workflow
+                "sd15": "flux-dev.json",  # TODO: Update to use sd15-specific workflow when available
                 "flux": "flux-dev.json",
-                "sdxl": "flux-dev.json"
+                "sdxl": "flux-dev.json"   # TODO: Update to use sdxl-specific workflow when available
             }
             workflow_file = workflow_map.get(model, "flux-dev.json")
             
@@ -354,11 +354,13 @@ async def generate_image(
                             f.write(response.content)
                         local_path = str(output_path)
                     else:
-                        # Non-fatal error - continue with MinIO URL only
-                        pass
+                        # Log warning but continue - local save is optional
+                        import warnings
+                        warnings.warn(f"Failed to download image for local save: HTTP {response.status_code}")
                 except Exception as e:
-                    # Non-fatal error - continue with MinIO URL only
-                    pass
+                    # Log warning but continue - local save is optional
+                    import warnings
+                    warnings.warn(f"Failed to save image locally: {str(e)}")
             
             # Run validation if requested
             if validate:

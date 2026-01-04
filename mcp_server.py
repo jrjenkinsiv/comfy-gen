@@ -744,9 +744,9 @@ async def validate_workflow(
         
         # Load appropriate workflow
         workflow_map = {
-            "sd15": "flux-dev.json",
+            "sd15": "flux-dev.json",  # TODO: Update to use sd15-specific workflow when available
             "flux": "flux-dev.json",
-            "sdxl": "flux-dev.json"
+            "sdxl": "flux-dev.json"   # TODO: Update to use sdxl-specific workflow when available
         }
         workflow_file = workflow_map.get(model, "flux-dev.json")
         

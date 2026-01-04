@@ -21,6 +21,8 @@ async def example_json_progress():
     from comfygen.tools import generation
     
     # Generate with JSON progress enabled
+    # Note: When json_progress=True, progress updates are collected in result['progress_updates']
+    # If you also provide progress_callback, updates are sent to both
     result = await generation.generate_image(
         prompt="a sunset over mountains, cinematic lighting, highly detailed",
         negative_prompt="blurry, low quality, watermark",
@@ -28,8 +30,9 @@ async def example_json_progress():
         width=512,
         height=512,
         steps=20,
-        json_progress=True,  # Enable structured progress updates
-        progress_callback=lambda update: print(f"[PROGRESS] {update}")
+        json_progress=True,  # Enable structured progress collection
+        # progress_callback can be omitted when using json_progress
+        # or provided to get real-time updates in addition to collection
     )
     
     print(f"\nGeneration Status: {result['status']}")
