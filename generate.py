@@ -147,20 +147,22 @@ def cancel_generation(prompt_id):
     # First, try to delete from queue
     url = f"{COMFYUI_HOST}/queue"
     payload = {"delete": [prompt_id]}
+    deleted = False
     try:
         response = requests.post(url, json=payload)
         if response.status_code == 200:
             print(f"[OK] Cancelled generation {prompt_id}")
-            return True
+            deleted = True
     except requests.RequestException as e:
         # Queue deletion failed, continue to try interrupt
-        pass
+        print(f"[WARN] Could not remove from queue, attempting interrupt...")
     
     # Also interrupt current generation in case it's running
     try:
         interrupt_url = f"{COMFYUI_HOST}/interrupt"
         requests.post(interrupt_url)
-        print(f"[OK] Interrupted current generation")
+        if not deleted:
+            print(f"[OK] Interrupted current generation")
         return True
     except requests.RequestException as e:
         print(f"[ERROR] Failed to cancel: {e}")
@@ -190,7 +192,7 @@ def cleanup_partial_outputs():
             except OSError as e:
                 # Ignore errors during cleanup (file may not exist, permission issues, etc.)
                 pass
-    except Exception as e:
+    except (OSError, RuntimeError) as e:
         # Ignore glob errors - cleanup is best-effort
         pass
 
