@@ -1,0 +1,225 @@
+# Prompt Catalog for ComfyGen
+# Systematic collection of prompt engineering patterns
+# Issue #68: Research and empirical testing
+#
+# Structure:
+#   quality_boosters: Keywords that improve output quality
+#   negative_presets: Common negative prompt patterns
+#   style_modifiers: Artistic style keywords
+#   templates: Full prompt templates by category
+#   model_specific: Adjustments per model type
+
+# ========================================
+# QUALITY BOOSTERS
+# ========================================
+# Keywords empirically shown to improve output quality
+# Add validation scores from testing
+
+quality_boosters:
+  resolution:
+    - keyword: "8K resolution"
+      effectiveness: "high"  # To be validated
+      notes: "Works well with photorealistic prompts"
+    - keyword: "4K"
+      effectiveness: "medium"
+    - keyword: "high resolution"
+      effectiveness: "medium"
+    - keyword: "ultra detailed"
+      effectiveness: "high"
+      
+  sharpness:
+    - keyword: "sharp focus"
+      effectiveness: "high"
+    - keyword: "tack-sharp"
+      effectiveness: "high"
+    - keyword: "crystal clear"
+      effectiveness: "medium"
+      
+  lighting:
+    - keyword: "cinematic lighting"
+      effectiveness: "high"
+    - keyword: "volumetric lighting"
+      effectiveness: "high"
+    - keyword: "golden hour"
+      effectiveness: "high"
+      notes: "Best for outdoor scenes"
+    - keyword: "studio lighting"
+      effectiveness: "high"
+      notes: "Best for product/portrait shots"
+    - keyword: "rim lighting"
+      effectiveness: "medium"
+      
+  composition:
+    - keyword: "professional photography"
+      effectiveness: "high"
+    - keyword: "award-winning photograph"
+      effectiveness: "medium"
+    - keyword: "magazine cover"
+      effectiveness: "medium"
+
+# ========================================
+# NEGATIVE PRESETS
+# ========================================
+# Tested negative prompt collections
+
+negative_presets:
+  # Universal baseline - works with most generations
+  universal:
+    prompt: "bad quality, blurry, low resolution, watermark, text, signature, jpeg artifacts, distorted, cropped, out of frame"
+    effectiveness: "baseline"
+    
+  # For photorealistic images
+  photorealistic:
+    prompt: "bad quality, blurry, low resolution, watermark, text, cartoon, anime, illustration, painting, drawing, 3d render, CGI, unrealistic, oversaturated, amateur"
+    effectiveness: "high"
+    
+  # For game assets/icons
+  game_assets:
+    prompt: "realistic, 3d render, photograph, perspective, tilted, angled, complex background, text, watermark, multiple objects, blurry"
+    effectiveness: "high"
+    notes: "Use with vector/pixel art LoRAs"
+    
+  # For portraits
+  portrait:
+    prompt: "bad anatomy, bad hands, missing fingers, extra fingers, mutated, deformed, ugly, blurry, low quality, watermark, text, cropped head"
+    effectiveness: "high"
+    
+  # For landscapes/scenery
+  landscape:
+    prompt: "people, crowds, text, watermark, blurry, low quality, oversaturated, unrealistic colors, cropped, out of frame"
+    effectiveness: "medium"
+
+# ========================================
+# STYLE MODIFIERS
+# ========================================
+# Style keywords organized by category
+
+style_modifiers:
+  photography_styles:
+    - "professional automotive photography"
+    - "editorial fashion photography"
+    - "architectural photography"
+    - "product photography"
+    - "street photography"
+    - "portrait photography"
+    - "landscape photography"
+    - "macro photography"
+    
+  artistic_styles:
+    - "oil painting style"
+    - "watercolor style"
+    - "digital art"
+    - "concept art"
+    - "illustration"
+    - "anime style"
+    - "comic book style"
+    - "pixel art"
+    - "vector art"
+    - "flat design"
+    
+  mood_atmosphere:
+    - "cinematic"
+    - "dramatic"
+    - "moody"
+    - "ethereal"
+    - "vibrant"
+    - "dark and gritty"
+    - "soft and dreamy"
+    - "high contrast"
+    
+  camera_technical:
+    - "shallow depth of field"
+    - "bokeh"
+    - "wide angle lens"
+    - "telephoto lens"
+    - "tilt-shift"
+    - "long exposure"
+    - "motion blur"
+
+# ========================================
+# PROMPT TEMPLATES
+# ========================================
+# Full templates with placeholders
+
+templates:
+  # Automotive photography
+  automotive:
+    positive: "{color} {car_model} {action}, {location}, {time_of_day}, professional automotive photography, {camera_settings}, {lighting}, 8K resolution, sharp focus"
+    negative: "bad quality, blurry, cartoon, anime, duplicate cars, watermark, text, 3d render, multiple cars, people, crowds"
+    variables:
+      color: ["metallic silver", "deep blue", "guards red", "pristine white", "black"]
+      action: ["parked", "in motion", "captured mid-action", "positioned"]
+      location: ["coastal highway", "modern architecture", "rain-soaked street", "race track", "mansion driveway"]
+      time_of_day: ["golden hour", "blue hour", "night with neon lights", "bright sunny day", "magic hour"]
+      camera_settings: ["shot with wide-angle lens at f/2.8", "telephoto lens at 1/2000", "50mm at f/1.4"]
+      lighting: ["warm sunset light", "studio lighting", "neon reflections", "harsh midday sun"]
+      
+  # Game icons (top-down)
+  game_icon:
+    positive: "{style} game icon of {subject}, top-down view, {aesthetic}, clean edges, centered composition, game asset"
+    negative: "realistic, 3d render, photograph, perspective, tilted, complex background, text, watermark, multiple objects"
+    variables:
+      style: ["vector", "pixel art", "flat design", "cartoon"]
+      subject: ["battleship", "destroyer", "aircraft carrier", "submarine", "patrol boat"]
+      aesthetic: ["clean lines", "solid colors", "16-bit style", "minimalist"]
+      
+  # Portrait
+  portrait:
+    positive: "portrait of {subject}, {expression}, {lighting}, {background}, {camera}, professional portrait photography, 8K"
+    negative: "bad anatomy, deformed, ugly, blurry, low quality, watermark, cropped, bad hands"
+    variables:
+      subject: ["a young woman", "an elderly man", "a child"]
+      expression: ["smiling", "serious", "contemplative", "laughing"]
+      lighting: ["soft studio lighting", "natural window light", "dramatic side lighting"]
+      background: ["blurred bokeh", "solid color", "outdoor setting"]
+      camera: ["85mm lens at f/1.8", "medium format camera"]
+
+  # Landscape
+  landscape:
+    positive: "{scene}, {time}, {weather}, {style}, breathtaking, detailed, 8K resolution"
+    negative: "people, text, watermark, blurry, oversaturated, cropped"
+    variables:
+      scene: ["mountain range", "ocean coastline", "forest", "desert", "valley"]
+      time: ["sunrise", "sunset", "golden hour", "blue hour", "night sky"]
+      weather: ["clear sky", "dramatic clouds", "fog", "after rain"]
+      style: ["landscape photography", "cinematic", "ethereal"]
+
+# ========================================
+# MODEL-SPECIFIC ADJUSTMENTS
+# ========================================
+# Different models respond differently to prompts
+
+model_specific:
+  sd15:
+    notes: "Classic keyword-based prompting works best"
+    recommended_quality: ["masterpiece", "best quality", "highly detailed"]
+    avoid: ["natural language sentences work less well"]
+    prompt_style: "keyword-heavy"
+    
+  flux:
+    notes: "Natural language descriptions work well"
+    recommended_quality: ["8K resolution", "professional photography", "sharp focus"]
+    avoid: ["excessive keyword stacking"]
+    prompt_style: "natural-language"
+    
+  wan22:
+    notes: "Focus on motion and action descriptors"
+    recommended_quality: ["smooth motion", "cinematic", "high quality video"]
+    motion_keywords: ["moving", "walking", "running", "dancing", "flowing"]
+    avoid: ["static descriptors for video generation"]
+    prompt_style: "action-oriented"
+
+# ========================================
+# EMPIRICAL TEST RESULTS
+# ========================================
+# Log results from systematic testing here
+# Format: test_id, prompt_variant, seed, validation_score, notes
+
+test_results: []
+# Will be populated by testing script
+# Example:
+# - test_id: "001"
+#   prompt: "8K resolution, sharp focus, cinematic lighting"
+#   seed: 12345
+#   validation_score: 0.95
+#   notes: "High quality boosters effective"
