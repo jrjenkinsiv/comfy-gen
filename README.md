@@ -18,6 +18,12 @@ python3 generate.py --workflow workflows/flux-dev.json \
     --prompt "a sunset over mountains" \
     --output /tmp/sunset.png
 
+# With dynamic LoRA injection
+python3 generate.py --workflow workflows/flux-dev.json \
+    --prompt "a sunset over mountains" \
+    --lora "style_lora.safetensors:0.8" \
+    --output /tmp/sunset.png
+
 # View in browser
 open "http://192.168.1.215:9000/comfy-gen/"
 ```
@@ -55,6 +61,33 @@ magneto (dev) --> GitHub --> ant-man (runner) --> moira (ComfyUI + RTX 5090)
 All models stored in: `C:\Users\jrjen\comfy\models\` on moira.
 
 See [docs/MODEL_REGISTRY.md](docs/MODEL_REGISTRY.md) for complete inventory.
+
+## LoRA Support
+
+ComfyGen supports dynamic LoRA injection at generation time:
+
+```bash
+# Single LoRA
+python3 generate.py --workflow workflows/flux-dev.json \
+    --prompt "..." \
+    --lora "lora_name.safetensors:0.8"
+
+# Multiple LoRAs (chained)
+python3 generate.py --workflow workflows/flux-dev.json \
+    --prompt "..." \
+    --lora "lora1.safetensors:0.7" \
+    --lora "lora2.safetensors:0.5"
+
+# LoRA presets
+python3 generate.py --workflow workflows/flux-dev.json \
+    --prompt "..." \
+    --lora-preset video-quality
+
+# List available LoRAs
+python3 generate.py --list-loras
+```
+
+See [docs/LORA_INJECTION.md](docs/LORA_INJECTION.md) for detailed documentation.
 
 ## Viewing Images
 
