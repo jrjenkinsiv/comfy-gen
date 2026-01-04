@@ -3,6 +3,7 @@
 
 Usage:
     python generate.py --workflow workflow.json --prompt "your prompt" --negative-prompt "negative prompt" --output output.png
+    python generate.py --auto-select --prompt "your prompt" --output output.png
 """
 
 import argparse
@@ -10,6 +11,7 @@ import json
 import requests
 import time
 import sys
+import os
 from pathlib import Path
 from minio import Minio
 from minio.error import S3Error
@@ -137,15 +139,100 @@ def upload_to_minio(file_path, object_name):
         print(f"[ERROR] MinIO error: {e}")
         return None
 
+def auto_select_workflow(prompt, prefer_quality=False):
+    """Automatically select workflow based on prompt analysis.
+    
+    Uses scripts/select_model.py to analyze prompt and suggest appropriate workflow.
+    
+    Args:
+        prompt: Text prompt to analyze
+        prefer_quality: Whether to prefer quality over speed
+        
+    Returns:
+        Path to selected workflow file, or None if selection fails
+    """
+    import subprocess
+    
+    script_path = Path(__file__).parent / "scripts" / "select_model.py"
+    
+    if not script_path.exists():
+        print(f"[ERROR] select_model.py not found at {script_path}")
+        return None
+    
+    # Run select_model.py to get selection
+    cmd = [sys.executable, str(script_path), prompt, "--output-format", "json"]
+    if prefer_quality:
+        cmd.append("--prefer-quality")
+    
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+        if result.returncode != 0:
+            print(f"[ERROR] Model selection failed: {result.stderr}")
+            return None
+        
+        # Parse JSON output (skip stderr which contains INFO/WARN messages)
+        selection = json.loads(result.stdout)
+        
+        # Determine workflow based on model
+        base_model = selection["base_model"]["filename"]
+        
+        print(f"[INFO] Auto-selected model: {base_model}")
+        if selection["loras"]:
+            print(f"[INFO] Auto-selected {len(selection['loras'])} LoRA(s):")
+            for lora in selection["loras"]:
+                print(f"  - {lora['filename']} (strength: {lora['strength_model']})")
+        
+        # Map model to workflow
+        workflows_dir = Path(__file__).parent / "workflows"
+        
+        if "wan2.2_t2v" in base_model:
+            workflow_path = workflows_dir / "wan22-t2v.json"
+        elif "wan2.2_i2v" in base_model:
+            workflow_path = workflows_dir / "wan22-i2v.json"
+        else:
+            # Default to SD 1.5
+            workflow_path = workflows_dir / "flux-dev.json"
+        
+        if not workflow_path.exists():
+            print(f"[ERROR] Workflow not found: {workflow_path}")
+            return None
+        
+        print(f"[INFO] Selected workflow: {workflow_path.name}")
+        return str(workflow_path)
+        
+    except subprocess.TimeoutExpired:
+        print("[ERROR] Model selection timed out")
+        return None
+    except json.JSONDecodeError as e:
+        print(f"[ERROR] Failed to parse selection output: {e}")
+        return None
+    except Exception as e:
+        print(f"[ERROR] Unexpected error during model selection: {e}")
+        return None
+
 def main():
     parser = argparse.ArgumentParser(description="Generate images with ComfyUI")
-    parser.add_argument("--workflow", required=True, help="Path to workflow JSON")
+    parser.add_argument("--workflow", help="Path to workflow JSON")
     parser.add_argument("--prompt", required=True, help="Positive text prompt")
     parser.add_argument("--negative-prompt", default="", help="Negative text prompt")
     parser.add_argument("--output", default="output.png", help="Output image path")
+    parser.add_argument("--auto-select", action="store_true", help="Automatically select workflow based on prompt")
+    parser.add_argument("--prefer-quality", action="store_true", help="Prefer quality over speed (with --auto-select)")
     args = parser.parse_args()
 
-    workflow = load_workflow(args.workflow)
+    # Determine workflow
+    if args.auto_select:
+        workflow_path = auto_select_workflow(args.prompt, args.prefer_quality)
+        if not workflow_path:
+            print("[ERROR] Auto-selection failed. Please specify --workflow manually.")
+            sys.exit(1)
+    else:
+        if not args.workflow:
+            print("[ERROR] Either --workflow or --auto-select must be specified")
+            sys.exit(1)
+        workflow_path = args.workflow
+
+    workflow = load_workflow(workflow_path)
     workflow = modify_prompt(workflow, args.prompt, args.negative_prompt)
 
     prompt_id = queue_workflow(workflow)
