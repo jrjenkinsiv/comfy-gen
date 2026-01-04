@@ -53,6 +53,7 @@ def check_server_availability():
             return True
         else:
             print(f"[ERROR] ComfyUI server returned status {response.status_code}")
+            print(f"[ERROR] Server may be starting up or experiencing issues. Please check the server logs.")
             return False
     except requests.ConnectionError:
         print(f"[ERROR] Cannot connect to ComfyUI server at {COMFYUI_HOST}")
@@ -150,11 +151,14 @@ def validate_workflow_models(workflow, available_models):
     """Validate that all models referenced in workflow exist.
     
     Args:
-        workflow: The workflow dictionary
-        available_models: Dictionary of available models from get_available_models()
+        workflow (dict): The workflow dictionary containing node definitions
+        available_models (dict): Dictionary of available models from get_available_models()
     
     Returns:
-        tuple: (is_valid, missing_models, suggestions)
+        tuple: (is_valid (bool), missing_models (list of tuples), suggestions (dict))
+            - is_valid: True if all models exist, False otherwise
+            - missing_models: List of (model_type, model_name) tuples for missing models
+            - suggestions: Dict mapping missing model names to lists of suggested alternatives
     """
     if not available_models:
         print("[WARN] Cannot validate models - model list unavailable")
