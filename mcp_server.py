@@ -49,8 +49,22 @@ import check_comfyui_status
 # Import generation tools
 from comfygen.tools import generation, video, models, gallery, prompts, control
 
+# Import config loader
+from comfygen.config import get_config_loader
+
 # Initialize FastMCP server
 mcp = FastMCP("ComfyUI Comprehensive Generation Server")
+
+# Load configuration on startup
+config_loader = get_config_loader()
+presets_config = config_loader.load_presets()
+lora_catalog = config_loader.load_lora_catalog()
+
+# Log loaded configuration
+print(f"[OK] Loaded {len(presets_config.get('presets', {}))} generation presets")
+print(f"[OK] Loaded {len(lora_catalog.get('loras', []))} LoRAs from catalog")
+print(f"[OK] Default negative prompt: {presets_config.get('default_negative_prompt', 'none')[:50]}...")
+print(f"[OK] Validation enabled: {presets_config.get('validation', {}).get('enabled', False)}")
 
 
 @mcp.tool()
@@ -143,56 +157,113 @@ def check_comfyui_service_status() -> str:
 @mcp.tool()
 async def generate_image(
     prompt: str,
-    negative_prompt: str = "blurry, low quality, watermark",
+    negative_prompt: str = "",
     model: str = "sd15",
     width: int = 512,
     height: int = 512,
-    steps: int = 20,
-    cfg: float = 7.0,
-    sampler: str = "euler",
-    scheduler: str = "normal",
+    steps: int = None,
+    cfg: float = None,
+    sampler: str = None,
+    scheduler: str = None,
     seed: int = -1,
-    validate: bool = True,
-    auto_retry: bool = True,
-    retry_limit: int = 3,
-    positive_threshold: float = 0.25,
+    preset: str = None,
+    lora_preset: str = None,
+    validate: bool = None,
+    auto_retry: bool = None,
+    retry_limit: int = None,
+    positive_threshold: float = None,
 ) -> dict:
     """Generate image from text prompt with optional CLIP validation.
     
     Args:
         prompt: Positive text prompt describing what to generate
-        negative_prompt: Negative prompt (what to avoid)
+        negative_prompt: Negative prompt (what to avoid). If empty, uses default from presets.yaml
         model: Model to use (sd15, flux, sdxl)
         width: Output width in pixels (default: 512)
         height: Output height in pixels (default: 512)
-        steps: Number of sampling steps (default: 20)
-        cfg: CFG scale (default: 7.0)
-        sampler: Sampler algorithm (default: euler)
-        scheduler: Scheduler type (default: normal)
+        steps: Number of sampling steps. If None, uses preset or default (20)
+        cfg: CFG scale. If None, uses preset or default (7.0)
+        sampler: Sampler algorithm. If None, uses preset or default (euler)
+        scheduler: Scheduler type. If None, uses preset or default (normal)
         seed: Random seed, -1 for random (default: -1)
-        validate: Run CLIP validation after generation (default: True)
-        auto_retry: Automatically retry if validation fails (default: True)
-        retry_limit: Maximum retry attempts (default: 3)
-        positive_threshold: Minimum CLIP score for positive prompt (default: 0.25)
+        preset: Generation preset (draft, balanced, high-quality, fast, ultra). Overrides steps/cfg/sampler/scheduler
+        lora_preset: LoRA preset from lora_catalog.yaml (text_to_video, simple_image, etc.)
+        validate: Run CLIP validation after generation. If None, uses preset or config default
+        auto_retry: Automatically retry if validation fails. If None, uses preset or config default
+        retry_limit: Maximum retry attempts. If None, uses preset or config default (3)
+        positive_threshold: Minimum CLIP score for positive prompt. If None, uses preset or config default (0.25)
     
     Returns:
         Dictionary with status, url, generation metadata, and validation results
     """
+    # Load preset if specified
+    preset_params = {}
+    if preset:
+        preset_params = config_loader.get_preset(preset) or {}
+        if not preset_params:
+            return {
+                "status": "error",
+                "error": f"Preset '{preset}' not found. Available: {', '.join(presets_config.get('presets', {}).keys())}"
+            }
+    
+    # Load LoRA preset if specified
+    loras = None
+    if lora_preset:
+        lora_preset_data = config_loader.get_lora_preset(lora_preset)
+        if lora_preset_data:
+            default_loras = lora_preset_data.get("default_loras", [])
+            if default_loras:
+                # Convert LoRA filenames to format expected by generate_image
+                loras = []
+                for lora_filename in default_loras:
+                    # Find LoRA details in catalog
+                    lora_info = None
+                    for lora in lora_catalog.get("loras", []):
+                        if lora.get("filename") == lora_filename:
+                            lora_info = lora
+                            break
+                    
+                    strength = lora_info.get("recommended_strength", 1.0) if lora_info else 1.0
+                    loras.append({"name": lora_filename, "strength": strength})
+        else:
+            return {
+                "status": "error",
+                "error": f"LoRA preset '{lora_preset}' not found. Available: {', '.join(lora_catalog.get('model_suggestions', {}).keys())}"
+            }
+    
+    # Apply defaults from config and preset (CLI args > preset > config defaults)
+    validation_config = presets_config.get("validation", {})
+    
+    # Use default negative prompt if not provided
+    if not negative_prompt:
+        negative_prompt = presets_config.get("default_negative_prompt", "blurry, low quality, watermark")
+    
+    # Merge preset and config defaults
+    final_steps = steps if steps is not None else preset_params.get("steps", 20)
+    final_cfg = cfg if cfg is not None else preset_params.get("cfg", 7.0)
+    final_sampler = sampler if sampler is not None else preset_params.get("sampler", "euler")
+    final_scheduler = scheduler if scheduler is not None else preset_params.get("scheduler", "normal")
+    final_validate = validate if validate is not None else preset_params.get("validate", validation_config.get("enabled", True))
+    final_auto_retry = auto_retry if auto_retry is not None else preset_params.get("auto_retry", validation_config.get("auto_retry", True))
+    final_retry_limit = retry_limit if retry_limit is not None else preset_params.get("retry_limit", validation_config.get("retry_limit", 3))
+    final_positive_threshold = positive_threshold if positive_threshold is not None else preset_params.get("positive_threshold", validation_config.get("positive_threshold", 0.25))
+    
     return await generation.generate_image(
         prompt=prompt,
         negative_prompt=negative_prompt,
         model=model,
         width=width,
         height=height,
-        steps=steps,
-        cfg=cfg,
-        sampler=sampler,
-        scheduler=scheduler,
+        steps=final_steps,
+        cfg=final_cfg,
+        sampler=final_sampler,
+        scheduler=final_scheduler,
         seed=seed,
-        validate=validate,
-        auto_retry=auto_retry,
-        retry_limit=retry_limit,
-        positive_threshold=positive_threshold
+        loras=loras,
+        validate=final_validate,
+        auto_retry=final_auto_retry,
+        retry_limit=final_retry_limit,
+        positive_threshold=final_positive_threshold
     )
 
 
