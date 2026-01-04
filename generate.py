@@ -40,6 +40,9 @@ MAX_RETRIES = 3
 RETRY_DELAY = 2  # seconds
 RETRY_BACKOFF = 2  # exponential backoff multiplier
 
+# Default negative prompts
+DEFAULT_SD_NEGATIVE_PROMPT = "bad quality, blurry, low resolution, watermark, text, deformed, ugly, duplicate"
+
 def check_server_availability():
     """Check if ComfyUI server is available.
     
@@ -352,13 +355,16 @@ def find_prompt_nodes(workflow):
         if first_clip_node is None:
             first_clip_node = node_id
         
-        title = node.get("_meta", {}).get("title", "").lower()
+        # Normalize title for matching: lowercase and remove special chars
+        title = node.get("_meta", {}).get("title", "")
+        title_normalized = re.sub(r'[^a-z0-9]', '', title.lower())
         
-        # Match positive prompt patterns
-        if "positive" in title or "motion prompt" in title:
+        # Match positive prompt patterns (normalized)
+        positive_patterns = ['positive', 'motionprompt']
+        if any(pattern in title_normalized for pattern in positive_patterns):
             positive_node = node_id
-        # Match negative prompt patterns
-        elif "negative" in title:
+        # Match negative prompt patterns (normalized)
+        elif 'negative' in title_normalized:
             negative_node = node_id
     
     # Fallback: use first CLIP node if no positive found
@@ -393,7 +399,7 @@ def get_default_negative_prompt(workflow):
         return ""
     
     # SD 1.5 and similar checkpoints - use quality-focused negative
-    return "bad quality, blurry, low resolution, watermark, text, deformed, ugly, duplicate"
+    return DEFAULT_SD_NEGATIVE_PROMPT
 
 
 def modify_prompt(workflow, positive_prompt, negative_prompt=""):
@@ -786,7 +792,8 @@ def main():
     parser = argparse.ArgumentParser(description="Generate images with ComfyUI")
     parser.add_argument("--workflow", help="Path to workflow JSON")
     parser.add_argument("--prompt", help="Positive text prompt")
-    parser.add_argument("--negative-prompt", "-n", default="", help="Negative text prompt (what to avoid). If not specified, SD workflows use default: 'bad quality, blurry, low resolution, watermark, text, deformed, ugly, duplicate'")
+    parser.add_argument("--negative-prompt", "-n", default="", 
+                        help=f"Negative text prompt (what to avoid). If not specified, SD workflows use default: '{DEFAULT_SD_NEGATIVE_PROMPT}'")
     parser.add_argument("--output", default="output.png", help="Output image path")
     parser.add_argument("--input-image", "-i", help="Input image path (local file or URL) for img2img/I2V")
     parser.add_argument("--resize", help="Resize input image to WxH (e.g., 512x512)")

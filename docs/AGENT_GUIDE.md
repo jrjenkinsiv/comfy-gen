@@ -299,7 +299,7 @@ python3 generate.py \
 a car driving along a coastal highway, waves crashing, drone shot following
 ```
 
-**Note:** Wan 2.2 workflows typically do not use negative prompts. The model architecture handles quality through the positive prompt and sampling parameters. If you specify a negative prompt with Wan workflows, it will be ignored.
+**Note:** Wan 2.2 workflows typically do not use negative prompts. The model architecture handles quality through the positive prompt and sampling parameters. If you specify a negative prompt with Wan workflows, a warning will be displayed and the negative prompt will not be applied (since Wan workflows lack a negative prompt node).
 
 ---
 
