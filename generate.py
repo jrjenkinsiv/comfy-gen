@@ -1019,6 +1019,59 @@ def load_config():
         print(f"[ERROR] Failed to load presets.yaml: {e}")
         return {"presets": {}, "default_negative_prompt": "", "validation": {}}
 
+
+def load_prompt_catalog():
+    """Load prompt catalog from prompt_catalog.yaml.
+    
+    Returns:
+        dict: Prompt catalog with templates, negative_presets, etc.
+    """
+    catalog_path = Path(__file__).parent / "prompt_catalog.yaml"
+    if not catalog_path.exists():
+        return {}
+    
+    try:
+        with open(catalog_path, 'r', encoding='utf-8') as f:
+            data = yaml.safe_load(f)
+        return data if data else {}
+    except Exception as e:
+        print(f"[ERROR] Failed to load prompt_catalog.yaml: {e}")
+        return {}
+
+
+def expand_prompt_template(template_data, variables=None):
+    """Expand a prompt template with variable substitution.
+    
+    Args:
+        template_data: Template dict with 'positive', 'negative', and 'variables' keys
+        variables: Optional dict of variable overrides (key: value)
+    
+    Returns:
+        tuple: (positive_prompt, negative_prompt)
+    """
+    positive_template = template_data.get("positive", "")
+    negative_template = template_data.get("negative", "")
+    template_variables = template_data.get("variables", {})
+    
+    # Merge user variables with template defaults
+    final_variables = {}
+    for var_name, var_options in template_variables.items():
+        if variables and var_name in variables:
+            # Use user-provided value
+            final_variables[var_name] = variables[var_name]
+        elif var_options and isinstance(var_options, list) and len(var_options) > 0:
+            # Use first option as default
+            final_variables[var_name] = var_options[0]
+        else:
+            # No default available
+            final_variables[var_name] = ""
+    
+    # Substitute variables in templates
+    positive_prompt = positive_template.format(**final_variables)
+    negative_prompt = negative_template.format(**final_variables) if negative_template else ""
+    
+    return positive_prompt, negative_prompt
+
 def queue_workflow(workflow, retry=True):
     """Send workflow to ComfyUI server with retry logic.
     
@@ -1312,7 +1365,8 @@ def create_metadata_json(
     minio_url,
     workflow=None,
     output_path=None,
-    generation_time_seconds=None
+    generation_time_seconds=None,
+    prompt_preset=None
 ):
     """Create metadata JSON for experiment tracking.
     
@@ -1325,9 +1379,10 @@ def create_metadata_json(
         preset: Preset name if used
         validation_score: CLIP validation score if validation was run
         minio_url: URL to the generated image in MinIO
-        workflow: Optional workflow dict to extract model/VAE/resolution info
-        output_path: Optional output file path to calculate file size
-        generation_time_seconds: Optional generation time in seconds
+        workflow: Full workflow dict (optional)
+        output_path: Path to output file (optional)
+        generation_time_seconds: Time taken to generate (optional)
+        prompt_preset: Prompt template name if used (optional)
     
     Returns:
         dict: Metadata dictionary ready for JSON serialization
@@ -1361,7 +1416,8 @@ def create_metadata_json(
         "input": {
             "prompt": prompt,
             "negative_prompt": negative_prompt if negative_prompt else "",
-            "preset": preset if preset else None
+            "preset": preset if preset else None,
+            "prompt_preset": prompt_preset if prompt_preset else None
         },
         
         "workflow": {
@@ -1650,6 +1706,8 @@ def main():
                         help="Add LoRA with strength (e.g., 'style.safetensors:0.8'). Can be repeated for multiple LoRAs.")
     parser.add_argument("--lora-preset", metavar="PRESET_NAME",
                         help="Use a predefined LoRA preset from lora_catalog.yaml")
+    parser.add_argument("--prompt-preset", metavar="TEMPLATE_NAME",
+                        help="Use a prompt template from prompt_catalog.yaml (e.g., automotive, portrait, landscape, game_icon)")
     parser.add_argument("--list-loras", action="store_true", 
                         help="List available LoRAs and presets, then exit")
     parser.add_argument("--cancel", metavar="PROMPT_ID", help="Cancel a specific prompt by ID")
@@ -1756,8 +1814,34 @@ def main():
     if not args.workflow:
         parser.error("--workflow is required")
     
-    if not args.dry_run and not args.prompt:
-        parser.error("--prompt is required (unless using --dry-run)")
+    # Handle prompt-preset flag
+    preset_positive_prompt = None
+    preset_negative_prompt = None
+    if args.prompt_preset:
+        catalog = load_prompt_catalog()
+        templates = catalog.get("templates", {})
+        
+        if args.prompt_preset not in templates:
+            available_templates = ', '.join(templates.keys()) if templates else 'none'
+            print(f"[ERROR] Prompt preset not found: {args.prompt_preset}")
+            print(f"[ERROR] Available presets: {available_templates}")
+            sys.exit(EXIT_CONFIG_ERROR)
+        
+        # Expand template with default variables
+        template_data = templates[args.prompt_preset]
+        preset_positive_prompt, preset_negative_prompt = expand_prompt_template(template_data)
+        
+        if not args.quiet:
+            print(f"[OK] Loaded prompt preset '{args.prompt_preset}'")
+            print(f"[OK] Positive: {preset_positive_prompt}")
+            if preset_negative_prompt:
+                print(f"[OK] Negative: {preset_negative_prompt}")
+    
+    # Determine final prompt (preset can be overridden by --prompt)
+    final_prompt = args.prompt if args.prompt else preset_positive_prompt
+    
+    if not args.dry_run and not final_prompt:
+        parser.error("--prompt or --prompt-preset is required (unless using --dry-run)")
     
     # Check server availability first
     if not check_server_availability():
@@ -1798,8 +1882,8 @@ def main():
     if args.dry_run:
         print("[OK] Dry-run mode - workflow is valid")
         print(f"[OK] Workflow: {args.workflow}")
-        if args.prompt:
-            print(f"[OK] Prompt: {args.prompt}")
+        if final_prompt:
+            print(f"[OK] Prompt: {final_prompt}")
         print("[OK] Validation complete - no generation performed")
         sys.exit(EXIT_SUCCESS)
     
@@ -1807,15 +1891,19 @@ def main():
     signal.signal(signal.SIGINT, signal_handler)
     current_output_path = args.output
 
-    # Apply default negative prompt from config if not provided
+    # Determine final negative prompt (priority: user arg > preset > config default)
     effective_negative_prompt = args.negative_prompt
-    if not effective_negative_prompt and config_negative_prompt:
+    if not effective_negative_prompt and preset_negative_prompt:
+        effective_negative_prompt = preset_negative_prompt
+        if not args.quiet:
+            print(f"[OK] Using negative prompt from preset")
+    elif not effective_negative_prompt and config_negative_prompt:
         effective_negative_prompt = config_negative_prompt
         if not args.quiet:
             print(f"[OK] Using default negative prompt from config")
 
     # Modify workflow with prompts
-    workflow = modify_prompt(workflow, args.prompt, effective_negative_prompt)
+    workflow = modify_prompt(workflow, final_prompt, effective_negative_prompt)
     
     # Handle input image if provided
     temp_file = None
@@ -2020,7 +2108,7 @@ def main():
                 print(f"\n[INFO] Retry attempt {attempt}/{max_attempts}")
             # Adjust prompts for retry
             adjusted_positive, adjusted_negative = adjust_prompt_for_retry(
-                args.prompt, effective_negative_prompt, attempt - 1
+                final_prompt, effective_negative_prompt, attempt - 1
             )
             if not args.quiet:
                 print(f"[INFO] Adjusted positive prompt: {adjusted_positive}")
@@ -2071,7 +2159,7 @@ def main():
                     # Upload metadata after successful validation
                     if not args.no_metadata and object_name:
                         # Get current prompt (may be adjusted for retry)
-                        current_positive = args.prompt if attempt == 1 else adjusted_positive
+                        current_positive = final_prompt if attempt == 1 else adjusted_positive
                         current_negative = effective_negative_prompt if attempt == 1 else adjusted_negative
                         
                         metadata = create_metadata_json(
@@ -2085,7 +2173,8 @@ def main():
                             minio_url=minio_url,
                             workflow=workflow,
                             output_path=args.output,
-                            generation_time_seconds=generation_time_seconds
+                            generation_time_seconds=generation_time_seconds,
+                            prompt_preset=args.prompt_preset
                         )
                         metadata_url = upload_metadata_to_minio(metadata, object_name)
                         if metadata_url and not args.quiet:
@@ -2097,7 +2186,7 @@ def main():
                     if not args.auto_retry:
                         # Validation failed but no retry requested - still save metadata
                         if not args.no_metadata and object_name:
-                            current_positive = args.prompt if attempt == 1 else adjusted_positive
+                            current_positive = final_prompt if attempt == 1 else adjusted_positive
                             current_negative = effective_negative_prompt if attempt == 1 else adjusted_negative
                             
                             metadata = create_metadata_json(
@@ -2111,7 +2200,8 @@ def main():
                                 minio_url=minio_url,
                                 workflow=workflow,
                                 output_path=args.output,
-                                generation_time_seconds=generation_time_seconds
+                                generation_time_seconds=generation_time_seconds,
+                                prompt_preset=args.prompt_preset
                             )
                             metadata_url = upload_metadata_to_minio(metadata, object_name)
                             if metadata_url and not args.quiet:
@@ -2124,7 +2214,7 @@ def main():
                             print(f"  Positive score: {validation_result.get('positive_score', 0.0):.3f}")
                         # Save metadata for failed attempt
                         if not args.no_metadata and object_name:
-                            current_positive = args.prompt if attempt == 1 else adjusted_positive
+                            current_positive = final_prompt if attempt == 1 else adjusted_positive
                             current_negative = effective_negative_prompt if attempt == 1 else adjusted_negative
                             
                             metadata = create_metadata_json(
@@ -2138,7 +2228,8 @@ def main():
                                 minio_url=minio_url,
                                 workflow=workflow,
                                 output_path=args.output,
-                                generation_time_seconds=generation_time_seconds
+                                generation_time_seconds=generation_time_seconds,
+                                prompt_preset=args.prompt_preset
                             )
                             metadata_url = upload_metadata_to_minio(metadata, object_name)
                             if metadata_url and not args.quiet:
@@ -2151,7 +2242,7 @@ def main():
                     print("[WARN] Validation module not available. Install dependencies: pip install transformers")
                 # Upload metadata even if validation failed to import
                 if not args.no_metadata and object_name:
-                    current_positive = args.prompt if attempt == 1 else adjusted_positive if attempt > 1 else args.prompt
+                    current_positive = final_prompt if attempt == 1 else adjusted_positive if attempt > 1 else final_prompt
                     current_negative = effective_negative_prompt if attempt == 1 else adjusted_negative if attempt > 1 else effective_negative_prompt
                     
                     metadata = create_metadata_json(
@@ -2165,7 +2256,8 @@ def main():
                         minio_url=minio_url,
                         workflow=workflow,
                         output_path=args.output,
-                        generation_time_seconds=generation_time_seconds
+                        generation_time_seconds=generation_time_seconds,
+                        prompt_preset=args.prompt_preset
                     )
                     metadata_url = upload_metadata_to_minio(metadata, object_name)
                     if metadata_url and not args.quiet:
@@ -2176,7 +2268,7 @@ def main():
                     print(f"[ERROR] Validation failed: {e}")
                 # Upload metadata even if validation failed
                 if not args.no_metadata and object_name:
-                    current_positive = args.prompt if attempt == 1 else adjusted_positive if attempt > 1 else args.prompt
+                    current_positive = final_prompt if attempt == 1 else adjusted_positive if attempt > 1 else final_prompt
                     current_negative = effective_negative_prompt if attempt == 1 else adjusted_negative if attempt > 1 else effective_negative_prompt
                     
                     metadata = create_metadata_json(
@@ -2190,7 +2282,8 @@ def main():
                         minio_url=minio_url,
                         workflow=workflow,
                         output_path=args.output,
-                        generation_time_seconds=generation_time_seconds
+                        generation_time_seconds=generation_time_seconds,
+                        prompt_preset=args.prompt_preset
                     )
                     metadata_url = upload_metadata_to_minio(metadata, object_name)
                     if metadata_url and not args.quiet:
@@ -2199,7 +2292,7 @@ def main():
         else:
             # No validation requested - upload metadata immediately
             if not args.no_metadata and object_name:
-                current_positive = args.prompt if attempt == 1 else adjusted_positive if attempt > 1 else args.prompt
+                current_positive = final_prompt if attempt == 1 else adjusted_positive if attempt > 1 else final_prompt
                 current_negative = effective_negative_prompt if attempt == 1 else adjusted_negative if attempt > 1 else effective_negative_prompt
                 
                 metadata = create_metadata_json(
@@ -2213,7 +2306,8 @@ def main():
                     minio_url=minio_url,
                     workflow=workflow,
                     output_path=args.output,
-                    generation_time_seconds=generation_time_seconds
+                    generation_time_seconds=generation_time_seconds,
+                    prompt_preset=args.prompt_preset
                 )
                 metadata_url = upload_metadata_to_minio(metadata, object_name)
                 if metadata_url and not args.quiet:

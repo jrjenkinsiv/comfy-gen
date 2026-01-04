@@ -148,6 +148,7 @@ templates:
     negative: "bad quality, blurry, cartoon, anime, duplicate cars, watermark, text, 3d render, multiple cars, people, crowds"
     variables:
       color: ["metallic silver", "deep blue", "guards red", "pristine white", "black"]
+      car_model: ["sports car", "sedan", "SUV", "luxury car", "sports coupe"]
       action: ["parked", "in motion", "captured mid-action", "positioned"]
       location: ["coastal highway", "modern architecture", "rain-soaked street", "race track", "mansion driveway"]
       time_of_day: ["golden hour", "blue hour", "night with neon lights", "bright sunny day", "magic hour"]
