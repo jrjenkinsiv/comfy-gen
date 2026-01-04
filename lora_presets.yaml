@@ -1,0 +1,19 @@
+# LoRA Presets Configuration
+# Define bundles of LoRAs for common use cases
+
+presets:
+  video-quality:
+    - name: "BoobPhysics_WAN_v6.safetensors"
+      strength: 0.7
+    - name: "BounceHighWan2_2.safetensors"
+      strength: 0.6
+      
+  fast-generation:
+    - name: "wan2.2_t2v_lightx2v_4steps_lora_v1.1_high_noise.safetensors"
+      strength: 1.0
+      
+  physics-enhanced:
+    - name: "BoobPhysics_WAN_v6.safetensors"
+      strength: 0.8
+    - name: "wan-thiccum-v3.safetensors"
+      strength: 0.6

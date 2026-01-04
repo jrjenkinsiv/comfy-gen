@@ -11,8 +11,10 @@ import requests
 import time
 import sys
 from pathlib import Path
+from typing import List, Tuple, Dict, Any, Optional
 from minio import Minio
 from minio.error import S3Error
+import yaml
 
 COMFYUI_HOST = "http://192.168.1.215:8188"  # ComfyUI running on moira
 
@@ -26,6 +28,161 @@ def load_workflow(workflow_path):
     """Load workflow JSON."""
     with open(workflow_path, 'r') as f:
         return json.load(f)
+
+def get_available_loras() -> List[str]:
+    """Fetch available LoRAs from ComfyUI API."""
+    try:
+        url = f"{COMFYUI_HOST}/object_info"
+        response = requests.get(url, timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            lora_loader_info = data.get("LoraLoader", {})
+            lora_input = lora_loader_info.get("input", {})
+            required = lora_input.get("required", {})
+            lora_name_info = required.get("lora_name", [[]])
+            if isinstance(lora_name_info, list) and len(lora_name_info) > 0:
+                return lora_name_info[0]
+        return []
+    except Exception as e:
+        print(f"[ERROR] Failed to fetch available LoRAs: {e}")
+        return []
+
+def load_lora_presets(preset_file: str = "lora_presets.yaml") -> Dict[str, List[Dict[str, Any]]]:
+    """Load LoRA presets from YAML file."""
+    preset_path = Path(__file__).parent / preset_file
+    if not preset_path.exists():
+        return {}
+    
+    try:
+        with open(preset_path, 'r') as f:
+            data = yaml.safe_load(f)
+            return data.get("presets", {})
+    except Exception as e:
+        print(f"[ERROR] Failed to load LoRA presets: {e}")
+        return {}
+
+def parse_lora_arg(lora_str: str) -> Tuple[str, float]:
+    """Parse LoRA argument in format 'name:strength' or just 'name'."""
+    if ":" in lora_str:
+        name, strength_str = lora_str.rsplit(":", 1)
+        try:
+            strength = float(strength_str)
+        except ValueError:
+            print(f"[WARN] Invalid strength '{strength_str}' for LoRA '{name}', using 1.0")
+            strength = 1.0
+    else:
+        name = lora_str
+        strength = 1.0
+    return name, strength
+
+def find_checkpoint_loader(workflow: Dict[str, Any]) -> Optional[str]:
+    """Find the CheckpointLoaderSimple node in the workflow."""
+    for node_id, node in workflow.items():
+        if isinstance(node, dict):
+            if node.get("class_type") == "CheckpointLoaderSimple":
+                return node_id
+    return None
+
+def find_consumers(workflow: Dict[str, Any], source_node_id: str, output_index: int) -> List[Tuple[str, str]]:
+    """Find all nodes that consume a specific output from a source node.
+    
+    Returns list of tuples: (consumer_node_id, input_name)
+    """
+    consumers = []
+    for node_id, node in workflow.items():
+        if isinstance(node, dict) and "inputs" in node:
+            for input_name, input_value in node["inputs"].items():
+                if isinstance(input_value, list) and len(input_value) >= 2:
+                    if input_value[0] == source_node_id and input_value[1] == output_index:
+                        consumers.append((node_id, input_name))
+    return consumers
+
+def inject_loras(workflow: Dict[str, Any], loras: List[Tuple[str, float]]) -> Dict[str, Any]:
+    """Inject LoRA nodes into the workflow.
+    
+    Args:
+        workflow: The workflow dictionary to modify
+        loras: List of (lora_name, strength) tuples
+        
+    Returns:
+        Modified workflow dictionary
+    """
+    if not loras:
+        return workflow
+    
+    # Find the checkpoint loader
+    checkpoint_node_id = find_checkpoint_loader(workflow)
+    if not checkpoint_node_id:
+        print("[ERROR] No CheckpointLoaderSimple node found in workflow")
+        return workflow
+    
+    print(f"[INFO] Found CheckpointLoader at node {checkpoint_node_id}")
+    
+    # Find all consumers of the checkpoint's model (output 0) and clip (output 1)
+    model_consumers = find_consumers(workflow, checkpoint_node_id, 0)
+    clip_consumers = find_consumers(workflow, checkpoint_node_id, 1)
+    
+    print(f"[INFO] Model consumers: {model_consumers}")
+    print(f"[INFO] CLIP consumers: {clip_consumers}")
+    
+    # Find the highest node ID
+    max_id = max(int(k) for k in workflow.keys())
+    
+    # Chain LoRAs
+    current_model_source = [checkpoint_node_id, 0]
+    current_clip_source = [checkpoint_node_id, 1]
+    
+    for idx, (lora_name, strength) in enumerate(loras):
+        new_id = str(max_id + 1 + idx)
+        
+        # Create LoraLoader node
+        workflow[new_id] = {
+            "class_type": "LoraLoader",
+            "inputs": {
+                "model": current_model_source,
+                "clip": current_clip_source,
+                "lora_name": lora_name,
+                "strength_model": strength,
+                "strength_clip": strength
+            },
+            "_meta": {
+                "title": f"LoRA {idx + 1}: {lora_name}"
+            }
+        }
+        
+        print(f"[INFO] Added LoraLoader node {new_id}: {lora_name} (strength={strength})")
+        
+        # Update sources for next LoRA in chain
+        current_model_source = [new_id, 0]
+        current_clip_source = [new_id, 1]
+    
+    # Rewire all model consumers to use the last LoRA's output
+    for consumer_id, input_name in model_consumers:
+        workflow[consumer_id]["inputs"][input_name] = current_model_source
+        print(f"[INFO] Rewired node {consumer_id}.{input_name} -> {current_model_source}")
+    
+    # Rewire all clip consumers to use the last LoRA's output
+    for consumer_id, input_name in clip_consumers:
+        workflow[consumer_id]["inputs"][input_name] = current_clip_source
+        print(f"[INFO] Rewired node {consumer_id}.{input_name} -> {current_clip_source}")
+    
+    return workflow
+
+def validate_loras(loras: List[Tuple[str, float]]) -> bool:
+    """Validate that all specified LoRAs exist on the server."""
+    available_loras = get_available_loras()
+    if not available_loras:
+        print("[WARN] Could not fetch available LoRAs from server")
+        return True  # Proceed anyway, server will error if LoRA doesn't exist
+    
+    all_valid = True
+    for lora_name, _ in loras:
+        if lora_name not in available_loras:
+            print(f"[ERROR] LoRA not found: {lora_name}")
+            print(f"[ERROR] Available LoRAs: {', '.join(available_loras[:5])}...")
+            all_valid = False
+    
+    return all_valid
 
 def modify_prompt(workflow, new_prompt):
     """Modify the prompt in the workflow."""
@@ -137,12 +294,76 @@ def upload_to_minio(file_path, object_name):
 
 def main():
     parser = argparse.ArgumentParser(description="Generate images with ComfyUI")
-    parser.add_argument("--workflow", required=True, help="Path to workflow JSON")
-    parser.add_argument("--prompt", required=True, help="Text prompt")
+    parser.add_argument("--workflow", help="Path to workflow JSON")
+    parser.add_argument("--prompt", help="Text prompt")
     parser.add_argument("--output", default="output.png", help="Output image path")
+    parser.add_argument("--lora", action="append", dest="loras", metavar="NAME:STRENGTH",
+                        help="Add LoRA (can be repeated). Format: lora_name.safetensors:strength")
+    parser.add_argument("--lora-preset", metavar="PRESET_NAME",
+                        help="Use a LoRA preset from lora_presets.yaml")
+    parser.add_argument("--list-loras", action="store_true",
+                        help="List available LoRAs and exit")
     args = parser.parse_args()
 
+    # Handle --list-loras
+    if args.list_loras:
+        print("[INFO] Fetching available LoRAs from ComfyUI server...")
+        loras = get_available_loras()
+        if loras:
+            print(f"\n[OK] Found {len(loras)} LoRAs:\n")
+            for lora in sorted(loras):
+                print(f"  - {lora}")
+        else:
+            print("[ERROR] No LoRAs found or failed to connect to server")
+            sys.exit(1)
+        sys.exit(0)
+
+    # Validate required arguments for generation
+    if not args.workflow:
+        parser.error("--workflow is required for generation")
+    if not args.prompt:
+        parser.error("--prompt is required for generation")
+
+    # Parse LoRA arguments
+    loras_to_inject: List[Tuple[str, float]] = []
+    
+    # Handle --lora-preset
+    if args.lora_preset:
+        presets = load_lora_presets()
+        if args.lora_preset in presets:
+            preset_loras = presets[args.lora_preset]
+            for lora_def in preset_loras:
+                lora_name = lora_def.get("name")
+                strength = lora_def.get("strength", 1.0)
+                if lora_name:
+                    loras_to_inject.append((lora_name, strength))
+                    print(f"[INFO] Added LoRA from preset '{args.lora_preset}': {lora_name} (strength={strength})")
+        else:
+            print(f"[ERROR] LoRA preset '{args.lora_preset}' not found")
+            presets_list = list(presets.keys())
+            if presets_list:
+                print(f"[ERROR] Available presets: {', '.join(presets_list)}")
+            sys.exit(1)
+    
+    # Handle --lora arguments
+    if args.loras:
+        for lora_arg in args.loras:
+            lora_name, strength = parse_lora_arg(lora_arg)
+            loras_to_inject.append((lora_name, strength))
+            print(f"[INFO] Added LoRA: {lora_name} (strength={strength})")
+    
+    # Validate LoRAs if any were specified
+    if loras_to_inject:
+        if not validate_loras(loras_to_inject):
+            print("[ERROR] LoRA validation failed")
+            sys.exit(1)
+
     workflow = load_workflow(args.workflow)
+    
+    # Inject LoRAs if specified
+    if loras_to_inject:
+        workflow = inject_loras(workflow, loras_to_inject)
+    
     workflow = modify_prompt(workflow, args.prompt)
 
     prompt_id = queue_workflow(workflow)
