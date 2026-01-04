@@ -101,6 +101,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         }
         .tag.lora { background: #5a3a7a; }
         .tag.score { background: #3a5a3a; }
+        .tag.grade-a { background: #2d5a2d; font-weight: bold; }
+        .tag.grade-b { background: #3a5a3a; }
+        .tag.grade-c { background: #5a5a3a; }
+        .tag.grade-d { background: #5a3a3a; }
+        .tag.grade-f { background: #5a2a2a; }
         .modal {
             display: none;
             position: fixed;
@@ -181,7 +186,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 allImages = [];
                 for (const png of pngFiles) {
                     const jsonKey = png + '.json';
-                    let meta = { prompt: 'No metadata', loras: [], validation_score: null };
+                    let meta = { prompt: 'No metadata', loras: [], validation_score: null, quality_grade: null, quality_score: null };
                     
                     if (keys.includes(jsonKey)) {
                         try {
@@ -199,6 +204,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                                     cfg: rawMeta.parameters?.cfg,
                                     loras: rawMeta.parameters?.loras || [],
                                     validation_score: rawMeta.quality?.prompt_adherence?.clip,
+                                    quality_grade: rawMeta.quality?.grade,
+                                    quality_score: rawMeta.quality?.composite_score,
+                                    quality_technical: rawMeta.quality?.technical?.brisque,
+                                    quality_aesthetic: rawMeta.quality?.aesthetic,
+                                    quality_detail: rawMeta.quality?.detail,
                                     generation_time: rawMeta.storage?.generation_time_seconds,
                                     file_size: rawMeta.storage?.file_size_bytes,
                                     model: rawMeta.workflow?.model,
@@ -213,7 +223,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                                     steps: rawMeta.steps,
                                     cfg: rawMeta.cfg,
                                     loras: rawMeta.loras || [],
-                                    validation_score: rawMeta.validation_score
+                                    validation_score: rawMeta.validation_score,
+                                    quality_grade: null,
+                                    quality_score: null
                                 };
                             }
                         } catch (e) {
@@ -269,11 +281,12 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                         <div class="card-title">${img.key}</div>
                         <div class="prompt">${escapeHtml(img.prompt || 'No prompt')}</div>
                         <div class="meta">
+                            ${img.quality_grade ? `<span class="tag grade-${img.quality_grade.toLowerCase()}" title="Quality Score: ${img.quality_score?.toFixed(1)}/10">Grade: ${img.quality_grade}</span>` : ''}
                             ${img.seed ? `<span class="tag">seed: ${img.seed}</span>` : ''}
                             ${img.steps ? `<span class="tag">steps: ${img.steps}</span>` : ''}
                             ${img.cfg ? `<span class="tag">cfg: ${img.cfg}</span>` : ''}
                             ${img.loras?.map(l => `<span class="tag lora">${l.name.split('.')[0]}:${l.strength}</span>`).join('') || ''}
-                            ${img.validation_score !== null ? `<span class="tag score">score: ${img.validation_score.toFixed(2)}</span>` : ''}
+                            ${img.validation_score !== null ? `<span class="tag score">CLIP: ${img.validation_score.toFixed(2)}</span>` : ''}
                         </div>
                     </div>
                 </div>
