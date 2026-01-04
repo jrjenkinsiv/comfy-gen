@@ -36,6 +36,13 @@ python3 generate.py --workflow workflows/sd15-img2img.json \
     --input-image "http://192.168.1.215:9000/comfy-gen/previous_image.png" \
     --prompt "add more detail"
 
+# Generate with validation and auto-retry
+python3 generate.py --workflow workflows/flux-dev.json \
+    --prompt "(Porsche 911:2.0) single car, one car only, driving down a country road" \
+    --negative-prompt "multiple cars, duplicate, cloned, ghosting" \
+    --output /tmp/porsche.png \
+    --validate --auto-retry --retry-limit 3
+
 # View in browser
 open "http://192.168.1.215:9000/comfy-gen/"
 ```
@@ -120,6 +127,57 @@ python3 generate.py --workflow workflows/sd15-img2img.json \
 - `--denoise FLOAT`: Denoise strength (0.0-1.0), controls how much the output differs from input
   - Lower values (0.3-0.5): More faithful to input
   - Higher values (0.7-0.9): More creative freedom
+
+## Image Validation & Auto-Retry
+
+ComfyGen can automatically validate generated images and retry with adjusted prompts if quality issues are detected.
+
+**Validation uses CLIP** (Contrastive Language-Image Pre-training) to compute semantic similarity between the generated image and your prompt.
+
+### Basic Validation
+
+```bash
+# Validate after generation
+python3 generate.py --workflow workflows/flux-dev.json \
+    --prompt "a red sports car" \
+    --output /tmp/car.png \
+    --validate
+```
+
+This will:
+1. Generate the image
+2. Check CLIP similarity score against the prompt
+3. Report whether validation passed or failed
+
+### Auto-Retry on Failure
+
+```bash
+# Automatically retry up to 3 times if validation fails
+python3 generate.py --workflow workflows/flux-dev.json \
+    --prompt "(Porsche 911:2.0) single car, driving down a country road" \
+    --negative-prompt "multiple cars, duplicate, cloned" \
+    --output /tmp/porsche.png \
+    --validate --auto-retry --retry-limit 3
+```
+
+When validation fails and `--auto-retry` is enabled:
+- Positive prompt weights are increased (e.g., "single car" → "(single car:1.3)")
+- Negative prompt is strengthened with terms like "duplicate, cloned, ghosting"
+- Generation is retried with adjusted prompts
+
+### Validation Options
+
+- `--validate` - Enable validation after generation
+- `--auto-retry` - Automatically retry if validation fails
+- `--retry-limit N` - Maximum retry attempts (default: 3)
+- `--positive-threshold FLOAT` - Minimum CLIP score (default: 0.25)
+
+### Dependencies
+
+Validation requires additional packages:
+```bash
+pip install transformers
+```
 
 ## Starting ComfyUI
 

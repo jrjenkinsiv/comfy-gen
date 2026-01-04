@@ -307,3 +307,117 @@ To create a new workflow:
 1. Export from ComfyUI GUI
 2. Save to `workflows/` with descriptive name
 3. Document in this file
+
+---
+
+## Image Validation and Auto-Retry
+
+### Overview
+
+ComfyGen includes automated validation to detect quality issues and optionally retry generation with adjusted prompts.
+
+**Use validation when:**
+- Generating subjects that often duplicate (e.g., cars, people)
+- Quality consistency is critical
+- You want to reduce manual iteration
+
+### How Validation Works
+
+1. **CLIP Scoring**: Computes semantic similarity between the generated image and your prompt
+2. **Threshold Check**: Validates that the CLIP score meets minimum requirements
+3. **Auto-Retry** (optional): Adjusts prompts and regenerates if validation fails
+
+### Basic Usage
+
+```bash
+# Just validate (no retry)
+python3 generate.py --workflow workflows/flux-dev.json \
+    --prompt "a red Porsche 911" \
+    --output /tmp/car.png \
+    --validate
+
+# Validate with auto-retry
+python3 generate.py --workflow workflows/flux-dev.json \
+    --prompt "(Porsche 911:2.0) single car, one car only" \
+    --negative-prompt "multiple cars, duplicate" \
+    --output /tmp/car.png \
+    --validate --auto-retry --retry-limit 3
+```
+
+### Validation Options
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--validate` | Boolean | False | Run validation after generation |
+| `--auto-retry` | Boolean | False | Retry if validation fails |
+| `--retry-limit` | Integer | 3 | Maximum retry attempts |
+| `--positive-threshold` | Float | 0.25 | Minimum CLIP score (0-1) |
+
+### How Auto-Retry Adjusts Prompts
+
+When validation fails and auto-retry is enabled:
+
+1. **Positive prompt enhancement**:
+   - Increases weight on key terms like "single car" → "(single car:1.3)"
+   - Weight multiplier increases with each retry attempt
+
+2. **Negative prompt strengthening**:
+   - Adds terms: "multiple cars, duplicate, cloned, ghosting, mirrored"
+   - Helps prevent common issues like duplicated subjects
+
+### Validation Thresholds
+
+**CLIP Score Interpretation:**
+- **< 0.20**: Poor semantic match (likely wrong subject or major issues)
+- **0.20-0.25**: Marginal match (may have quality issues)
+- **0.25-0.35**: Acceptable match (default threshold: 0.25)
+- **> 0.35**: Good semantic match
+
+Adjust `--positive-threshold` based on your quality requirements:
+```bash
+# Strict validation (higher quality bar)
+python3 generate.py ... --validate --positive-threshold 0.30
+
+# Lenient validation (accept more variations)
+python3 generate.py ... --validate --positive-threshold 0.20
+```
+
+### Example: Generating a Single Car
+
+**Problem**: Often get duplicate/cloned cars
+
+**Solution**: Use validation with strong emphasis on "single"
+
+```bash
+python3 generate.py --workflow workflows/flux-dev.json \
+    --prompt "(Porsche 911:2.0) (single car:1.5) (one car only:1.5), driving on mountain road, photorealistic" \
+    --negative-prompt "multiple cars, two cars, duplicate, cloned, ghosting, mirrored, extra car" \
+    --output /tmp/porsche.png \
+    --validate --auto-retry --retry-limit 3 \
+    --positive-threshold 0.28
+```
+
+### Dependencies
+
+Validation requires:
+```bash
+pip install transformers
+```
+
+(torch and PIL are already in requirements.txt)
+
+### Troubleshooting
+
+**"CLIP dependencies not available"**
+- Install: `pip install transformers`
+- May also need to update torch: `pip install --upgrade torch`
+
+**Validation always fails**
+- Lower threshold: `--positive-threshold 0.20`
+- Check prompt matches expected output
+- Try without negative prompt first
+
+**Too many retries**
+- Reduce retry limit: `--retry-limit 2`
+- Review prompt for contradictions
+- Consider if validation threshold is too strict

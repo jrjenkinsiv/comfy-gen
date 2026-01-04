@@ -3,3 +3,4 @@ torch
 torchvision
 minio
 Pillow
+transformers
