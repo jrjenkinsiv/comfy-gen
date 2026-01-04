@@ -109,6 +109,7 @@ open "http://192.168.1.215:9000/comfy-gen/<filename>.png"
 
 - **CRITICAL: No PowerShell/Batch Files** - All scripts must be Python for cross-platform compatibility.
 - **CRITICAL: No Emojis** - Windows cp1252 encoding breaks on Unicode. Use `[OK]`, `[WARN]`, `[ERROR]`.
+- **CRITICAL: Use Detailed, Verbose Prompts** - Models can handle paragraph-length prompts. See `docs/DETAILED_PROMPTING_GUIDE.md` for examples. Short prompts like "a battleship, top-down" are inadequate - use 100-200 token detailed descriptions with redundant constraint reinforcement.
 - **Style:** Python with type hints. Use `sys.exit(1)` for failures.
 - **File organization:** Workflows in `workflows/`, scripts in `scripts/`. NEVER create files in root except `generate.py`.
 
@@ -144,14 +145,22 @@ C:\Users\jrjen\comfy\models\
 
 **For agents executing generation requests:**
 
-1. **Read the request** - What subject? What style?
-2. **Choose workflow** - SD 1.5 for images, Wan 2.2 for video
-3. **Generate** - `python3 generate.py --workflow <file> --prompt "<prompt>" --output /tmp/output.png`
-4. **Return URL** - Image will be at `http://192.168.1.215:9000/comfy-gen/<timestamp>_<filename>`
+1. **Read the request** - What subject? What style? What constraints?
+2. **Craft a DETAILED, VERBOSE prompt** - Use paragraph-length descriptions (100-200 tokens)
+   - See `docs/DETAILED_PROMPTING_GUIDE.md` for comprehensive examples
+   - Layer constraints with redundant phrasing (e.g., "top-down view, orthographic, no perspective, flat like a blueprint")
+   - Include: subject, perspective, style, specific elements, what to avoid
+3. **Choose workflow** - SD 1.5 for images, Wan 2.2 for video
+4. **Set parameters appropriately:**
+   - Steps: 30 for drafts, 80+ for final/complex prompts
+   - CFG: 7.0 default, 8-10 for stricter prompt adherence
+   - Validation: `--validate --auto-retry --retry-limit 3 --positive-threshold 0.85` for quality control
+5. **Generate** - `python3 generate.py --workflow <file> --prompt "<detailed_prompt>" --negative-prompt "<detailed_negative>" --steps 80 --output /tmp/output.png`
+6. **Return URL** - Image will be at `http://192.168.1.215:9000/comfy-gen/<timestamp>_<filename>`
 
 See `docs/AGENT_GUIDE.md` for:
 - LoRA selection and strength guidelines
-- Prompt engineering tips
+- Detailed prompt engineering strategies
 - Error handling procedures
 - Decision tree for model selection
 

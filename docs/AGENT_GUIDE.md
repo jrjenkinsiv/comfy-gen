@@ -443,17 +443,49 @@ python3 generate.py \
 
 ## Prompt Engineering Tips
 
+### CRITICAL: Use Detailed, Verbose Prompts
+
+**Models can handle paragraph-length prompts with extensive detail.** More specific descriptions produce better results by narrowing the sampling space and reducing ambiguity.
+
+**📖 For comprehensive prompting strategies, see [DETAILED_PROMPTING_GUIDE.md](DETAILED_PROMPTING_GUIDE.md)**
+
+---
+
 ### For SD 1.5
 
-**Good prompt structure:**
+#### Basic Structure (Minimum)
 ```
 [subject], [style], [lighting], [quality modifiers]
 ```
 
-**Example:**
+**Example (basic):**
 ```
 a red Porsche 911 on a mountain road, cinematic photography, golden hour lighting, highly detailed, 8k
 ```
+
+#### Recommended: Detailed Paragraph-Style Prompts
+
+**Example (detailed - PREFERRED):**
+```
+A sleek red Porsche 911 GT3 sports car driving along a winding mountain road carved into 
+rocky cliffs, photographed during golden hour with warm amber sunlight streaming through 
+gaps in the mountains, casting long dramatic shadows across the asphalt. The car is 
+captured in motion from a three-quarter front angle, showing the aggressive front fascia 
+and aerodynamic bodywork in sharp detail. The background features towering pine trees and 
+distant snow-capped peaks bathed in soft orange-pink evening light. Professional 
+automotive photography style reminiscent of Top Gear or Motor Trend magazine shoots, 
+shot with a wide-angle lens (24mm), shallow depth of field to blur the background while 
+keeping the car in tack-sharp focus, cinematic color grading with rich warm tones, 8K 
+resolution with meticulous attention to reflections on the car's paint and glinting 
+highlights on chrome accents.
+```
+
+**Why detailed prompts work better:**
+- Reduces ambiguity ("which mountain? what style? what angle?")
+- Layers constraints for better control
+- Uses redundant phrasing to reinforce critical concepts
+- Provides visual anchors (magazine references, specific lenses)
+- Specifies exactly what you want vs. hoping the model guesses
 
 **Negative prompt (always include):**
 
@@ -464,34 +496,46 @@ ComfyGen automatically applies default negative prompts for SD 1.5 workflows whe
 bad quality, blurry, low resolution, watermark, text, deformed, ugly, duplicate
 ```
 
-**Common negative prompt additions:**
+**Detailed negative prompts (recommended for complex requests):**
 
 For photorealism:
 ```
-cartoon, anime, illustration, painting, sketch, 3d render
+cartoon, anime, illustration, painting, sketch, 3d render, CGI, digital art, cel shaded, 
+low poly, unrealistic, stylized, painterly
 ```
 
 For avoiding duplicates (cars, people, objects):
 ```
-multiple objects, duplicate, cloned, ghosting, mirrored, two cars, extra person
+multiple objects, duplicate, cloned, ghosting, mirrored, two cars, extra person, 
+multiple subjects, repeated elements, reflection creating duplicate
 ```
 
 For avoiding artifacts:
 ```
-distorted, malformed, disfigured, jpeg artifacts, compression artifacts
+distorted, malformed, disfigured, jpeg artifacts, compression artifacts, noise, grain, 
+chromatic aberration, lens flare (unless desired), oversaturated, undersaturated
 ```
 
 For clean composition:
 ```
-cropped, out of frame, cut off, signatures, frames, borders
+cropped, out of frame, cut off, signatures, frames, borders, text overlay, watermark, 
+logo, date stamp, amateur composition
 ```
 
-**Complete example with custom negative:**
+For perspective control (game sprites, orthographic views):
+```
+perspective, side view, diagonal, isometric, 3D, angled, tilted, depth, foreshortening, 
+vanishing point, horizon line, diagonal angle, oblique view
+```
+
+**Complete example with detailed prompts:**
 ```bash
 python3 generate.py \
     --workflow workflows/flux-dev.json \
-    --prompt "a red Porsche 911 on a mountain road, cinematic photography" \
-    --negative-prompt "bad quality, blurry, cartoon, anime, duplicate cars, watermark" \
+    --prompt "A sleek red Porsche 911 GT3 sports car driving along a winding mountain road carved into rocky cliffs, photographed during golden hour with warm amber sunlight streaming through gaps in the mountains, casting long dramatic shadows across the asphalt. The car is captured in motion from a three-quarter front angle, showing the aggressive front fascia and aerodynamic bodywork in sharp detail. The background features towering pine trees and distant snow-capped peaks bathed in soft orange-pink evening light. Professional automotive photography style reminiscent of Top Gear or Motor Trend magazine shoots, shot with a wide-angle lens (24mm), shallow depth of field to blur the background while keeping the car in tack-sharp focus, cinematic color grading with rich warm tones, 8K resolution with meticulous attention to reflections on the car's paint and glinting highlights on chrome accents." \
+    --negative-prompt "bad quality, blurry, cartoon, anime, duplicate cars, watermark, text, 3d render, CGI, low resolution, jpeg artifacts, distorted, cropped, out of frame" \
+    --steps 80 \
+    --cfg 8.5 \
     --output /tmp/car.png
 ```
 
@@ -895,9 +939,11 @@ Before generating, ensure:
 - [ ] ComfyUI server is running (check with `check_server_availability()`)
 - [ ] Correct workflow selected based on decision tree
 - [ ] Models exist (use `--dry-run` or `validate_workflow_models()`)
-- [ ] Prompts are well-structured (see Prompt Engineering section)
+- [ ] **Prompts are detailed and verbose** (see [Prompt Engineering](#prompt-engineering-tips) and [DETAILED_PROMPTING_GUIDE.md](DETAILED_PROMPTING_GUIDE.md))
+- [ ] Negative prompts include specific constraints (not just generic "bad quality")
 - [ ] Input images are prepared if needed (resize, crop)
-- [ ] Validation enabled if quality is critical (`--validate`)
+- [ ] Validation enabled if quality is critical (`--validate --auto-retry`)
+- [ ] Steps set appropriately (30 for drafts, 80+ for complex/final output)
 - [ ] Output path is writable
 - [ ] MinIO is accessible for upload
 
