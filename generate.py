@@ -13,6 +13,7 @@ import sys
 import os
 import tempfile
 import urllib.request
+import datetime
 from pathlib import Path
 from shutil import copyfile
 from minio import Minio
@@ -282,6 +283,7 @@ def main():
     # Handle input image if provided
     if args.input_image:
         temp_image_path = None
+        is_from_url = False
         try:
             # Check if input is URL or local file
             if args.input_image.startswith("http://") or args.input_image.startswith("https://"):
@@ -294,6 +296,7 @@ def main():
                     sys.exit(1)
                 
                 image_to_process = temp_image_path
+                is_from_url = True
             else:
                 # Use local file
                 if not os.path.exists(args.input_image):
@@ -303,8 +306,8 @@ def main():
             
             # Preprocess image if resize/crop specified
             if args.resize or args.crop:
-                # If using original file, create a temp copy for processing
-                if image_to_process == args.input_image:
+                # If using original local file, create a temp copy to avoid modifying it
+                if not is_from_url and temp_image_path is None:
                     temp_fd, temp_image_path = tempfile.mkstemp(suffix=".png")
                     os.close(temp_fd)
                     # Copy original to temp
@@ -337,7 +340,6 @@ def main():
     if status:
         if download_output(status, args.output):
             # Upload to MinIO
-            import datetime
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
             object_name = f"{timestamp}_{Path(args.output).name}"
             minio_url = upload_to_minio(args.output, object_name)
