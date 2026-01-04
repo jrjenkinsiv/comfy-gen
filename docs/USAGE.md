@@ -458,6 +458,18 @@ Need video/animation?
 
 ## Prompt Engineering
 
+### Prompt Catalog
+
+A structured collection of prompt patterns is available in `prompt_catalog.yaml`:
+
+- **Quality Boosters** - Phrases to enhance image quality
+- **Negative Presets** - Curated negative prompts by use case (minimal, standard, comprehensive)
+- **Style Modifiers** - Photography, pixel art, vector, illustration styles
+- **Templates** - Ready-to-use prompts for common scenarios (automotive, game icons, portraits)
+- **Model-Specific Adjustments** - CFG and step recommendations by model
+
+Use the catalog to build consistent, high-quality prompts.
+
 ### CRITICAL: Use Detailed, Verbose Prompts
 
 Models can handle paragraph-length prompts with extensive detail. More specific descriptions produce better results.

@@ -5,6 +5,27 @@ This document tracks all models and LoRAs installed on moira for ComfyUI.
 **Last Updated:** 2026-01-04  
 **Model Directory:** `C:\Users\jrjen\comfy\models\`
 
+## Downloading Models
+
+Models can be downloaded from multiple sources:
+
+| Source | Auth Required | Config |
+|--------|---------------|--------|
+| CivitAI | Yes (many models) | `CIVITAI_API_KEY` in `.env` |
+| HuggingFace | Yes (gated models) | `HF_TOKEN` in `.env` |
+| Direct URL | No | Just use URL |
+
+**Setup (one-time):**
+```bash
+# Create .env file in project root (gitignored)
+echo "CIVITAI_API_KEY=your_key_here" >> .env
+echo "HF_TOKEN=hf_your_token_here" >> .env
+```
+
+**Download scripts:**
+- CivitAI: `comfygen/civitai_client.py` (uses `CIVITAI_API_KEY` automatically)
+- HuggingFace: `huggingface-cli download` or direct download
+
 ## Directory Structure
 
 ```

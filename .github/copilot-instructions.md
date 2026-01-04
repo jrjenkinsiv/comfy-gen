@@ -73,17 +73,23 @@ magneto (git push) --> GitHub --> ant-man (runner) --> moira (ComfyUI)
 
 | Label | Meaning | Rule |
 |-------|---------|------|
-| `serial-assignment` | Touches high-conflict files (e.g., `generate.py`, core workflows) | **ONE AT A TIME.** Wait for PR merge before assigning next. |
-| `parallel-ok` | Isolated changes (e.g., new workflows, scripts, docs) | **BATCH OK.** Can assign 3-5 simultaneously. |
-| `local-network` | Requires SSH to moira/ant-man/cerebro (model downloads, GPU tasks, service restarts) | **ORCHESTRATOR ONLY.** VS Code Agent handles directly - do NOT assign to Copilot (it runs on GitHub infra, no local network access). |
+| `serial-assignment` | Code changes to high-conflict files (e.g., `generate.py`, core workflows) | **ONE AT A TIME.** Wait for PR merge before assigning next. |
+| `parallel-ok` | Isolated code changes (e.g., new workflows, scripts, docs) | **BATCH OK.** Can assign 3-5 simultaneously. |
+| `local-network` | Requires local network access - SSH, ComfyUI API, generation, model downloads, GPU tasks | **ORCHESTRATOR ONLY.** VS Code Agent handles directly - do NOT assign to Copilot (it runs on GitHub infra, no local network access). |
 | `human-required` | Requires true human intervention (physical access, subjective aesthetic decisions, external account setup) | **DO NOT ASSIGN.** Report to user. |
+
+**CRITICAL: Image/Video Generation is ALWAYS `local-network`**
+- Generation requires ComfyUI API at `192.168.1.215:8188` (moira)
+- Copilot runs on GitHub infrastructure - it CANNOT reach the local network
+- Only the Orchestrator (VS Code Agent) can execute generation requests
+- Label generation issues as `local-network`, NOT `serial-assignment`
 
 **Rate Limiting Prevention:**
 - Assign maximum **3 parallel-ok issues at once** to avoid token exhaustion
 - Wait for at least one PR to complete before assigning more
 - If rate limited, wait 1-2 hours before resuming assignments
 
-**High-conflict files:** `generate.py`, `workflows/flux-dev.json` (base workflow)
+**High-conflict files (for code changes):** `generate.py`, `workflows/flux-dev.json` (base workflow)
 
 ## 5. Build & Test Commands
 
@@ -128,7 +134,14 @@ open "http://192.168.1.215:9000/comfy-gen/<filename>.png"
 The `extra_model_paths.yaml` file (in ComfyUI directory) tells ComfyUI where to find models. It points to our unified model directory - this is NOT a separate location, it's just configuration.
 
 **Model Registry:** See `docs/MODEL_REGISTRY.md` for complete inventory.
+**LoRA Catalog:** See `lora_catalog.yaml` for semantic tags and metadata.
 **Usage Guide:** See `docs/USAGE.md` for CLI and MCP server usage.
+
+**API Keys for Downloads:**
+- `.env` file (gitignored) stores API keys: `CIVITAI_API_KEY`, `HF_TOKEN`
+- CivitAI requires auth for many downloads
+- HuggingFace required for gated models
+- civitai_client.py automatically uses `CIVITAI_API_KEY` from environment
 
 **Directory Structure on moira:**
 ```
