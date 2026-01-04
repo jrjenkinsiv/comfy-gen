@@ -34,8 +34,10 @@ def test_quality_function_signature():
     from comfy_gen.quality import score_image
     
     # Test with minimal arguments (should not crash)
-    # Use tempfile to generate a cross-platform non-existent file path
-    nonexistent_path = os.path.join(tempfile.gettempdir(), "nonexistent_test_image.png")
+    # Use tempfile to generate a unique non-existent file path
+    with tempfile.NamedTemporaryFile(suffix='.png', delete=True) as tmp:
+        nonexistent_path = tmp.name + "_nonexistent"
+    
     result = score_image(nonexistent_path)
     
     # Check that result has expected keys
@@ -63,8 +65,10 @@ def test_quality_scorer_class():
         assert scorer is not None
         print("[OK] QualityScorer instantiated successfully")
         
-        # Test with non-existent file
-        nonexistent_path = os.path.join(tempfile.gettempdir(), "nonexistent_test_image.png")
+        # Test with non-existent file (unique path)
+        with tempfile.NamedTemporaryFile(suffix='.png', delete=True) as tmp:
+            nonexistent_path = tmp.name + "_nonexistent"
+        
         result = scorer.score_image(nonexistent_path)
         
         assert "error" in result or "composite_score" in result
@@ -101,8 +105,12 @@ def test_metadata_integration():
     """Test that quality results integrate with metadata structure."""
     from comfy_gen.quality import score_image
     
+    # Create a unique non-existent path
+    with tempfile.NamedTemporaryFile(suffix='.png', delete=True) as tmp:
+        nonexistent_path = tmp.name + "_nonexistent"
+    
     # Create a mock result
-    result = score_image(os.path.join(tempfile.gettempdir(), "nonexistent.png"))
+    result = score_image(nonexistent_path)
     
     # Check that result structure matches metadata schema
     assert "composite_score" in result

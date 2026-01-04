@@ -82,11 +82,16 @@ class QualityScorer:
         self.clip_processor = None
         if CLIP_AVAILABLE:
             try:
+                print("[INFO] Loading CLIP model for prompt adherence...")
                 self.clip_model = CLIPModel.from_pretrained("openai/clip-vit-base-patch32").to(self.device)
                 self.clip_processor = CLIPProcessor.from_pretrained("openai/clip-vit-base-patch32")
                 print("[OK] CLIP model loaded for prompt adherence scoring")
+            except OSError as e:
+                print(f"[WARN] Failed to download CLIP model (network/cache issue): {e}")
+                print("[INFO] Quality scoring will continue without prompt adherence metrics")
             except Exception as e:
                 print(f"[WARN] Failed to load CLIP model: {e}")
+                print("[INFO] Quality scoring will continue without prompt adherence metrics")
         
         print("[OK] Quality metrics loaded")
     
@@ -170,10 +175,17 @@ class QualityScorer:
             
             with torch.no_grad():
                 outputs = self.clip_model(**inputs)
-                logits_per_image = outputs.logits_per_image
-                probs = logits_per_image.softmax(dim=1)
-            
-            return float(probs[0][0])
+                # Get cosine similarity between image and text embeddings
+                # logits_per_image is already the cosine similarity scaled by temperature
+                # For a single text prompt, we take the similarity value
+                similarity = outputs.logits_per_image[0, 0]
+                
+                # CLIP similarity is typically in range [-100, 100] due to temperature scaling
+                # Normalize to 0-1 range using sigmoid-like function
+                # Original CLIP uses temperature=100, so we scale accordingly
+                normalized_score = torch.sigmoid(similarity / 100.0)
+                
+            return float(normalized_score)
         except Exception as e:
             print(f"[ERROR] Failed to compute CLIP score: {e}")
             return 0.0
