@@ -40,12 +40,20 @@ class MinIOClient:
             secure=secure
         )
         
-        # Ensure bucket exists
-        try:
-            if not self.client.bucket_exists(bucket):
-                self.client.make_bucket(bucket)
-        except S3Error:
-            pass  # Bucket may already exist
+        # Note: Bucket existence check is deferred to first operation
+        # to avoid blocking on client creation
+        self._bucket_checked = False
+    
+    def _ensure_bucket(self):
+        """Ensure bucket exists (called lazily)."""
+        if not self._bucket_checked:
+            try:
+                if not self.client.bucket_exists(self.bucket):
+                    self.client.make_bucket(self.bucket)
+            except S3Error:
+                pass  # Bucket may already exist
+            finally:
+                self._bucket_checked = True
     
     def upload_file(
         self,
@@ -63,6 +71,7 @@ class MinIOClient:
         Returns:
             Public URL of uploaded file or None on failure
         """
+        self._ensure_bucket()
         bucket = bucket or self.bucket
         
         if object_name is None:
@@ -92,6 +101,7 @@ class MinIOClient:
         Returns:
             Public URL of uploaded data or None on failure
         """
+        self._ensure_bucket()
         bucket = bucket or self.bucket
         
         try:
@@ -147,6 +157,7 @@ class MinIOClient:
         Returns:
             List of object dictionaries with metadata
         """
+        self._ensure_bucket()
         bucket = bucket or self.bucket
         
         objects = []
