@@ -15,6 +15,7 @@ import tempfile
 import threading
 import time
 import uuid
+import yaml
 from io import BytesIO
 from pathlib import Path
 from urllib.parse import urlparse
@@ -391,6 +392,226 @@ def validate_workflow_models(workflow, available_models):
     
     is_valid = len(missing_models) == 0
     return is_valid, missing_models, suggestions
+
+def load_lora_presets():
+    """Load LoRA presets from lora_catalog.yaml.
+    
+    Returns:
+        dict: Dictionary containing 'loras' list and 'presets' dict, or empty dict on failure
+    """
+    import yaml
+    
+    catalog_path = Path(__file__).parent / "lora_catalog.yaml"
+    if not catalog_path.exists():
+        print("[WARN] lora_catalog.yaml not found")
+        return {}
+    
+    try:
+        with open(catalog_path, 'r') as f:
+            catalog = yaml.safe_load(f)
+        return catalog or {}
+    except Exception as e:
+        print(f"[ERROR] Failed to load lora_catalog.yaml: {e}")
+        return {}
+
+def list_available_loras(available_models=None):
+    """List available LoRAs from ComfyUI server and catalog.
+    
+    Args:
+        available_models: Optional pre-fetched model dict from get_available_models()
+    
+    Returns:
+        list: List of available LoRA filenames
+    """
+    if available_models is None:
+        available_models = get_available_models()
+    
+    if available_models and "loras" in available_models:
+        return available_models["loras"]
+    return []
+
+def validate_lora_exists(lora_name, available_loras=None):
+    """Validate that a LoRA file exists on the server.
+    
+    Args:
+        lora_name: The LoRA filename to validate
+        available_loras: Optional pre-fetched list of available LoRAs
+    
+    Returns:
+        bool: True if LoRA exists, False otherwise
+    """
+    if available_loras is None:
+        available_loras = list_available_loras()
+    
+    return lora_name in available_loras
+
+def find_model_output_connections(workflow, node_id, output_index=0):
+    """Find all nodes that connect to a specific output of a node.
+    
+    Args:
+        workflow: The workflow dictionary
+        node_id: The source node ID
+        output_index: The output index to search for (default 0)
+    
+    Returns:
+        list: List of tuples (target_node_id, input_key) that connect to this output
+    """
+    connections = []
+    for target_id, target_node in workflow.items():
+        if "inputs" not in target_node:
+            continue
+        
+        for input_key, input_value in target_node["inputs"].items():
+            # Input connections are [node_id, output_index]
+            if isinstance(input_value, list) and len(input_value) == 2:
+                if input_value[0] == node_id and input_value[1] == output_index:
+                    connections.append((target_id, input_key))
+    
+    return connections
+
+def inject_lora(workflow, lora_name, strength_model=1.0, strength_clip=1.0, insert_after=None):
+    """Inject a LoRA loader node into the workflow.
+    
+    Args:
+        workflow: The workflow dictionary
+        lora_name: The LoRA filename
+        strength_model: Model strength (default 1.0)
+        strength_clip: CLIP strength (default 1.0)
+        insert_after: Optional node ID to insert after. If None, finds CheckpointLoader or UNETLoader
+    
+    Returns:
+        tuple: (modified_workflow, new_node_id) or (workflow, None) on failure
+    """
+    # Find the highest node ID
+    max_id = max(int(k) for k in workflow.keys() if k.isdigit())
+    new_id = str(max_id + 1)
+    
+    # Find the model loader node if not specified
+    if insert_after is None:
+        # Look for CheckpointLoaderSimple (SD 1.5) or UNETLoader (Wan 2.2)
+        for node_id, node in workflow.items():
+            class_type = node.get("class_type", "")
+            if class_type in ["CheckpointLoaderSimple", "UNETLoader"]:
+                insert_after = node_id
+                break
+    
+    if insert_after is None:
+        print("[ERROR] Cannot inject LoRA: No checkpoint or UNET loader found in workflow")
+        return workflow, None
+    
+    # Get the source node
+    source_node = workflow.get(insert_after)
+    if not source_node:
+        print(f"[ERROR] Cannot inject LoRA: Source node {insert_after} not found")
+        return workflow, None
+    
+    source_class = source_node.get("class_type", "")
+    
+    # Determine which outputs to use based on source node type
+    if source_class == "CheckpointLoaderSimple":
+        # CheckpointLoader outputs: [0]=MODEL, [1]=CLIP, [2]=VAE
+        model_output = [insert_after, 0]
+        clip_output = [insert_after, 1]
+    elif source_class == "UNETLoader":
+        # UNETLoader outputs: [0]=MODEL only
+        model_output = [insert_after, 0]
+        # For Wan 2.2, CLIP comes from DualCLIPLoader - find it
+        clip_output = None
+        for node_id, node in workflow.items():
+            if node.get("class_type") == "DualCLIPLoader":
+                clip_output = [node_id, 0]
+                break
+        if clip_output is None:
+            print("[WARN] No CLIP loader found for LoRA, using model connection only")
+            clip_output = model_output  # Fallback
+    elif source_class == "LoraLoader":
+        # Chaining LoRAs - connect to previous LoRA's outputs
+        model_output = [insert_after, 0]
+        clip_output = [insert_after, 1]
+    else:
+        print(f"[ERROR] Cannot inject LoRA after node type: {source_class}")
+        return workflow, None
+    
+    # Create the LoRA loader node
+    lora_node = {
+        "class_type": "LoraLoader",
+        "inputs": {
+            "model": model_output,
+            "clip": clip_output,
+            "lora_name": lora_name,
+            "strength_model": strength_model,
+            "strength_clip": strength_clip
+        },
+        "_meta": {
+            "title": f"LoRA: {lora_name}"
+        }
+    }
+    
+    # Add the node to workflow
+    workflow[new_id] = lora_node
+    
+    # Find all connections from the source node's model output (index 0)
+    # and redirect them to the new LoRA node
+    connections = find_model_output_connections(workflow, insert_after, 0)
+    
+    for target_id, input_key in connections:
+        # Skip the LoRA node we just created
+        if target_id == new_id:
+            continue
+        
+        # Redirect this connection to point to the LoRA node instead
+        workflow[target_id]["inputs"][input_key] = [new_id, 0]
+    
+    # Also redirect CLIP connections if applicable
+    if source_class == "CheckpointLoaderSimple":
+        clip_connections = find_model_output_connections(workflow, insert_after, 1)
+        for target_id, input_key in clip_connections:
+            if target_id == new_id:
+                continue
+            workflow[target_id]["inputs"][input_key] = [new_id, 1]
+    
+    print(f"[OK] Injected LoRA '{lora_name}' as node {new_id} (strength: {strength_model})")
+    return workflow, new_id
+
+def inject_lora_chain(workflow, lora_specs, available_loras=None):
+    """Inject multiple LoRAs in a chain.
+    
+    Args:
+        workflow: The workflow dictionary
+        lora_specs: List of tuples (lora_name, strength_model, strength_clip)
+        available_loras: Optional pre-fetched list of available LoRAs
+    
+    Returns:
+        dict: Modified workflow with LoRA chain injected
+    """
+    if not lora_specs:
+        return workflow
+    
+    # Validate all LoRAs exist before injecting
+    if available_loras is None:
+        available_loras = list_available_loras()
+    
+    for lora_name, _, _ in lora_specs:
+        if not validate_lora_exists(lora_name, available_loras):
+            print(f"[ERROR] LoRA not found: {lora_name}")
+            print(f"[ERROR] Available LoRAs: {', '.join(available_loras[:10])}...")
+            return workflow
+    
+    # Inject LoRAs in order, chaining them together
+    last_node_id = None
+    for lora_name, strength_model, strength_clip in lora_specs:
+        workflow, last_node_id = inject_lora(
+            workflow, 
+            lora_name, 
+            strength_model, 
+            strength_clip,
+            insert_after=last_node_id  # Chain to previous LoRA
+        )
+        if last_node_id is None:
+            print(f"[ERROR] Failed to inject LoRA: {lora_name}")
+            break
+    
+    return workflow
 
 def load_workflow(workflow_path):
     """Load workflow JSON."""
@@ -1019,6 +1240,12 @@ def main():
     parser.add_argument("--resize", help="Resize input image to WxH (e.g., 512x512)")
     parser.add_argument("--crop", choices=['center', 'cover', 'contain'], help="Crop mode for resize")
     parser.add_argument("--denoise", type=float, help="Denoise strength (0.0-1.0) for img2img")
+    parser.add_argument("--lora", action="append", metavar="NAME:STRENGTH", 
+                        help="Add LoRA with strength (e.g., 'style.safetensors:0.8'). Can be repeated for multiple LoRAs.")
+    parser.add_argument("--lora-preset", metavar="PRESET_NAME",
+                        help="Use a predefined LoRA preset from lora_catalog.yaml")
+    parser.add_argument("--list-loras", action="store_true", 
+                        help="List available LoRAs and presets, then exit")
     parser.add_argument("--cancel", metavar="PROMPT_ID", help="Cancel a specific prompt by ID")
     parser.add_argument("--dry-run", action="store_true", help="Validate workflow without generating")
     parser.add_argument("--validate", action="store_true", help="Run validation after generation")
@@ -1029,6 +1256,49 @@ def main():
     parser.add_argument("--json-progress", action="store_true", help="Output machine-readable JSON progress")
     args = parser.parse_args()
     
+    # Handle list-loras mode
+    if args.list_loras:
+        print("[INFO] Querying available LoRAs from ComfyUI server...")
+        
+        # Check server availability
+        if not check_server_availability():
+            print("[ERROR] ComfyUI server is not available")
+            sys.exit(EXIT_CONFIG_ERROR)
+        
+        # Get available LoRAs
+        available_loras = list_available_loras()
+        if available_loras:
+            print(f"\n[OK] Available LoRAs ({len(available_loras)}):")
+            for lora in sorted(available_loras):
+                print(f"  - {lora}")
+        else:
+            print("[WARN] No LoRAs found")
+        
+        # Load and display presets
+        catalog = load_lora_presets()
+        if catalog and "model_suggestions" in catalog:
+            presets = {}
+            # Extract presets from model_suggestions
+            for scenario_name, scenario_data in catalog["model_suggestions"].items():
+                if "default_loras" in scenario_data and scenario_data["default_loras"]:
+                    presets[scenario_name] = scenario_data["default_loras"]
+            
+            if presets:
+                print(f"\n[OK] Available LoRA presets:")
+                for preset_name, lora_list in presets.items():
+                    print(f"  - {preset_name}:")
+                    for lora_name in lora_list:
+                        # Find strength from catalog
+                        strength = 1.0
+                        if "loras" in catalog:
+                            for lora_entry in catalog["loras"]:
+                                if lora_entry.get("filename") == lora_name:
+                                    strength = lora_entry.get("recommended_strength", 1.0)
+                                    break
+                        print(f"      {lora_name} (strength: {strength})")
+        
+        sys.exit(EXIT_SUCCESS)
+    
     # Handle cancel mode
     if args.cancel:
         if cancel_prompt(args.cancel):
@@ -1038,10 +1308,10 @@ def main():
     
     # Validate required args for generation mode
     if not args.workflow:
-        parser.error("--workflow is required (unless using --cancel)")
+        parser.error("--workflow is required (unless using --cancel or --list-loras)")
     
     if not args.dry_run and not args.prompt:
-        parser.error("--prompt is required (unless using --dry-run or --cancel)")
+        parser.error("--prompt is required (unless using --dry-run, --cancel, or --list-loras)")
     
     # Check server availability first
     if not check_server_availability():
@@ -1157,6 +1427,66 @@ def main():
     # Apply denoise strength if specified
     if args.denoise is not None:
         workflow = modify_denoise(workflow, args.denoise)
+    
+    # Process LoRA arguments
+    lora_specs = []
+    
+    # Handle --lora-preset
+    if args.lora_preset:
+        catalog = load_lora_presets()
+        if catalog and "model_suggestions" in catalog:
+            preset_found = False
+            for scenario_name, scenario_data in catalog["model_suggestions"].items():
+                if scenario_name == args.lora_preset:
+                    preset_found = True
+                    if "default_loras" in scenario_data and scenario_data["default_loras"]:
+                        print(f"[OK] Loading LoRA preset '{args.lora_preset}'")
+                        for lora_name in scenario_data["default_loras"]:
+                            # Find recommended strength from catalog
+                            strength = 1.0
+                            if "loras" in catalog:
+                                for lora_entry in catalog["loras"]:
+                                    if lora_entry.get("filename") == lora_name:
+                                        strength = lora_entry.get("recommended_strength", 1.0)
+                                        break
+                            lora_specs.append((lora_name, strength, strength))
+                            print(f"  - {lora_name} (strength: {strength})")
+                    break
+            
+            if not preset_found:
+                print(f"[ERROR] LoRA preset not found: {args.lora_preset}")
+                print(f"[ERROR] Available presets: {', '.join(catalog['model_suggestions'].keys())}")
+                sys.exit(EXIT_CONFIG_ERROR)
+        else:
+            print(f"[ERROR] Cannot load LoRA presets from lora_catalog.yaml")
+            sys.exit(EXIT_CONFIG_ERROR)
+    
+    # Handle --lora arguments
+    if args.lora:
+        for lora_spec in args.lora:
+            # Parse "name:strength" format
+            if ':' in lora_spec:
+                parts = lora_spec.rsplit(':', 1)
+                lora_name = parts[0]
+                try:
+                    strength = float(parts[1])
+                except ValueError:
+                    print(f"[ERROR] Invalid LoRA strength: {parts[1]}")
+                    print(f"[ERROR] Format: 'lora_name.safetensors:0.8'")
+                    sys.exit(EXIT_CONFIG_ERROR)
+            else:
+                # No strength specified, use 1.0
+                lora_name = lora_spec
+                strength = 1.0
+            
+            lora_specs.append((lora_name, strength, strength))
+            print(f"[OK] Adding LoRA: {lora_name} (strength: {strength})")
+    
+    # Inject LoRAs into workflow
+    if lora_specs:
+        available_models = get_available_models()
+        available_loras = available_models.get("loras", []) if available_models else []
+        workflow = inject_lora_chain(workflow, lora_specs, available_loras)
 
     # Validation and retry loop
     attempt = 0
