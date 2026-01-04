@@ -456,6 +456,167 @@ Need video/animation?
 
 ---
 
+## Game Asset Generation
+
+ComfyGen supports specialized workflows for generating game-ready assets including icons, sprites, VFX, and UI elements.
+
+### Quick Start - Game Assets
+
+**Battleship Icon (Top-Down):**
+```bash
+python3 generate.py \
+    --workflow workflows/game-icon-transparent.json \
+    --prompt "(single battleship:1.8), top-down view, orthographic, no perspective, flat like a blueprint, military naval vessel, clean icon style, game asset, centered composition, white background, flat design, vector style, solid colors" \
+    --negative-prompt "multiple ships, side view, perspective view, realistic photo, blurry, complex background, water, waves, ocean, scenery, text, watermark" \
+    --steps 80 \
+    --cfg 8.5 \
+    --output /tmp/battleship_icon.png
+```
+
+**Explosion Effect Sprite:**
+```bash
+python3 generate.py \
+    --workflow workflows/game-icon-transparent.json \
+    --prompt "(single explosion:1.8), game effect sprite, clean edges, cartoon explosion, orange and red flames, comic book style, centered, white background, bold outlines, simple shapes" \
+    --negative-prompt "realistic photo, multiple explosions, complex scene, background scenery, text, watermark" \
+    --steps 50 \
+    --cfg 8.0 \
+    --output /tmp/explosion_sprite.png
+```
+
+**Pixel Art Ship:**
+```bash
+python3 generate.py \
+    --workflow workflows/flux-dev.json \
+    --prompt "r3tr0, pixel art battleship, 16-bit style, retro game sprite, top-down view, simple colors, 8-bit aesthetic, NES style" \
+    --negative-prompt "realistic, photorealistic, 3D, modern graphics, complex details" \
+    --steps 40 \
+    --cfg 7.5 \
+    --output /tmp/pixel_ship.png
+```
+
+### Game Asset Workflows
+
+| Workflow | Best For | Output | Settings |
+|----------|----------|--------|----------|
+| `game-icon-transparent.json` | Icons, sprites, UI elements | 512x512 PNG | CFG 8.0, Steps 30-80 |
+| `flux-dev.json` | Pixel art, retro assets | 512x512 PNG | CFG 7.5, Steps 40 |
+
+### Game Asset Categories
+
+**Available (After Download & Testing):**
+- **Icons & Flat Design:** Flux Flat Art, Simple Vector Flux, Game Icon v1
+- **Pixel Art:** Retro Game Art (SDXL/SD15), 2D Pixel Toolkit
+- **Naval/Military:** Battleships v1, USS Iowa, HMS Warspite, Bismarck
+- **VFX/Explosions:** Explosion Matrix v2, FireVFX v2
+- **Sprite Sheets:** Sprite Sheet Maker workflow
+
+**See:** `docs/MODEL_REGISTRY.md` for complete list of researched LoRAs  
+**See:** `docs/GAME_ASSET_TESTING.md` for download and testing instructions
+
+### Transparent Backgrounds
+
+**Method 1: Clean Background (Current)**
+- Use `game-icon-transparent.json` workflow
+- Generates white background for easy removal
+- Add to prompt: "white background, isolated object, centered"
+- Add to negative: "complex background, scenery, detailed background"
+- Post-process with background removal tools (RemBG, SAM, Photoshop)
+
+**Method 2: True Transparency (Future - Requires LayerDiffusion)**
+- Install LayerDiffusion extension in ComfyUI
+- Native alpha channel PNG output
+- No post-processing needed
+- **Installation:** https://github.com/layerdiffusion/sd-forge-layerdiffuse
+
+### Game Asset Prompt Templates
+
+**Top-Down Ship Icon:**
+```
+Positive: (single {ship_type}:1.8), top-down view, orthographic, no perspective, 
+flat like a blueprint, military naval vessel, clean icon style, game asset, 
+centered composition, white background, flat design, vector style, solid colors, 
+simple shapes
+
+Negative: multiple ships, side view, perspective view, realistic photo, blurry, 
+complex background, water, waves, ocean, scenery, text, watermark, 3D rendering, 
+shadows, detailed environment
+```
+
+**Explosion/VFX Sprite:**
+```
+Positive: (single explosion:1.8), game effect sprite, clean edges, cartoon 
+explosion, orange and red flames, comic book style, centered, white background, 
+bold outlines, simple shapes, vibrant colors, {effect_details}
+
+Negative: realistic photo, multiple explosions, complex scene, background scenery, 
+smoke clouds, text, watermark, blurry, detailed fire, realistic rendering
+```
+
+**Pixel Art Asset:**
+```
+Positive: r3tr0, pixel art {subject}, 16-bit style, retro game sprite, {view}, 
+simple colors, 8-bit aesthetic, NES/SNES style, low color depth, pixelated
+
+Negative: realistic, photorealistic, 3D, modern graphics, complex details, 
+gradients, high resolution, smooth, anti-aliased
+```
+
+**UI Button/Element:**
+```
+Positive: (single button:1.8), game UI element, {theme}, clean design, centered, 
+white background, flat icon, simple geometric shapes, {style_details}
+
+Negative: text, multiple buttons, complex background, realistic photo, 3D 
+rendering, shadows, gradients, detailed textures
+```
+
+### Parameter Guidelines for Game Assets
+
+**Icons & UI Elements:**
+- Steps: 30-50 (simple) to 60-80 (complex)
+- CFG: 8.0-8.5 (higher = stricter prompt adherence)
+- Resolution: 512x512 (standard icons) or 768x768 (detailed)
+
+**Pixel Art:**
+- Steps: 30-40
+- CFG: 7.0-7.5
+- Resolution: 512x512 or lower (256x256 for authentic pixel art)
+
+**VFX/Explosions:**
+- Steps: 40-60
+- CFG: 7.5-8.0
+- Resolution: 512x512 or 256x256 (for sprite overlays)
+
+**Sprite Sheets:**
+- Steps: 50-80 (consistency important)
+- CFG: 7.5-8.5
+- Resolution: Per sprite (e.g., 128x128) in grid layout
+
+### Common Issues & Solutions
+
+**Issue: Ship shows side view instead of top-down**
+- Solution: Increase emphasis `(top-down view:2.0)`, add "orthographic, blueprint style"
+- Add negative: "side view, perspective, 3D, angled view"
+- Increase CFG to 8.5-9.0 for stronger prompt adherence
+
+**Issue: Multiple objects instead of single icon**
+- Solution: Increase emphasis `(single {object}:1.8)` to `(single {object}:2.0)`
+- Add negative: "multiple, duplicate, two, several, many"
+- Use "centered, isolated" in prompt
+
+**Issue: Complex/detailed background**
+- Solution: Emphasize "(white background:1.5), clean, no background"
+- Add negative: "scenery, landscape, environment, detailed background, complex scene"
+- Consider post-processing background removal
+
+**Issue: Wrong style (too realistic)**
+- Solution: Add style keywords: "flat design, vector style, game asset, icon style"
+- Add negative: "realistic photo, photorealistic, 3D rendering, detailed"
+- Increase LoRA strength if using style LoRAs
+
+---
+
 ## Prompt Engineering
 
 ### CRITICAL: Use Detailed, Verbose Prompts
