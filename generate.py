@@ -481,7 +481,12 @@ def inject_lora(workflow, lora_name, strength_model=1.0, strength_clip=1.0, inse
         tuple: (modified_workflow, new_node_id) or (workflow, None) on failure
     """
     # Find the highest node ID
-    max_id = max(int(k) for k in workflow.keys() if k.isdigit())
+    numeric_keys = [int(k) for k in workflow.keys() if k.isdigit()]
+    if not numeric_keys:
+        print("[ERROR] Cannot inject LoRA: No numeric node IDs found in workflow")
+        return workflow, None
+    
+    max_id = max(numeric_keys)
     new_id = str(max_id + 1)
     
     # Find the model loader node if not specified

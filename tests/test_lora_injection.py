@@ -282,6 +282,31 @@ def test_inject_lora_no_checkpoint():
     print("[OK] inject_lora handles missing checkpoint loader")
 
 
+def test_inject_lora_empty_workflow():
+    """Test that inject_lora fails gracefully with empty workflow."""
+    workflow = {}
+    
+    modified, new_id = generate.inject_lora(workflow, "test_lora.safetensors")
+    
+    assert new_id is None
+    print("[OK] inject_lora handles empty workflow")
+
+
+def test_inject_lora_non_numeric_keys():
+    """Test that inject_lora fails gracefully with non-numeric keys."""
+    workflow = {
+        "abc": {
+            "class_type": "CheckpointLoaderSimple",
+            "inputs": {}
+        }
+    }
+    
+    modified, new_id = generate.inject_lora(workflow, "test_lora.safetensors")
+    
+    assert new_id is None
+    print("[OK] inject_lora handles non-numeric keys")
+
+
 if __name__ == "__main__":
     print("Running LoRA injection tests...\n")
     
@@ -298,6 +323,8 @@ if __name__ == "__main__":
         test_inject_lora_chain,
         test_inject_lora_chain_missing_lora,
         test_inject_lora_no_checkpoint,
+        test_inject_lora_empty_workflow,
+        test_inject_lora_non_numeric_keys,
     ]
     
     passed = 0
