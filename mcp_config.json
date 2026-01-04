@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "comfyui-service-manager": {
+      "command": "python3",
+      "args": ["mcp_server.py"],
+      "cwd": "/home/runner/work/comfy-gen/comfy-gen",
+      "env": {}
+    }
+  }
+}

@@ -4,3 +4,4 @@ torchvision
 minio
 Pillow
 transformers
+mcp
