@@ -9,6 +9,14 @@ from typing import Dict, Any, Optional
 import yaml
 
 
+# Preset parameters that can be overridden
+PRESET_PARAMETER_KEYS = [
+    'steps', 'cfg', 'sampler', 'scheduler', 'validate', 
+    'auto_retry', 'positive_threshold', 'width', 'height',
+    'retry_limit'
+]
+
+
 def get_config_path(filename: str = "presets.yaml") -> Path:
     """Get path to configuration file.
     
@@ -151,10 +159,7 @@ def apply_preset_to_params(
     result = params.copy()
     
     # Apply preset values only if not already set
-    preset_keys = ['steps', 'cfg', 'sampler', 'scheduler', 'validate', 
-                   'auto_retry', 'positive_threshold', 'width', 'height']
-    
-    for key in preset_keys:
+    for key in PRESET_PARAMETER_KEYS:
         if key in preset and key not in result:
             result[key] = preset[key]
     

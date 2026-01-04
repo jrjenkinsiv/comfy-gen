@@ -203,27 +203,20 @@ async def generate_image(
         "seed": seed,
     }
     
-    # Only include parameters that were explicitly provided
-    if width is not None:
-        params["width"] = width
-    if height is not None:
-        params["height"] = height
-    if steps is not None:
-        params["steps"] = steps
-    if cfg is not None:
-        params["cfg"] = cfg
-    if sampler is not None:
-        params["sampler"] = sampler
-    if scheduler is not None:
-        params["scheduler"] = scheduler
-    if validate is not None:
-        params["validate"] = validate
-    if auto_retry is not None:
-        params["auto_retry"] = auto_retry
-    if retry_limit is not None:
-        params["retry_limit"] = retry_limit
-    if positive_threshold is not None:
-        params["positive_threshold"] = positive_threshold
+    # Helper function to add optional parameters
+    def add_if_not_none(key, value):
+        if value is not None:
+            params[key] = value
+    
+    # Add explicitly provided parameters
+    optional_params = [
+        ('width', width), ('height', height), ('steps', steps), ('cfg', cfg),
+        ('sampler', sampler), ('scheduler', scheduler), ('validate', validate),
+        ('auto_retry', auto_retry), ('retry_limit', retry_limit), 
+        ('positive_threshold', positive_threshold)
+    ]
+    for key, value in optional_params:
+        add_if_not_none(key, value)
     
     # Apply preset if specified (preset values used as defaults)
     if preset:
@@ -249,9 +242,8 @@ async def generate_image(
             # Also update model if specified in preset
             if "model" in lora_config:
                 params["model"] = lora_config["model"]
-            if "workflow" in lora_config:
-                # Store workflow hint for later (not directly used in this function)
-                pass
+            # Note: workflow from lora_config is informational only; 
+            # actual workflow selection happens in WorkflowManager
         else:
             available = ', '.join(_lora_catalog.get("model_suggestions", {}).keys())
             return {
