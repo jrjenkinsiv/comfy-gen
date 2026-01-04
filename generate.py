@@ -170,8 +170,14 @@ def auto_select_workflow(prompt, prefer_quality=False):
             print(f"[ERROR] Model selection failed: {result.stderr}")
             return None
         
-        # Parse JSON output (skip stderr which contains INFO/WARN messages)
-        selection = json.loads(result.stdout)
+        # Parse JSON output - find the first { to skip any stderr messages
+        stdout = result.stdout
+        json_start = stdout.find('{')
+        if json_start == -1:
+            print(f"[ERROR] No JSON output found from model selection")
+            return None
+        
+        selection = json.loads(stdout[json_start:])
         
         # Determine workflow based on model
         base_model = selection["base_model"]["filename"]
