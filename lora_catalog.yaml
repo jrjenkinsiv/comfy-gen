@@ -93,6 +93,62 @@ loras:
     description: "Body enhancement LoRA for character-focused video generation"
     use_cases: ["character enhancement", "body modification", "character-focused content"]
 
+  # ========================================
+  # FLUX IMAGE LoRAs - Quality and style enhancement
+  # ========================================
+  # These LoRAs work with Flux.1 Dev for image generation
+  # Source: HuggingFace XLabs-AI flux-lora-collection, ByteDance Hyper-SD
+  
+  - filename: "Hyper-FLUX.1-dev-8steps-lora.safetensors"
+    tags: ["acceleration", "speed", "8-step", "flux", "turbo"]
+    compatible_with: ["flux1-dev-fp8.safetensors"]
+    recommended_strength: 0.125  # Use with steps=8
+    description: "Reduces Flux.1 Dev from 20+ steps to 8 steps for faster generation"
+    use_cases: ["fast image generation", "turbo mode", "quick iterations"]
+    notes: "Use --steps 8 with this LoRA. Strength 0.125 recommended."
+    
+  - filename: "realism_lora.safetensors"
+    tags: ["realism", "photorealistic", "flux", "quality", "photo"]
+    compatible_with: ["flux1-dev-fp8.safetensors"]
+    recommended_strength: 0.8  # Range: 0.6-1.0
+    description: "Enhances photorealistic quality in Flux.1 generations"
+    use_cases: ["photorealistic images", "portrait photography", "realistic rendering"]
+    
+  - filename: "scenery_lora.safetensors"
+    tags: ["scenery", "landscape", "nature", "flux", "environment"]
+    compatible_with: ["flux1-dev-fp8.safetensors"]
+    recommended_strength: 0.7  # Range: 0.5-0.9
+    description: "Improves landscape and scenery generation quality"
+    use_cases: ["landscapes", "nature scenes", "environments", "scenery"]
+    
+  - filename: "mjv6_lora.safetensors"
+    tags: ["midjourney", "style", "artistic", "flux", "mjv6"]
+    compatible_with: ["flux1-dev-fp8.safetensors"]
+    recommended_strength: 0.8  # Range: 0.6-1.0
+    description: "Midjourney v6 aesthetic style for artistic images"
+    use_cases: ["artistic images", "midjourney style", "stylized rendering"]
+    
+  - filename: "art_lora.safetensors"
+    tags: ["art", "artistic", "painting", "flux", "creative"]
+    compatible_with: ["flux1-dev-fp8.safetensors"]
+    recommended_strength: 0.7  # Range: 0.5-0.9
+    description: "Artistic and painterly style enhancement"
+    use_cases: ["digital art", "paintings", "artistic style"]
+    
+  - filename: "anime_lora.safetensors"
+    tags: ["anime", "manga", "japanese", "flux", "cartoon"]
+    compatible_with: ["flux1-dev-fp8.safetensors"]
+    recommended_strength: 0.8  # Range: 0.6-1.0
+    description: "Anime and manga art style"
+    use_cases: ["anime characters", "manga style", "japanese animation"]
+    
+  - filename: "disney_lora.safetensors"
+    tags: ["disney", "cartoon", "animation", "flux", "pixar"]
+    compatible_with: ["flux1-dev-fp8.safetensors"]
+    recommended_strength: 0.8  # Range: 0.6-1.0
+    description: "Disney/Pixar animation style"
+    use_cases: ["cartoon characters", "disney style", "animated look"]
+
 # ========================================
 # MODEL SUGGESTIONS - Predefined scenarios
 # ========================================
@@ -171,3 +227,60 @@ keyword_mappings:
   dynamic:
     tags: ["dynamic", "motion"]
     boost_score: 1.5
+
+  # Flux image LoRA keywords
+  photo:
+    tags: ["realism", "photorealistic"]
+    boost_score: 2.0
+    
+  photorealistic:
+    tags: ["realism", "photorealistic"]
+    boost_score: 2.0
+    
+  portrait:
+    tags: ["realism", "photorealistic"]
+    boost_score: 1.5
+    
+  landscape:
+    tags: ["scenery", "landscape", "nature"]
+    boost_score: 2.0
+    
+  scenery:
+    tags: ["scenery", "landscape"]
+    boost_score: 2.0
+    
+  nature:
+    tags: ["scenery", "nature", "environment"]
+    boost_score: 1.5
+    
+  midjourney:
+    tags: ["midjourney", "mjv6"]
+    boost_score: 2.0
+    
+  artistic:
+    tags: ["art", "artistic", "creative"]
+    boost_score: 1.5
+    
+  painting:
+    tags: ["art", "painting"]
+    boost_score: 1.5
+    
+  anime:
+    tags: ["anime", "manga"]
+    boost_score: 2.0
+    
+  manga:
+    tags: ["anime", "manga"]
+    boost_score: 2.0
+    
+  disney:
+    tags: ["disney", "cartoon", "pixar"]
+    boost_score: 2.0
+    
+  cartoon:
+    tags: ["cartoon", "disney", "animation"]
+    boost_score: 1.5
+    
+  turbo:
+    tags: ["acceleration", "speed", "turbo"]
+    boost_score: 2.0
