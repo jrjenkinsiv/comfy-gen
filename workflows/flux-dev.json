@@ -1,7 +1,7 @@
 {
   "1": {
     "inputs": {
-      "ckpt_name": "flux-dev.safetensors"
+      "ckpt_name": "v1-5-pruned-emaonly-fp16.safetensors"
     },
     "class_type": "CheckpointLoaderSimple",
     "_meta": {

@@ -14,10 +14,10 @@ from pathlib import Path
 from minio import Minio
 from minio.error import S3Error
 
-COMFYUI_HOST = "http://localhost:8188"  # ComfyUI running on moira
+COMFYUI_HOST = "http://192.168.1.215:8188"  # ComfyUI running on moira
 
 # MinIO configuration
-MINIO_ENDPOINT = "localhost:9000"
+MINIO_ENDPOINT = "192.168.1.215:9000"
 MINIO_ACCESS_KEY = "minioadmin"
 MINIO_SECRET_KEY = "minioadmin"
 BUCKET_NAME = "comfy-gen"
