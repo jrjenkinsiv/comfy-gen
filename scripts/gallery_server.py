@@ -221,6 +221,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             const filter = document.getElementById('filter').value;
             const sort = document.getElementById('sort').value;
             
+            // Note: Quality grade thresholds are hardcoded here to match comfy_gen/quality.py
+            // A: 8.0+, B: 6.5-7.9, C: 5.0-6.4, D: 3.0-4.9, F: 0.0-2.9
             let filtered = allImages.filter(img => {
                 if (search && !img.prompt?.toLowerCase().includes(search)) return false;
                 if (filter === 'lora' && (!img.loras || img.loras.length === 0)) return false;

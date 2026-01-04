@@ -29,7 +29,8 @@ except ImportError:
     CLIP_AVAILABLE = False
 
 
-# Quality grade thresholds
+# Quality grade thresholds (Python 3.7+ preserves insertion order)
+# Grades are checked in descending order: A -> B -> C -> D -> F
 GRADE_THRESHOLDS = {
     'A': 8.0,
     'B': 6.5,
@@ -399,11 +400,17 @@ class QualityScorer:
             prompt_adherence = {'clip_score': None, 'composite': 0.0}
         
         # Calculate weighted composite score
+        # Handle None composites by treating them as 0.0
+        technical_composite = technical.get('composite', 0.0) or 0.0
+        aesthetic_composite = aesthetic.get('composite', 0.0) or 0.0
+        detail_composite = detail.get('composite', 0.0) or 0.0
+        prompt_composite = prompt_adherence.get('composite', 0.0) or 0.0
+        
         composite_score = (
-            WEIGHTS['technical'] * technical['composite'] +
-            WEIGHTS['aesthetic'] * aesthetic['composite'] +
-            WEIGHTS['prompt_adherence'] * prompt_adherence['composite'] +
-            WEIGHTS['detail'] * detail['composite']
+            WEIGHTS['technical'] * technical_composite +
+            WEIGHTS['aesthetic'] * aesthetic_composite +
+            WEIGHTS['prompt_adherence'] * prompt_composite +
+            WEIGHTS['detail'] * detail_composite
         )
         
         # Calculate grade
