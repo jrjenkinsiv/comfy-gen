@@ -36,15 +36,18 @@ def main():
         client.make_bucket(BUCKET_NAME)
         print(f"[OK] Bucket '{BUCKET_NAME}' created.")
 
-    # Set public read policy
+    # Set public read policy (with listing)
     policy = {
         "Version": "2012-10-17",
         "Statement": [
             {
                 "Effect": "Allow",
                 "Principal": {"AWS": ["*"]},
-                "Action": ["s3:GetObject"],
-                "Resource": [f"arn:aws:s3:::{BUCKET_NAME}/*"],
+                "Action": ["s3:GetObject", "s3:ListBucket"],
+                "Resource": [
+                    f"arn:aws:s3:::{BUCKET_NAME}",
+                    f"arn:aws:s3:::{BUCKET_NAME}/*"
+                ],
             }
         ],
     }
