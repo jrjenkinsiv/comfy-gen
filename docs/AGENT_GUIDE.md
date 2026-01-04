@@ -9,6 +9,7 @@ This guide is for AI agents and low-level workers to understand how to generate 
 - [Understanding Workflows](#understanding-workflows)
 - [Available Models](#available-models)
 - [Using LoRAs](#using-loras)
+- [Advanced Generation Parameters](#advanced-generation-parameters)
 - [Prompt Engineering](#prompt-engineering)
 - [Validation and Quality Control](#validation-and-quality-control)
 - [Error Handling](#error-handling)
@@ -305,6 +306,138 @@ ssh moira "C:\\Users\\jrjen\\comfy\\.venv\\Scripts\\python.exe C:\\Users\\jrjen\
        print(l)
    "
    ```
+
+---
+
+## Advanced Generation Parameters
+
+ComfyGen supports fine-tuning generation quality and behavior through various parameters.
+
+### Parameter Reference
+
+| Parameter | Range | Default | Effect |
+|-----------|-------|---------|--------|
+| `--steps` | 1-150 | 20 | Number of sampling steps. More steps = finer detail but slower generation. Diminishing returns above 50. |
+| `--cfg` | 1.0-20.0 | 7.0 | Classifier-free guidance scale. Higher = stricter prompt adherence, but can cause oversaturation. |
+| `--seed` | -1 or int | random | Random seed for reproducibility. Use -1 for random, or specific number for repeatable results. |
+| `--width` | 64-2048 | 512 | Output width in pixels (must be divisible by 8). |
+| `--height` | 64-2048 | 512 | Output height in pixels (must be divisible by 8). |
+| `--sampler` | string | varies | Sampler algorithm (euler, dpmpp_2m, dpmpp_2m_sde, etc.). |
+| `--scheduler` | string | normal | Noise scheduler (normal, karras, exponential). |
+| `--denoise` | 0.0-1.0 | 1.0 | Denoising strength for img2img. 1.0 = full generation, 0.5 = preserve 50% of input. |
+
+### Usage Examples
+
+#### High Quality Generation
+```bash
+python3 generate.py \
+    --workflow workflows/flux-dev.json \
+    --prompt "detailed portrait of a warrior, highly detailed" \
+    --steps 50 \
+    --cfg 7.5 \
+    --sampler dpmpp_2m_sde \
+    --scheduler karras \
+    --output /tmp/high_quality.png
+```
+
+#### Fast Draft Generation
+```bash
+python3 generate.py \
+    --workflow workflows/flux-dev.json \
+    --prompt "concept art of a robot" \
+    --steps 10 \
+    --cfg 5.0 \
+    --sampler euler \
+    --output /tmp/draft.png
+```
+
+#### Reproducible Generation
+```bash
+python3 generate.py \
+    --workflow workflows/flux-dev.json \
+    --prompt "landscape with mountains" \
+    --seed 12345 \
+    --output /tmp/reproducible.png
+```
+
+#### Custom Dimensions
+```bash
+python3 generate.py \
+    --workflow workflows/flux-dev.json \
+    --prompt "wide panoramic view of a city" \
+    --width 768 \
+    --height 512 \
+    --output /tmp/panorama.png
+```
+
+### Generation Presets
+
+Presets provide pre-configured parameter combinations for common scenarios. Use `--preset` to apply a preset, and individual parameters can override preset values.
+
+#### Available Presets
+
+| Preset | Steps | CFG | Sampler | Scheduler | Use Case |
+|--------|-------|-----|---------|-----------|----------|
+| `draft` | 10 | 5.0 | euler | normal | Quick previews, testing prompts |
+| `balanced` | 20 | 7.0 | euler_ancestral | normal | Default quality/speed balance |
+| `high-quality` | 50 | 7.5 | dpmpp_2m_sde | karras | Final outputs, detailed work |
+| `fast` | 15 | 7.0 | dpmpp_2m | normal | Good quality with speed |
+| `ultra` | 100 | 8.0 | dpmpp_2m_sde | karras | Maximum quality, very slow |
+
+#### Using Presets
+
+```bash
+# Use high-quality preset
+python3 generate.py \
+    --workflow workflows/flux-dev.json \
+    --prompt "detailed fantasy scene" \
+    --preset high-quality \
+    --output /tmp/scene.png
+
+# Use preset but override specific parameters
+python3 generate.py \
+    --workflow workflows/flux-dev.json \
+    --prompt "robot in factory" \
+    --preset balanced \
+    --seed 42 \
+    --width 768 \
+    --output /tmp/robot.png
+```
+
+### Parameter Selection Guidelines
+
+#### Steps
+- **10-15 steps**: Draft/preview quality, very fast
+- **20-30 steps**: Standard quality, good balance
+- **40-60 steps**: High quality, slower
+- **80-150 steps**: Diminishing returns, use only for critical work
+
+#### CFG (Classifier-Free Guidance)
+- **1.0-4.0**: Loose interpretation, more creative/random
+- **5.0-7.0**: Balanced adherence (recommended)
+- **8.0-12.0**: Strict prompt following
+- **13.0+**: Risk of over-saturation and artifacts
+
+#### Samplers
+- **euler**: Fast, simple, good for drafts
+- **euler_ancestral**: Adds randomness, varied outputs
+- **dpmpp_2m**: Fast, high quality, good default
+- **dpmpp_2m_sde**: Slower but higher quality
+- **dpmpp_2m_sde_gpu**: GPU-optimized version
+
+#### Schedulers
+- **normal**: Standard linear noise schedule
+- **karras**: Better detail preservation, recommended for quality
+- **exponential**: Alternative noise distribution
+- **sgm_uniform**: Specific use cases
+
+### Best Practices
+
+1. **Start with presets**: Use `--preset balanced` as baseline
+2. **Iterate on seed**: Find a good seed, then adjust other parameters
+3. **Test dimensions**: Ensure width/height are divisible by 8
+4. **Balance speed/quality**: Use draft preset for testing, high-quality for finals
+5. **Document your settings**: Save successful parameter combinations
 
 ---
 
