@@ -80,8 +80,29 @@ ssh moira "C:\\Users\\jrjen\\comfy\\.venv\\Scripts\\python.exe C:\\Users\\jrjen\
 | Script | Purpose |
 |--------|---------|
 | `scripts/start_comfyui.py` | Start ComfyUI server on moira (run via SSH) |
+| `scripts/cancel_generation.py` | Cancel running/queued jobs or list queue |
 | `scripts/set_bucket_policy.py` | Make MinIO bucket publicly readable |
 | `scripts/create_bucket.py` | Create the comfy-gen MinIO bucket |
+
+## Canceling Generation
+
+Cancel long-running or mistaken generations:
+
+```bash
+# Cancel all current/queued jobs
+python3 scripts/cancel_generation.py
+
+# List current queue
+python3 scripts/cancel_generation.py --list
+
+# Cancel specific prompt by ID
+python3 scripts/cancel_generation.py --prompt-id <prompt_id>
+
+# Cancel from generate.py
+python3 generate.py --cancel <prompt_id>
+
+# Use Ctrl+C during generation to cancel and cleanup
+```
 
 ## Development
 
