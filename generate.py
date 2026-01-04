@@ -14,6 +14,7 @@ import os
 import tempfile
 import urllib.request
 from pathlib import Path
+from shutil import copyfile
 from minio import Minio
 from minio.error import S3Error
 from PIL import Image
@@ -62,7 +63,16 @@ def preprocess_image(image_path, resize=None, crop=None):
         
         if resize:
             # Parse resize dimensions (e.g., "512x512")
-            width, height = map(int, resize.split('x'))
+            try:
+                parts = resize.lower().split('x')
+                if len(parts) != 2:
+                    raise ValueError("Resize format must be 'WIDTHxHEIGHT'")
+                width, height = int(parts[0]), int(parts[1])
+                if width <= 0 or height <= 0:
+                    raise ValueError("Width and height must be positive integers")
+            except ValueError as e:
+                print(f"[ERROR] Invalid resize format '{resize}': {e}")
+                return False
             
             if crop == "center":
                 # Center crop to target aspect ratio, then resize
@@ -291,14 +301,13 @@ def main():
                     sys.exit(1)
                 image_to_process = args.input_image
             
-            # Preprocess image if resize/crop specified
+                # Preprocess image if resize/crop specified
             if args.resize or args.crop:
                 # If using original file, create a temp copy for processing
                 if image_to_process == args.input_image:
                     temp_fd, temp_image_path = tempfile.mkstemp(suffix=".png")
                     os.close(temp_fd)
                     # Copy original to temp
-                    from shutil import copyfile
                     copyfile(args.input_image, temp_image_path)
                     image_to_process = temp_image_path
                 
