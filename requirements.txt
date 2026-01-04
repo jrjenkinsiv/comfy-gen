@@ -2,3 +2,7 @@ requests
 torch
 torchvision
 minio
+
+# Optional dependencies for image validation
+transformers
+pillow

@@ -12,6 +12,7 @@ import time
 import sys
 import signal
 import os
+import re
 from pathlib import Path
 from minio import Minio
 from minio.error import S3Error
@@ -206,6 +207,96 @@ def signal_handler(signum, frame):
         cleanup_partial_output(current_output_path)
     print("[INFO] Cancelled. Exiting.")
     sys.exit(0)
+
+def strengthen_prompt(prompt, strength_multiplier=1.3):
+    """Strengthen emphasis markers in a prompt.
+    
+    Args:
+        prompt: Original prompt text
+        strength_multiplier: Factor to multiply existing weights by
+    
+    Returns:
+        Modified prompt with strengthened emphasis
+    """
+    # Find existing emphasis patterns like (text:weight)
+    def increase_weight(match):
+        text = match.group(1)
+        weight = float(match.group(2))
+        new_weight = weight * strength_multiplier
+        return f"({text}:{new_weight:.1f})"
+    
+    # Increase existing weights
+    modified = re.sub(r'\(([^:]+):([0-9.]+)\)', increase_weight, prompt)
+    
+    # If no weights found, add emphasis to key terms
+    if modified == prompt:
+        # Add emphasis to important keywords
+        keywords = ["single", "one", "alone", "solo"]
+        for keyword in keywords:
+            if keyword in modified.lower():
+                modified = re.sub(
+                    rf'\b({keyword})\b',
+                    rf'(\1:{strength_multiplier:.1f})',
+                    modified,
+                    flags=re.IGNORECASE
+                )
+    
+    return modified
+
+def add_negative_terms(negative_prompt, additional_terms):
+    """Add additional negative terms to negative prompt.
+    
+    Args:
+        negative_prompt: Original negative prompt
+        additional_terms: List of terms to add
+    
+    Returns:
+        Enhanced negative prompt
+    """
+    terms = [t.strip() for t in additional_terms if t.strip()]
+    if not terms:
+        return negative_prompt
+    
+    if negative_prompt:
+        return f"{negative_prompt}, {', '.join(terms)}"
+    else:
+        return ', '.join(terms)
+
+def validate_generated_image(image_url, positive_prompt, negative_prompt, threshold=0.25):
+    """Validate a generated image using CLIP.
+    
+    Args:
+        image_url: URL to the generated image
+        positive_prompt: Expected content
+        negative_prompt: Content to avoid
+        threshold: Minimum CLIP score to pass
+    
+    Returns:
+        Validation result dictionary
+    """
+    try:
+        from comfy_gen.validation import validate_image
+        return validate_image(image_url, positive_prompt, negative_prompt, threshold)
+    except ImportError as e:
+        print(f"[WARN] Validation dependencies not available: {e}")
+        print("[WARN] Skipping validation. Install with: pip install transformers pillow")
+        return {
+            "valid": True,
+            "clip_score": 0.0,
+            "negative_score": 0.0,
+            "threshold": threshold,
+            "diagnostics": "Validation skipped - dependencies not installed"
+        }
+    except Exception as e:
+        print(f"[ERROR] Validation failed: {e}")
+        return {
+            "valid": False,
+            "clip_score": 0.0,
+            "negative_score": 0.0,
+            "threshold": threshold,
+            "diagnostics": f"Validation error: {str(e)}"
+        }
+
 
 def main():
     global current_prompt_id, current_output_path
