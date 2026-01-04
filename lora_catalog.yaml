@@ -47,7 +47,7 @@ loras:
   - filename: "wan2.2_i2v_lightx2v_4steps_lora_v1_low_noise.safetensors"
     tags: ["acceleration", "speed", "4-step", "wan2.2", "image-to-video", "low-noise"]
     compatible_with: ["wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors"]
-    recommended_strength: 1.0
+    recommended_strength: 1.0  # Must be 1.0 for acceleration
     description: "Reduces Wan 2.2 I2V low noise generation to 4 steps for faster image animation"
     use_cases: ["fast video generation", "image-to-video with low noise model", "animation"]
     

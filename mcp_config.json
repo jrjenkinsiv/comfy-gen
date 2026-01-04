@@ -1,33 +1,10 @@
 {
   "mcpServers": {
     "comfyui-service-manager": {
-      // Command to run the MCP server
       "command": "python3",
-      
-      // Arguments passed to the command
-      // Note: Use relative path "mcp_server.py" when cwd is set
       "args": ["mcp_server.py"],
-      
-      // Working directory - set to repository root
-      // ${workspaceFolder} is a VS Code variable that expands to the workspace path
       "cwd": "/home/runner/work/comfy-gen/comfy-gen",
-      
-      // Environment variables (optional)
-      // Can override default endpoints here if needed
-      "env": {
-        // Example overrides (commented out - using defaults from mcp_server.py):
-        // "COMFYUI_HOST": "http://192.168.1.215:8188",
-        // "MINIO_ENDPOINT": "192.168.1.215:9000"
-      }
+      "env": {}
     }
-    
-    // Example: Additional MCP servers can be added here
-    // Uncomment when comprehensive MCP server is implemented (issue #18)
-    // "comfyui-generation": {
-    //   "command": "python3",
-    //   "args": ["mcp_generation_server.py"],
-    //   "cwd": "/home/runner/work/comfy-gen/comfy-gen",
-    //   "description": "Image/video generation tools (future)"
-    // }
   }
 }
