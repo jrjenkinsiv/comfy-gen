@@ -15,12 +15,14 @@ import os
 import tempfile
 import uuid
 import re
+import threading
 from pathlib import Path
 from minio import Minio
 from minio.error import S3Error
 from urllib.parse import urlparse
 from io import BytesIO
 from PIL import Image
+import websocket
 
 COMFYUI_HOST = "http://192.168.1.215:8188"  # ComfyUI running on moira
 
@@ -42,6 +44,184 @@ RETRY_BACKOFF = 2  # exponential backoff multiplier
 
 # Default negative prompts
 DEFAULT_SD_NEGATIVE_PROMPT = "bad quality, blurry, low resolution, watermark, text, deformed, ugly, duplicate"
+
+
+class ProgressTracker:
+    """Track real-time progress via ComfyUI WebSocket."""
+    
+    def __init__(self, prompt_id, quiet=False, json_progress=False):
+        """Initialize progress tracker.
+        
+        Args:
+            prompt_id: The prompt ID to track
+            quiet: Suppress progress output
+            json_progress: Output machine-readable JSON progress
+        """
+        self.prompt_id = prompt_id
+        self.quiet = quiet
+        self.json_progress = json_progress
+        self.ws = None
+        self.completed = False
+        self.error = None
+        self.start_time = None
+        self.current_node = None
+        self.node_progress = {}
+        self.running = False
+        self.thread = None
+        
+    def _log(self, message, prefix="[INFO]"):
+        """Log a message respecting quiet mode."""
+        if not self.quiet and not self.json_progress:
+            print(f"{prefix} {message}")
+    
+    def _log_progress(self, data):
+        """Log progress update."""
+        if self.json_progress:
+            print(json.dumps(data))
+        elif not self.quiet:
+            # Format human-readable progress
+            if "step" in data and "max_steps" in data:
+                step = data["step"]
+                max_steps = data["max_steps"]
+                percent = int((step / max_steps) * 100) if max_steps > 0 else 0
+                eta_str = ""
+                if "eta_seconds" in data and data["eta_seconds"] is not None:
+                    eta_str = f" - ETA: {int(data['eta_seconds'])}s"
+                print(f"[PROGRESS] Sampling: {step}/{max_steps} steps ({percent}%){eta_str}")
+            elif "node" in data:
+                print(f"[PROGRESS] {data['node']}")
+    
+    def _on_message(self, ws, message):
+        """Handle WebSocket message."""
+        try:
+            data = json.loads(message)
+            msg_type = data.get("type")
+            
+            # Only process messages for our prompt_id
+            if msg_type == "execution_start":
+                prompt_info = data.get("data", {}).get("prompt_id")
+                if prompt_info == self.prompt_id:
+                    self.start_time = time.time()
+                    self._log("Generation started")
+                    
+            elif msg_type == "executing":
+                exec_data = data.get("data", {})
+                if exec_data.get("prompt_id") == self.prompt_id:
+                    node = exec_data.get("node")
+                    if node is None:
+                        # Execution complete
+                        self.completed = True
+                        elapsed = time.time() - self.start_time if self.start_time else 0
+                        self._log(f"Generation complete in {elapsed:.1f}s", "[OK]")
+                    else:
+                        self.current_node = node
+                        
+            elif msg_type == "progress":
+                prog_data = data.get("data", {})
+                if prog_data.get("prompt_id") == self.prompt_id:
+                    step = prog_data.get("value", 0)
+                    max_steps = prog_data.get("max", 0)
+                    
+                    # Calculate ETA
+                    eta = None
+                    if self.start_time and max_steps > 0 and step > 0:
+                        elapsed = time.time() - self.start_time
+                        time_per_step = elapsed / step
+                        remaining_steps = max_steps - step
+                        eta = time_per_step * remaining_steps
+                    
+                    self._log_progress({
+                        "step": step,
+                        "max_steps": max_steps,
+                        "eta_seconds": eta,
+                        "node": self.current_node
+                    })
+                    
+            elif msg_type == "execution_cached":
+                cached_data = data.get("data", {})
+                if cached_data.get("prompt_id") == self.prompt_id:
+                    nodes = cached_data.get("nodes", [])
+                    if nodes:
+                        self._log(f"Using cached results for {len(nodes)} node(s)")
+                        
+            elif msg_type == "executed":
+                exec_data = data.get("data", {})
+                if exec_data.get("prompt_id") == self.prompt_id:
+                    node = exec_data.get("node")
+                    if node:
+                        self._log_progress({"node": f"Completed node {node}"})
+                        
+        except json.JSONDecodeError:
+            pass  # Ignore malformed messages
+        except Exception as e:
+            if not self.quiet:
+                print(f"[WARN] Error processing WebSocket message: {e}")
+    
+    def _on_error(self, ws, error):
+        """Handle WebSocket error."""
+        if not isinstance(error, websocket.WebSocketConnectionClosedException):
+            self.error = str(error)
+            if not self.quiet:
+                print(f"[WARN] WebSocket error: {error}")
+    
+    def _on_close(self, ws, close_status_code, close_msg):
+        """Handle WebSocket close."""
+        self.running = False
+    
+    def _on_open(self, ws):
+        """Handle WebSocket open."""
+        self.running = True
+        self._log("Connected to progress stream")
+    
+    def start(self):
+        """Start tracking progress in background thread."""
+        ws_url = "ws://192.168.1.215:8188/ws"
+        
+        # Create WebSocket with client ID
+        client_id = str(uuid.uuid4())
+        ws_url_with_id = f"{ws_url}?clientId={client_id}"
+        
+        self.ws = websocket.WebSocketApp(
+            ws_url_with_id,
+            on_message=self._on_message,
+            on_error=self._on_error,
+            on_close=self._on_close,
+            on_open=self._on_open
+        )
+        
+        # Run in background thread
+        self.thread = threading.Thread(target=self.ws.run_forever)
+        self.thread.daemon = True
+        self.thread.start()
+        
+        # Give WebSocket time to connect
+        time.sleep(0.5)
+    
+    def stop(self):
+        """Stop tracking progress."""
+        if self.ws:
+            self.ws.close()
+        if self.thread:
+            self.thread.join(timeout=2)
+    
+    def wait_for_completion(self, timeout=None):
+        """Wait for generation to complete.
+        
+        Args:
+            timeout: Maximum time to wait in seconds (None for no timeout)
+            
+        Returns:
+            bool: True if completed, False if timed out or error
+        """
+        start = time.time()
+        while not self.completed:
+            if self.error:
+                return False
+            if timeout and (time.time() - start) > timeout:
+                return False
+            time.sleep(0.5)
+        return True
+
 
 def check_server_availability():
     """Check if ComfyUI server is available.
@@ -533,27 +713,53 @@ def queue_workflow(workflow, retry=True):
     
     return None
 
-def wait_for_completion(prompt_id):
-    """Wait for workflow to complete."""
-    url = f"{COMFYUI_HOST}/history/{prompt_id}"
-    while True:
-        response = requests.get(url)
-        if response.status_code == 200:
-            history = response.json()
-            if prompt_id in history:
-                status = history[prompt_id]
-                if "outputs" in status:
-                    print("Workflow completed!")
-                    return status
-                elif "status" in status and status["status"]["completed"] is False:
-                    print("Workflow in progress...")
+def wait_for_completion(prompt_id, quiet=False, json_progress=False):
+    """Wait for workflow to complete with real-time progress tracking.
+    
+    Args:
+        prompt_id: The prompt ID to wait for
+        quiet: Suppress progress output
+        json_progress: Output machine-readable JSON progress
+        
+    Returns:
+        dict: Workflow status/history on completion, None on error
+    """
+    # Start WebSocket progress tracker
+    tracker = ProgressTracker(prompt_id, quiet=quiet, json_progress=json_progress)
+    tracker.start()
+    
+    try:
+        # Poll history endpoint to get final status
+        url = f"{COMFYUI_HOST}/history/{prompt_id}"
+        while True:
+            response = requests.get(url)
+            if response.status_code == 200:
+                history = response.json()
+                if prompt_id in history:
+                    status = history[prompt_id]
+                    if "outputs" in status:
+                        # Workflow completed successfully
+                        tracker.stop()
+                        return status
+                    elif "status" in status and status["status"].get("completed") is False:
+                        # Still in progress, keep waiting
+                        pass
+                    else:
+                        # Unknown status
+                        if not quiet:
+                            print("[WARN] Workflow status unknown")
                 else:
-                    print("Workflow status unknown")
+                    # Prompt not in history yet
+                    pass
             else:
-                print("Prompt ID not found in history")
-        else:
-            print(f"Error checking status: {response.text}")
-        time.sleep(5)
+                if not quiet:
+                    print(f"[ERROR] Error checking status: {response.text}")
+            
+            time.sleep(2)  # Reduced from 5s since we have WebSocket updates
+    finally:
+        tracker.stop()
+    
+    return None
 
 def download_output(status, output_path):
     """Download the generated image."""
@@ -748,7 +954,9 @@ def signal_handler(signum, frame):
 def run_generation(
     workflow: dict,
     output_path: str,
-    uploaded_image_filename: str = None
+    uploaded_image_filename: str = None,
+    quiet: bool = False,
+    json_progress: bool = False
 ) -> tuple:
     """Run a single generation attempt.
     
@@ -756,6 +964,8 @@ def run_generation(
         workflow: The workflow dict with prompts already set
         output_path: Path to save the output
         uploaded_image_filename: Optional uploaded input image filename
+        quiet: Suppress progress output
+        json_progress: Output machine-readable JSON progress
     
     Returns:
         Tuple of (success: bool, minio_url: str or None)
@@ -769,7 +979,7 @@ def run_generation(
     # Track prompt ID for cancellation
     current_prompt_id = prompt_id
 
-    status = wait_for_completion(prompt_id)
+    status = wait_for_completion(prompt_id, quiet=quiet, json_progress=json_progress)
     if status:
         if download_output(status, output_path):
             # Upload to MinIO
@@ -778,10 +988,12 @@ def run_generation(
             object_name = f"{timestamp}_{Path(output_path).name}"
             minio_url = upload_to_minio(output_path, object_name)
             if minio_url:
-                print(f"[OK] Image available at: {minio_url}")
+                if not quiet:
+                    print(f"[OK] Image available at: {minio_url}")
                 return True, minio_url
             else:
-                print("[ERROR] Failed to upload to MinIO")
+                if not quiet:
+                    print("[ERROR] Failed to upload to MinIO")
                 return False, None
     
     return False, None
@@ -805,6 +1017,8 @@ def main():
     parser.add_argument("--auto-retry", action="store_true", help="Automatically retry if validation fails")
     parser.add_argument("--retry-limit", type=int, default=3, help="Maximum retry attempts (default: 3)")
     parser.add_argument("--positive-threshold", type=float, default=0.25, help="Minimum CLIP score for positive prompt (default: 0.25)")
+    parser.add_argument("--quiet", action="store_true", help="Suppress progress output")
+    parser.add_argument("--json-progress", action="store_true", help="Output machine-readable JSON progress")
     args = parser.parse_args()
     
     # Handle cancel mode
@@ -946,20 +1160,29 @@ def main():
         attempt += 1
         
         if attempt > 1:
-            print(f"\n[INFO] Retry attempt {attempt}/{max_attempts}")
+            if not args.quiet:
+                print(f"\n[INFO] Retry attempt {attempt}/{max_attempts}")
             # Adjust prompts for retry
             adjusted_positive, adjusted_negative = adjust_prompt_for_retry(
                 args.prompt, args.negative_prompt, attempt - 1
             )
-            print(f"[INFO] Adjusted positive prompt: {adjusted_positive}")
-            print(f"[INFO] Adjusted negative prompt: {adjusted_negative}")
+            if not args.quiet:
+                print(f"[INFO] Adjusted positive prompt: {adjusted_positive}")
+                print(f"[INFO] Adjusted negative prompt: {adjusted_negative}")
             workflow = modify_prompt(workflow, adjusted_positive, adjusted_negative)
         
         # Run generation
-        success, minio_url = run_generation(workflow, args.output, uploaded_filename if args.input_image else None)
+        success, minio_url = run_generation(
+            workflow, 
+            args.output, 
+            uploaded_filename if args.input_image else None,
+            quiet=args.quiet,
+            json_progress=args.json_progress
+        )
         
         if not success:
-            print(f"[ERROR] Generation failed on attempt {attempt}")
+            if not args.quiet:
+                print(f"[ERROR] Generation failed on attempt {attempt}")
             if attempt >= max_attempts:
                 sys.exit(EXIT_FAILURE)
             continue
@@ -969,7 +1192,8 @@ def main():
             try:
                 from comfy_gen.validation import validate_image
                 
-                print(f"[INFO] Running validation...")
+                if not args.quiet:
+                    print(f"[INFO] Running validation...")
                 validation_result = validate_image(
                     args.output,
                     args.prompt,
@@ -977,33 +1201,39 @@ def main():
                     positive_threshold=args.positive_threshold
                 )
                 
-                print(f"[INFO] Validation result: {validation_result['reason']}")
-                print(f"[INFO] Positive score: {validation_result.get('positive_score', 0.0):.3f}")
-                
-                if validation_result.get('negative_score'):
-                    print(f"[INFO] Negative score: {validation_result['negative_score']:.3f}")
-                    print(f"[INFO] Delta: {validation_result.get('score_delta', 0.0):.3f}")
+                if not args.quiet:
+                    print(f"[INFO] Validation result: {validation_result['reason']}")
+                    print(f"[INFO] Positive score: {validation_result.get('positive_score', 0.0):.3f}")
+                    
+                    if validation_result.get('negative_score'):
+                        print(f"[INFO] Negative score: {validation_result['negative_score']:.3f}")
+                        print(f"[INFO] Delta: {validation_result.get('score_delta', 0.0):.3f}")
                 
                 if validation_result['passed']:
-                    print(f"[OK] Image passed validation")
+                    if not args.quiet:
+                        print(f"[OK] Image passed validation")
                     break
                 else:
-                    print(f"[WARN] Image failed validation: {validation_result['reason']}")
+                    if not args.quiet:
+                        print(f"[WARN] Image failed validation: {validation_result['reason']}")
                     if not args.auto_retry:
                         # Validation failed but no retry requested
                         break
                     elif attempt >= max_attempts:
-                        print(f"[ERROR] Max retries reached. Final validation result:")
-                        print(f"  Reason: {validation_result['reason']}")
-                        print(f"  Positive score: {validation_result.get('positive_score', 0.0):.3f}")
+                        if not args.quiet:
+                            print(f"[ERROR] Max retries reached. Final validation result:")
+                            print(f"  Reason: {validation_result['reason']}")
+                            print(f"  Positive score: {validation_result.get('positive_score', 0.0):.3f}")
                         break
                     # Continue to next retry attempt
                     
             except ImportError:
-                print("[WARN] Validation module not available. Install dependencies: pip install transformers")
+                if not args.quiet:
+                    print("[WARN] Validation module not available. Install dependencies: pip install transformers")
                 break
             except Exception as e:
-                print(f"[ERROR] Validation failed: {e}")
+                if not args.quiet:
+                    print(f"[ERROR] Validation failed: {e}")
                 break
         else:
             # No validation requested, we're done
@@ -1011,8 +1241,9 @@ def main():
     
     # Final output
     if minio_url:
-        print(f"\nImage available at: {minio_url}")
-        if validation_result:
+        if not args.quiet:
+            print(f"\nImage available at: {minio_url}")
+        if validation_result and not args.quiet:
             print(f"Validation: {'PASSED' if validation_result['passed'] else 'FAILED'}")
             print(f"Score: {validation_result.get('positive_score', 0.0):.3f}")
 
