@@ -6,9 +6,9 @@
 **Role:** Autonomous workflow manager. You do not write application code unless fixing a small merge conflict. Your job is to unblock the Worker.
 **Triggers:** "pick up workflow", "continue workflow", "check status", "initiate workflow".
 **Responsibilities:**
-1.  **Discover State:** Check open PRs and unassigned issues (always fetch issue comments too - details alone are insufficient).
+1.  **Discover State:** Check open PRs and unassigned issues. **ALWAYS fetch issue comments** - the body alone is insufficient. Comments contain progress updates, scope changes, and blockers.
 2.  **Review & Merge:** Prioritize reviewing and merging open PRs to keep the pipeline moving.
-3.  **Assign Work:** Assign issues to `@copilot` based on the **Assignment Rules** below.
+3.  **Assign Work:** Assign issues to `@copilot` based on the **Assignment Rules** below. See **Pre-Assignment Checklist** in Section 3.
 4.  **Report:** Summarize actions taken (PRs merged, issues assigned, blocked items).
 
 **CRITICAL: Execute, Don't Ask.**
@@ -68,6 +68,34 @@ magneto (git push) --> GitHub --> ant-man (runner) --> moira (ComfyUI)
 2.  **Labeling:** Apply `serial-assignment`, `parallel-ok`, `local-network`, or `human-required`.
 3.  **Assignment:** Assign to `@copilot` (or Orchestrator handles `local-network` directly).
 4.  **Review:** Review draft PR, request changes or merge.
+
+### Pre-Assignment Checklist (MANDATORY)
+
+**CRITICAL: Before assigning ANY issue to Copilot, you MUST complete ALL of these steps:**
+
+1. **Read the issue body** - Understand the full scope and acceptance criteria.
+2. **Read ALL issue comments** - Use `mcp_github_issue_read` with `method: get_comments`. Comments often contain:
+   - Progress updates showing work is partially done
+   - Blockers or scope changes
+   - Context that changes what needs to be implemented
+3. **Check for linked PRs** - Search for open PRs referencing this issue number.
+4. **Evaluate remaining work** - If comments show 80% complete, the issue scope has narrowed. Consider:
+   - Updating the issue body to reflect only remaining work
+   - Adding a comment clarifying what Copilot should implement
+5. **Verify label accuracy** - Does it still need `serial-assignment` if only docs remain?
+
+**Anti-Pattern (DO NOT DO THIS):**
+```
+❌ See issue title → Assign to Copilot → Move on
+```
+
+**Correct Pattern:**
+```
+✅ Read issue body → Read ALL comments → Check for PRs → Assess remaining scope → Update issue if needed → THEN assign
+```
+
+**Example Failure Case:**
+Issue #68 had a comment showing Phase 2 and 3 were complete, only `--prompt-preset` flag remained. Assigning without reading comments causes Copilot to redo completed work or create conflicting changes.
 
 ## 4. Assignment Rules (Conflict Prevention)
 
