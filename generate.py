@@ -8,6 +8,7 @@ Usage:
 import argparse
 import json
 import os
+import random
 import re
 import signal
 import sys
@@ -1647,7 +1648,6 @@ def main():
     
     # Handle seed=-1 for random seed generation
     if seed == -1:
-        import random
         seed = random.randint(0, 2**32 - 1)
         print(f"[OK] Generated random seed: {seed}")
     

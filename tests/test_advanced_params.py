@@ -193,9 +193,21 @@ def test_modify_dimensions_partial():
     assert result["1"]["inputs"]["width"] == 768
     assert result["1"]["inputs"]["height"] == 512
     
+    # Create a fresh workflow for second test
+    workflow2 = {
+        "1": {
+            "class_type": "EmptyLatentImage",
+            "inputs": {
+                "width": 512,
+                "height": 512,
+                "batch_size": 1
+            }
+        }
+    }
+    
     # Modify only height
-    result = generate.modify_dimensions(workflow, height=1024)
-    assert result["1"]["inputs"]["width"] == 768  # From previous
+    result = generate.modify_dimensions(workflow2, height=1024)
+    assert result["1"]["inputs"]["width"] == 512  # Original value
     assert result["1"]["inputs"]["height"] == 1024
     print("[OK] Partial dimension modification works")
 
