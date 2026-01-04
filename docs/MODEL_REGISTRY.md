@@ -202,7 +202,7 @@ python3 generate.py \
    "
    ```
 
-5. **Update lora_catalog.yaml** if it's a LoRA (see [LORA_CATALOG.md](LORA_CATALOG.md))
+5. **Update lora_catalog.yaml** if it's a LoRA (see [ARCHITECTURE.md](ARCHITECTURE.md) for LoRA injection)
 
 ### Example: Adding a New LoRA
 
