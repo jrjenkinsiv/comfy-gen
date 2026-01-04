@@ -394,10 +394,11 @@ def validate_workflow_models(workflow, available_models):
     return is_valid, missing_models, suggestions
 
 def load_lora_presets():
-    """Load LoRA presets from lora_catalog.yaml.
+    """Load LoRA catalog from lora_catalog.yaml.
     
     Returns:
-        dict: Dictionary containing 'loras' list and 'presets' dict, or empty dict on failure
+        dict: Catalog dictionary with 'loras' (list of LoRA metadata) and 
+              'model_suggestions' (dict of presets), or empty dict on failure
     """
     catalog_path = Path(__file__).parent / "lora_catalog.yaml"
     if not catalog_path.exists():

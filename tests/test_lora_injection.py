@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Tests for LoRA injection functionality."""
 
-import sys
-import os
 import json
+import os
+import sys
 import tempfile
+import traceback
 from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock
 
@@ -338,7 +339,6 @@ if __name__ == "__main__":
             passed += 1
         except Exception as e:
             print(f"[FAILED] {test.__name__}: {e}")
-            import traceback
             traceback.print_exc()
             failed += 1
     
