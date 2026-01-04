@@ -13,10 +13,18 @@ Generate images and videos via text prompts without using the ComfyUI GUI. This 
 ## Quick Start
 
 ```bash
-# Generate an image locally (from magneto)
+# Generate an image with automatic model selection
+python3 generate.py --auto-select \
+    --prompt "a sunset over mountains" \
+    --output /tmp/sunset.png
+
+# Generate using a specific workflow
 python3 generate.py --workflow workflows/flux-dev.json \
     --prompt "a sunset over mountains" \
     --output /tmp/sunset.png
+
+# Get model suggestions for a prompt
+python3 scripts/select_model.py "a car driving fast with motion blur"
 
 # View in browser
 open "http://192.168.1.215:9000/comfy-gen/"
@@ -54,7 +62,32 @@ magneto (dev) --> GitHub --> ant-man (runner) --> moira (ComfyUI + RTX 5090)
 
 All models stored in: `C:\Users\jrjen\comfy\models\` on moira.
 
-See [docs/MODEL_REGISTRY.md](docs/MODEL_REGISTRY.md) for complete inventory.
+- [docs/MODEL_REGISTRY.md](docs/MODEL_REGISTRY.md) - Complete model inventory
+- [docs/LORA_CATALOG.md](docs/LORA_CATALOG.md) - LoRA catalog with semantic descriptions
+- [docs/AGENT_GUIDE.md](docs/AGENT_GUIDE.md) - Guide for agents generating images/videos
+
+### Automatic Model Selection
+
+The `--auto-select` flag enables intelligent model and LoRA selection based on your prompt:
+
+```bash
+# Automatic selection for image
+python3 generate.py --auto-select --prompt "realistic portrait photo"
+# Selects: SD 1.5 checkpoint, no LoRAs
+
+# Automatic selection for video with motion
+python3 generate.py --auto-select --prompt "a car driving fast with motion blur"
+# Selects: Wan 2.2 T2V high noise + acceleration LoRA + motion LoRAs
+
+# Preview suggestions without generating
+python3 scripts/select_model.py "your prompt here"
+```
+
+**How it works:**
+1. Analyzes prompt for keywords (video, motion, speed, physics, etc.)
+2. Selects appropriate base model (SD 1.5 for images, Wan 2.2 for video)
+3. Suggests compatible LoRAs with optimal strength settings
+4. Creates workflow automatically with selected models/LoRAs
 
 ## Viewing Images
 
@@ -82,6 +115,7 @@ ssh moira "C:\\Users\\jrjen\\comfy\\.venv\\Scripts\\python.exe C:\\Users\\jrjen\
 | `scripts/start_comfyui.py` | Start ComfyUI server on moira (run via SSH) |
 | `scripts/set_bucket_policy.py` | Make MinIO bucket publicly readable |
 | `scripts/create_bucket.py` | Create the comfy-gen MinIO bucket |
+| `scripts/select_model.py` | Suggest models/LoRAs based on prompt analysis |
 
 ## Development
 
