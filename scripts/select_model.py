@@ -14,7 +14,7 @@ import json
 import re
 import sys
 import requests
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple, Optional, Any
 
 COMFYUI_HOST = "http://192.168.1.215:8188"
 
@@ -132,7 +132,7 @@ def query_available_models() -> Tuple[List[str], List[str]]:
         return [], []
 
 
-def analyze_prompt(prompt: str) -> Dict[str, any]:
+def analyze_prompt(prompt: str) -> Dict[str, Any]:
     """Analyze prompt to extract intent and keywords.
     
     Args:
@@ -175,7 +175,7 @@ def analyze_prompt(prompt: str) -> Dict[str, any]:
     return analysis
 
 
-def select_model(analysis: Dict[str, any], available_models: Optional[List[str]] = None) -> str:
+def select_model(analysis: Dict[str, Any], available_models: Optional[List[str]] = None) -> str:
     """Select best model based on prompt analysis.
     
     Args:
@@ -207,8 +207,8 @@ def select_model(analysis: Dict[str, any], available_models: Optional[List[str]]
     return model
 
 
-def select_loras(analysis: Dict[str, any], model: str, 
-                available_loras: Optional[List[str]] = None) -> List[Dict[str, any]]:
+def select_loras(analysis: Dict[str, Any], model: str, 
+                available_loras: Optional[List[str]] = None) -> List[Dict[str, Any]]:
     """Select compatible LoRAs based on prompt analysis and model.
     
     Args:

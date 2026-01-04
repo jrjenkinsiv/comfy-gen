@@ -248,7 +248,7 @@ def create_default_workflow(model_name, prompt, loras=None):
 
 def main():
     parser = argparse.ArgumentParser(description="Generate images with ComfyUI")
-    parser.add_argument("--workflow", help="Path to workflow JSON (required unless --auto-select is used)")
+    parser.add_argument("--workflow", help="Path to workflow JSON (mutually exclusive with --auto-select)")
     parser.add_argument("--prompt", required=True, help="Text prompt")
     parser.add_argument("--output", default="output.png", help="Output image path")
     parser.add_argument("--auto-select", action="store_true", 
