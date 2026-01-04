@@ -1483,7 +1483,7 @@ def get_retry_params(
         return {
             'steps': steps_progression[idx],
             'cfg': cfg_progression[idx],
-            'seed': random.randint(0, 2**32 - 1) if base_seed is None else base_seed
+            'seed': random.randint(0, 2**31 - 1) if base_seed is None else base_seed
         }
     
     elif strategy == 'seed_search':
@@ -1501,7 +1501,7 @@ def get_retry_params(
         return {
             'steps': base_steps,
             'cfg': base_cfg,
-            'seed': random.randint(0, 2**32 - 1) if base_seed is None else base_seed
+            'seed': random.randint(0, 2**31 - 1) if base_seed is None else base_seed
         }
     
     else:
@@ -1509,7 +1509,7 @@ def get_retry_params(
         return {
             'steps': base_steps,
             'cfg': base_cfg,
-            'seed': random.randint(0, 2**32 - 1) if base_seed is None else base_seed
+            'seed': random.randint(0, 2**31 - 1) if base_seed is None else base_seed
         }
 
 def enhance_prompt_for_quality(prompt: str, attempt: int) -> str:
@@ -1940,7 +1940,7 @@ def main():
     
     # Handle seed=-1 for random seed generation
     if seed == -1:
-        seed = random.randint(0, 2**32 - 1)
+        seed = random.randint(0, 2**31 - 1)
         print(f"[OK] Generated random seed: {seed}")
     
     # Validate parameters

@@ -17,9 +17,12 @@ from pathlib import Path
 
 try:
     from .validation import ImageValidator, CLIP_AVAILABLE
-except ImportError:
-    # Fallback for direct execution
-    from validation import ImageValidator, CLIP_AVAILABLE
+except (ImportError, ValueError):
+    # Running as script or module not installed
+    try:
+        from comfy_gen.validation import ImageValidator, CLIP_AVAILABLE
+    except ImportError:
+        from validation import ImageValidator, CLIP_AVAILABLE
 
 
 class QualityScorer:
@@ -28,9 +31,6 @@ class QualityScorer:
     def __init__(self):
         """Initialize the quality scorer."""
         self.validator = None
-        # Don't eagerly load CLIP model - only load when needed
-        # if CLIP_AVAILABLE:
-        #     self.validator = ImageValidator()
     
     def _ensure_validator(self):
         """Lazy-load the CLIP validator when needed."""
