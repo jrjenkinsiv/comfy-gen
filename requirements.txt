@@ -6,3 +6,6 @@ Pillow
 transformers
 mcp
 websocket-client
+pyyaml
+httpx
+aiofiles
