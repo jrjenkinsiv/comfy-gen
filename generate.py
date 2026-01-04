@@ -1048,6 +1048,10 @@ def expand_prompt_template(template_data, variables=None):
     
     Returns:
         tuple: (positive_prompt, negative_prompt)
+    
+    Raises:
+        KeyError: If template contains placeholders without corresponding variables
+        ValueError: If template data is invalid or missing required keys
     """
     positive_template = template_data.get("positive", "")
     negative_template = template_data.get("negative", "")
@@ -1066,9 +1070,16 @@ def expand_prompt_template(template_data, variables=None):
             # No default available
             final_variables[var_name] = ""
     
-    # Substitute variables in templates
-    positive_prompt = positive_template.format(**final_variables)
-    negative_prompt = negative_template.format(**final_variables) if negative_template else ""
+    # Substitute variables in templates with error handling
+    try:
+        positive_prompt = positive_template.format(**final_variables)
+        negative_prompt = negative_template.format(**final_variables) if negative_template else ""
+    except KeyError as e:
+        missing_var = str(e).strip("'")
+        raise KeyError(
+            f"Template contains placeholder '{{{missing_var}}}' but no value is defined. "
+            f"Add '{missing_var}' to the template's variables section or provide it as an override."
+        )
     
     return positive_prompt, negative_prompt
 
