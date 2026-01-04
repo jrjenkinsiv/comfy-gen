@@ -8,6 +8,7 @@ Usage:
 """
 
 import argparse
+import os
 import sys
 from datetime import datetime
 from typing import List, Dict
@@ -278,8 +279,9 @@ def main():
     try:
         with open(args.output, 'w', encoding='utf-8') as f:
             f.write(html)
+        abs_path = os.path.abspath(args.output)
         print(f"[OK] Generated gallery: {args.output}")
-        print(f"[INFO] Open in browser: file://{args.output}")
+        print(f"[INFO] Open in browser: file://{abs_path}")
         return 0
     except Exception as e:
         print(f"[ERROR] Failed to write gallery file: {e}")
