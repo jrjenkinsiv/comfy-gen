@@ -8,6 +8,20 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, Optional, List
 
+# Regex pattern for prompt adjustment (matches "single/one + adjective + noun" before prepositions)
+# Example: "single red car" before "on" -> captures "single red car"
+_PROMPT_WEIGHT_PATTERN_2WORD = re.compile(
+    r'\b(single|one)\s+(\w+\s+\w+)(?=\s+(?:on|in|at|with|near|by|under|over|,|$))',
+    re.IGNORECASE
+)
+
+# Regex pattern for single-word subject after "single/one"
+# Example: "single car" -> captures "single car"
+_PROMPT_WEIGHT_PATTERN_1WORD = re.compile(
+    r'\b(single|one)\s+(\w+)(?=\s|,|$)',
+    re.IGNORECASE
+)
+
 
 # Lazy initialization of clients
 _comfyui = None
@@ -88,9 +102,10 @@ def _adjust_prompt_for_retry(
     """
     # Increase emphasis on key terms
     adjusted_positive = positive_prompt
+    positive_lower = positive_prompt.lower()
     
     # Add emphasis to "single" and "one" if they appear
-    if "single" in adjusted_positive.lower() or "one" in adjusted_positive.lower():
+    if "single" in positive_lower or "one" in positive_lower:
         # Increase weight multiplier based on attempt
         multiplier = 1.0 + (attempt * 0.3)
         
@@ -99,28 +114,26 @@ def _adjust_prompt_for_retry(
         # This handles: "single car", "single red car", but not "single car driving"
         
         # First try 2-word pattern (adjective + noun) if followed by prep/punctuation
-        adjusted = re.sub(
-            r'\b(single|one)\s+(\w+\s+\w+)(?=\s+(?:on|in|at|with|near|by|under|over|,|$))',
+        adjusted = _PROMPT_WEIGHT_PATTERN_2WORD.sub(
             rf'(\1 \2:{multiplier:.1f})',
             adjusted_positive,
-            count=1,
-            flags=re.IGNORECASE
+            count=1
         )
         
         # If no match, try 1-word pattern  
         if adjusted == adjusted_positive:
-            adjusted = re.sub(
-                r'\b(single|one)\s+(\w+)(?=\s|,|$)',
+            adjusted = _PROMPT_WEIGHT_PATTERN_1WORD.sub(
                 rf'(\1 \2:{multiplier:.1f})',
                 adjusted_positive,
-                count=1,
-                flags=re.IGNORECASE
+                count=1
             )
         
         adjusted_positive = adjusted
     
     # Strengthen negative prompt (handle empty string)
     adjusted_negative = negative_prompt if negative_prompt else ""
+    adjusted_negative_lower = adjusted_negative.lower()
+    
     retry_negative_terms = [
         "multiple",
         "duplicate",
@@ -133,11 +146,13 @@ def _adjust_prompt_for_retry(
     
     # Add retry-specific negative terms if not already present
     for term in retry_negative_terms:
-        if term not in adjusted_negative.lower():
+        if term not in adjusted_negative_lower:
             if adjusted_negative:
                 adjusted_negative = f"{adjusted_negative}, {term}"
             else:
                 adjusted_negative = term
+            # Update lowercase version for next iteration
+            adjusted_negative_lower = adjusted_negative.lower()
     
     return adjusted_positive, adjusted_negative
 
