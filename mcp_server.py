@@ -152,8 +152,12 @@ async def generate_image(
     sampler: str = "euler",
     scheduler: str = "normal",
     seed: int = -1,
+    validate: bool = True,
+    auto_retry: bool = True,
+    retry_limit: int = 3,
+    positive_threshold: float = 0.25,
 ) -> dict:
-    """Generate image from text prompt.
+    """Generate image from text prompt with optional CLIP validation.
     
     Args:
         prompt: Positive text prompt describing what to generate
@@ -166,9 +170,13 @@ async def generate_image(
         sampler: Sampler algorithm (default: euler)
         scheduler: Scheduler type (default: normal)
         seed: Random seed, -1 for random (default: -1)
+        validate: Run CLIP validation after generation (default: True)
+        auto_retry: Automatically retry if validation fails (default: True)
+        retry_limit: Maximum retry attempts (default: 3)
+        positive_threshold: Minimum CLIP score for positive prompt (default: 0.25)
     
     Returns:
-        Dictionary with status, url, and generation metadata
+        Dictionary with status, url, generation metadata, and validation results
     """
     return await generation.generate_image(
         prompt=prompt,
@@ -180,7 +188,11 @@ async def generate_image(
         cfg=cfg,
         sampler=sampler,
         scheduler=scheduler,
-        seed=seed
+        seed=seed,
+        validate=validate,
+        auto_retry=auto_retry,
+        retry_limit=retry_limit,
+        positive_threshold=positive_threshold
     )
 
 
