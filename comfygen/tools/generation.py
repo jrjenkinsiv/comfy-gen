@@ -94,38 +94,50 @@ def _adjust_prompt_for_retry(
         # Increase weight multiplier based on attempt
         multiplier = 1.0 + (attempt * 0.3)
         
-        # Apply weight to single/one car phrases
-        adjusted_positive = re.sub(
-            r'\bsingle\s+car\b', 
-            f'(single car:{multiplier:.1f})',
+        # Apply weight to "single/one + (adjective) + noun" patterns
+        # Strategy: Match 2 words if followed by prep/punctuation, else 1 word
+        # This handles: "single car", "single red car", but not "single car driving"
+        
+        # First try 2-word pattern (adjective + noun) if followed by prep/punctuation
+        adjusted = re.sub(
+            r'\b(single|one)\s+(\w+\s+\w+)(?=\s+(?:on|in|at|with|near|by|under|over|,|$))',
+            rf'(\1 \2:{multiplier:.1f})',
             adjusted_positive,
+            count=1,
             flags=re.IGNORECASE
         )
-        adjusted_positive = re.sub(
-            r'\bone\s+car\b',
-            f'(one car:{multiplier:.1f})',
-            adjusted_positive,
-            flags=re.IGNORECASE
-        )
+        
+        # If no match, try 1-word pattern  
+        if adjusted == adjusted_positive:
+            adjusted = re.sub(
+                r'\b(single|one)\s+(\w+)(?=\s|,|$)',
+                rf'(\1 \2:{multiplier:.1f})',
+                adjusted_positive,
+                count=1,
+                flags=re.IGNORECASE
+            )
+        
+        adjusted_positive = adjusted
     
     # Strengthen negative prompt (handle empty string)
     adjusted_negative = negative_prompt if negative_prompt else ""
     retry_negative_terms = [
-        "multiple cars",
+        "multiple",
         "duplicate",
         "cloned",
         "ghosting",
         "mirrored",
-        "two cars",
-        "extra car"
+        "two",
+        "extra"
     ]
     
     # Add retry-specific negative terms if not already present
     for term in retry_negative_terms:
-        if adjusted_negative and term not in adjusted_negative.lower():
-            adjusted_negative = f"{adjusted_negative}, {term}"
-        elif not adjusted_negative:
-            adjusted_negative = term if not adjusted_negative else f"{adjusted_negative}, {term}"
+        if term not in adjusted_negative.lower():
+            if adjusted_negative:
+                adjusted_negative = f"{adjusted_negative}, {term}"
+            else:
+                adjusted_negative = term
     
     return adjusted_positive, adjusted_negative
 
