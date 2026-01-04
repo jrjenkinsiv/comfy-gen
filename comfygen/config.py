@@ -2,6 +2,7 @@
 
 from pathlib import Path
 from typing import Dict, Any, Optional
+import threading
 import yaml
 
 
@@ -165,15 +166,19 @@ class ConfigLoader:
 
 # Global instance for easy import
 _global_config_loader = None
+_loader_lock = threading.Lock()
 
 
 def get_config_loader() -> ConfigLoader:
-    """Get or create global ConfigLoader instance.
+    """Get or create global ConfigLoader instance (thread-safe).
     
     Returns:
         Global ConfigLoader instance
     """
     global _global_config_loader
     if _global_config_loader is None:
-        _global_config_loader = ConfigLoader()
+        with _loader_lock:
+            # Double-check locking pattern
+            if _global_config_loader is None:
+                _global_config_loader = ConfigLoader()
     return _global_config_loader

@@ -55,16 +55,24 @@ from comfygen.config import get_config_loader
 # Initialize FastMCP server
 mcp = FastMCP("ComfyUI Comprehensive Generation Server")
 
-# Load configuration on startup
-config_loader = get_config_loader()
-presets_config = config_loader.load_presets()
-lora_catalog = config_loader.load_lora_catalog()
+# Lazy-loaded configuration (loaded on first use)
+config_loader = None
+presets_config = None
+lora_catalog = None
 
-# Log loaded configuration
-print(f"[OK] Loaded {len(presets_config.get('presets', {}))} generation presets")
-print(f"[OK] Loaded {len(lora_catalog.get('loras', []))} LoRAs from catalog")
-print(f"[OK] Default negative prompt: {presets_config.get('default_negative_prompt', 'none')[:50]}...")
-print(f"[OK] Validation enabled: {presets_config.get('validation', {}).get('enabled', False)}")
+def _ensure_config_loaded():
+    """Ensure configuration is loaded (lazy loading)."""
+    global config_loader, presets_config, lora_catalog
+    if config_loader is None:
+        config_loader = get_config_loader()
+        presets_config = config_loader.load_presets()
+        lora_catalog = config_loader.load_lora_catalog()
+        
+        # Log loaded configuration
+        print(f"[OK] Loaded {len(presets_config.get('presets', {}))} generation presets")
+        print(f"[OK] Loaded {len(lora_catalog.get('loras', []))} LoRAs from catalog")
+        print(f"[OK] Default negative prompt: {presets_config.get('default_negative_prompt', 'none')[:50]}...")
+        print(f"[OK] Validation enabled: {presets_config.get('validation', {}).get('enabled', False)}")
 
 
 @mcp.tool()
@@ -157,7 +165,7 @@ def check_comfyui_service_status() -> str:
 @mcp.tool()
 async def generate_image(
     prompt: str,
-    negative_prompt: str = "",
+    negative_prompt: str = None,
     model: str = "sd15",
     width: int = 512,
     height: int = 512,
@@ -177,7 +185,8 @@ async def generate_image(
     
     Args:
         prompt: Positive text prompt describing what to generate
-        negative_prompt: Negative prompt (what to avoid). If empty, uses default from presets.yaml
+        negative_prompt: Negative prompt (what to avoid). If None, uses default from presets.yaml. 
+                        Set to empty string "" to disable negative prompt.
         model: Model to use (sd15, flux, sdxl)
         width: Output width in pixels (default: 512)
         height: Output height in pixels (default: 512)
@@ -187,7 +196,8 @@ async def generate_image(
         scheduler: Scheduler type. If None, uses preset or default (normal)
         seed: Random seed, -1 for random (default: -1)
         preset: Generation preset (draft, balanced, high-quality, fast, ultra). Overrides steps/cfg/sampler/scheduler
-        lora_preset: LoRA preset from lora_catalog.yaml (text_to_video, simple_image, etc.)
+        lora_preset: LoRA preset name from lora_catalog.yaml model_suggestions 
+                    (e.g., text_to_video, simple_image, battleship_ship_icon)
         validate: Run CLIP validation after generation. If None, uses preset or config default
         auto_retry: Automatically retry if validation fails. If None, uses preset or config default
         retry_limit: Maximum retry attempts. If None, uses preset or config default (3)
@@ -196,6 +206,9 @@ async def generate_image(
     Returns:
         Dictionary with status, url, generation metadata, and validation results
     """
+    # Ensure config is loaded
+    _ensure_config_loaded()
+    
     # Load preset if specified
     preset_params = {}
     if preset:
@@ -226,16 +239,18 @@ async def generate_image(
                     strength = lora_info.get("recommended_strength", 1.0) if lora_info else 1.0
                     loras.append({"name": lora_filename, "strength": strength})
         else:
+            available_presets = ', '.join(lora_catalog.get('model_suggestions', {}).keys())
             return {
                 "status": "error",
-                "error": f"LoRA preset '{lora_preset}' not found. Available: {', '.join(lora_catalog.get('model_suggestions', {}).keys())}"
+                "error": f"LoRA preset '{lora_preset}' not found in model_suggestions. Available LoRA presets: {available_presets}"
             }
     
     # Apply defaults from config and preset (CLI args > preset > config defaults)
     validation_config = presets_config.get("validation", {})
     
-    # Use default negative prompt if not provided
-    if not negative_prompt:
+    # Use default negative prompt if not provided (None)
+    # Empty string "" means explicitly no negative prompt
+    if negative_prompt is None:
         negative_prompt = presets_config.get("default_negative_prompt", "blurry, low quality, watermark")
     
     # Merge preset and config defaults
