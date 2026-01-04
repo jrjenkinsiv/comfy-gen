@@ -15,13 +15,13 @@ import tempfile
 import threading
 import time
 import uuid
-import yaml
 from io import BytesIO
 from pathlib import Path
 from urllib.parse import urlparse
 
 import requests
 import websocket
+import yaml
 from minio import Minio
 from minio.error import S3Error
 from PIL import Image
@@ -1311,10 +1311,10 @@ def main():
     
     # Validate required args for generation mode
     if not args.workflow:
-        parser.error("--workflow is required (unless using --list-loras)")
+        parser.error("--workflow is required (unless using --cancel or --list-loras)")
     
     if not args.dry_run and not args.prompt:
-        parser.error("--prompt is required (unless using --dry-run or --list-loras)")
+        parser.error("--prompt is required (unless using --dry-run, --cancel, or --list-loras)")
     
     # Check server availability first
     if not check_server_availability():
