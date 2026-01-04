@@ -1306,10 +1306,10 @@ def main():
     
     # Validate required args for generation mode
     if not args.workflow:
-        parser.error("--workflow is required (unless using --cancel or --list-loras)")
+        parser.error("--workflow is required (unless using --list-loras)")
     
     if not args.dry_run and not args.prompt:
-        parser.error("--prompt is required (unless using --dry-run, --cancel, or --list-loras)")
+        parser.error("--prompt is required (unless using --dry-run or --list-loras)")
     
     # Check server availability first
     if not check_server_availability():
@@ -1463,11 +1463,17 @@ def main():
     if args.lora:
         for lora_spec in args.lora:
             # Parse "name:strength" format
+            # Note: Using rsplit(':', 1) to split from right, which correctly handles
+            # paths with colons (e.g., "C:\\path\\lora.safetensors:0.8")
             if ':' in lora_spec:
                 parts = lora_spec.rsplit(':', 1)
                 lora_name = parts[0]
                 try:
                     strength = float(parts[1])
+                    if strength < 0:
+                        print(f"[ERROR] LoRA strength must be non-negative: {parts[1]}")
+                        print(f"[ERROR] Format: 'lora_name.safetensors:0.8'")
+                        sys.exit(EXIT_CONFIG_ERROR)
                 except ValueError:
                     print(f"[ERROR] Invalid LoRA strength: {parts[1]}")
                     print(f"[ERROR] Format: 'lora_name.safetensors:0.8'")
