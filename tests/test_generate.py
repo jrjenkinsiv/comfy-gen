@@ -231,6 +231,171 @@ def test_load_workflow_invalid_json():
         os.unlink(temp_path)
 
 
+def test_find_prompt_nodes_sd15():
+    """Test finding prompt nodes in SD 1.5 workflow."""
+    workflow = {
+        "1": {
+            "class_type": "CheckpointLoaderSimple",
+            "_meta": {"title": "Load Checkpoint"}
+        },
+        "2": {
+            "class_type": "CLIPTextEncode",
+            "inputs": {"text": "test"},
+            "_meta": {"title": "Positive Prompt"}
+        },
+        "3": {
+            "class_type": "CLIPTextEncode",
+            "inputs": {"text": ""},
+            "_meta": {"title": "Negative Prompt"}
+        }
+    }
+    
+    pos_node, neg_node = generate.find_prompt_nodes(workflow)
+    assert pos_node == "2", f"Expected positive node '2', got '{pos_node}'"
+    assert neg_node == "3", f"Expected negative node '3', got '{neg_node}'"
+    print("[OK] find_prompt_nodes correctly identifies SD 1.5 workflow nodes")
+
+
+def test_find_prompt_nodes_wan22():
+    """Test finding prompt nodes in Wan 2.2 workflow."""
+    workflow = {
+        "1": {
+            "class_type": "UNETLoader",
+            "_meta": {"title": "Load Diffusion Model"}
+        },
+        "3": {
+            "class_type": "CLIPTextEncode",
+            "inputs": {"text": "motion prompt"},
+            "_meta": {"title": "Motion Prompt"}
+        }
+    }
+    
+    pos_node, neg_node = generate.find_prompt_nodes(workflow)
+    assert pos_node == "3", f"Expected positive node '3', got '{pos_node}'"
+    assert neg_node is None, f"Expected no negative node, got '{neg_node}'"
+    print("[OK] find_prompt_nodes correctly identifies Wan 2.2 workflow nodes")
+
+
+def test_find_prompt_nodes_fallback():
+    """Test fallback to first CLIPTextEncode node."""
+    workflow = {
+        "5": {
+            "class_type": "CLIPTextEncode",
+            "inputs": {"text": "first clip node"},
+            "_meta": {"title": "Some CLIP Node"}
+        },
+        "6": {
+            "class_type": "CLIPTextEncode",
+            "inputs": {"text": "second clip node"},
+            "_meta": {"title": "Another CLIP Node"}
+        }
+    }
+    
+    pos_node, neg_node = generate.find_prompt_nodes(workflow)
+    assert pos_node == "5", f"Expected positive node '5' (first CLIP), got '{pos_node}'"
+    assert neg_node is None, f"Expected no negative node, got '{neg_node}'"
+    print("[OK] find_prompt_nodes falls back to first CLIPTextEncode")
+
+
+def test_get_default_negative_prompt_sd15():
+    """Test default negative prompt for SD 1.5 workflows."""
+    workflow = {
+        "1": {
+            "class_type": "CheckpointLoaderSimple",
+            "inputs": {"ckpt_name": "sd15.safetensors"}
+        }
+    }
+    
+    default_neg = generate.get_default_negative_prompt(workflow)
+    assert default_neg != "", "SD 1.5 workflow should have default negative prompt"
+    assert "bad quality" in default_neg.lower(), "Default should contain 'bad quality'"
+    assert "blurry" in default_neg.lower(), "Default should contain 'blurry'"
+    print(f"[OK] get_default_negative_prompt returns SD 1.5 default: '{default_neg[:50]}...'")
+
+
+def test_get_default_negative_prompt_wan22():
+    """Test default negative prompt for Wan 2.2 workflows."""
+    workflow = {
+        "1": {
+            "class_type": "UNETLoader",
+            "inputs": {}
+        }
+    }
+    
+    default_neg = generate.get_default_negative_prompt(workflow)
+    assert default_neg == "", "Wan 2.2 workflow should have empty default negative prompt"
+    print("[OK] get_default_negative_prompt returns empty for Wan 2.2")
+
+
+def test_modify_prompt_with_negative():
+    """Test modify_prompt with custom negative prompt."""
+    workflow = {
+        "2": {
+            "class_type": "CLIPTextEncode",
+            "inputs": {"text": "old positive"},
+            "_meta": {"title": "Positive Prompt"}
+        },
+        "3": {
+            "class_type": "CLIPTextEncode",
+            "inputs": {"text": "old negative"},
+            "_meta": {"title": "Negative Prompt"}
+        }
+    }
+    
+    modified = generate.modify_prompt(workflow, "new positive", "new negative")
+    
+    assert modified["2"]["inputs"]["text"] == "new positive"
+    assert modified["3"]["inputs"]["text"] == "new negative"
+    print("[OK] modify_prompt updates both positive and negative prompts")
+
+
+def test_modify_prompt_default_negative():
+    """Test modify_prompt with default negative prompt."""
+    workflow = {
+        "1": {
+            "class_type": "CheckpointLoaderSimple",
+            "inputs": {}
+        },
+        "2": {
+            "class_type": "CLIPTextEncode",
+            "inputs": {"text": "old positive"},
+            "_meta": {"title": "Positive Prompt"}
+        },
+        "3": {
+            "class_type": "CLIPTextEncode",
+            "inputs": {"text": ""},
+            "_meta": {"title": "Negative Prompt"}
+        }
+    }
+    
+    # Call without negative prompt - should apply default
+    modified = generate.modify_prompt(workflow, "test prompt", "")
+    
+    assert modified["2"]["inputs"]["text"] == "test prompt"
+    # Should get default negative for SD workflows
+    default_neg = modified["3"]["inputs"]["text"]
+    assert default_neg != "", "Should apply default negative prompt"
+    assert "bad quality" in default_neg.lower()
+    print(f"[OK] modify_prompt applies default negative: '{default_neg[:50]}...'")
+
+
+def test_modify_prompt_no_negative_node():
+    """Test modify_prompt with workflow that has no negative node."""
+    workflow = {
+        "3": {
+            "class_type": "CLIPTextEncode",
+            "inputs": {"text": "old prompt"},
+            "_meta": {"title": "Motion Prompt"}
+        }
+    }
+    
+    # Should not crash when negative prompt provided but no node exists
+    modified = generate.modify_prompt(workflow, "new prompt", "negative prompt")
+    
+    assert modified["3"]["inputs"]["text"] == "new prompt"
+    print("[OK] modify_prompt handles missing negative node gracefully")
+
+
 if __name__ == "__main__":
     print("Running generate.py tests...\n")
     
@@ -247,6 +412,14 @@ if __name__ == "__main__":
         test_exit_codes,
         test_load_workflow_file_not_found,
         test_load_workflow_invalid_json,
+        test_find_prompt_nodes_sd15,
+        test_find_prompt_nodes_wan22,
+        test_find_prompt_nodes_fallback,
+        test_get_default_negative_prompt_sd15,
+        test_get_default_negative_prompt_wan22,
+        test_modify_prompt_with_negative,
+        test_modify_prompt_default_negative,
+        test_modify_prompt_no_negative_node,
     ]
     
     passed = 0
