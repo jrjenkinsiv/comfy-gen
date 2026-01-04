@@ -19,6 +19,7 @@ Complete guide for using ComfyGen via CLI and MCP server for AI-driven image and
 - [Workflows](#workflows)
 - [Prompt Engineering](#prompt-engineering)
 - [Error Handling](#error-handling)
+- [Gallery Browser](#gallery-browser)
 
 ---
 
@@ -589,6 +590,48 @@ ssh moira "C:\\Users\\jrjen\\comfy\\.venv\\Scripts\\python.exe C:\\Users\\jrjen\
 3. **Handle missing models gracefully**
 4. **Use automatic retry for transient failures** (built-in)
 5. **Clean up on cancellation**
+
+---
+
+## Gallery Browser
+
+### Local Gallery Server
+
+Browse generated images with thumbnails and metadata:
+
+```bash
+python3 scripts/gallery_server.py
+# Open http://localhost:8080
+```
+
+**Features:**
+- Grid view with thumbnails
+- Search by prompt text
+- Filter: All / With LoRA / Validated
+- Sort: Newest / Oldest
+- Click to view full-size
+- Shows: seed, steps, cfg, LoRAs, validation score
+
+### MinIO Console
+
+Official MinIO web interface for file management:
+
+```
+http://192.168.1.215:9001
+Login: minioadmin / minioadmin
+```
+
+### Direct URL Access
+
+Images are publicly accessible:
+```
+http://192.168.1.215:9000/comfy-gen/<filename>.png
+```
+
+Metadata sidecars:
+```
+http://192.168.1.215:9000/comfy-gen/<filename>.png.json
+```
 
 ---
 
