@@ -17,8 +17,8 @@ class MinIOClient:
     def __init__(
         self,
         endpoint: str = "192.168.1.215:9000",
-        access_key: str = "minioadmin",
-        secret_key: str = "minioadmin",
+        access_key: Optional[str] = None,
+        secret_key: Optional[str] = None,
         bucket: str = "comfy-gen",
         secure: bool = False
     ):
@@ -26,13 +26,21 @@ class MinIOClient:
         
         Args:
             endpoint: MinIO server endpoint
-            access_key: Access key
-            secret_key: Secret key
+            access_key: Access key (defaults to MINIO_ACCESS_KEY env var or 'minioadmin')
+            secret_key: Secret key (defaults to MINIO_SECRET_KEY env var or 'minioadmin')
             bucket: Default bucket name
             secure: Whether to use HTTPS
         """
         self.endpoint = endpoint
         self.bucket = bucket
+        
+        # Get credentials from environment or use defaults
+        # NOTE: Default credentials are insecure and should only be used for local development
+        if access_key is None:
+            access_key = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
+        if secret_key is None:
+            secret_key = os.getenv("MINIO_SECRET_KEY", "minioadmin")
+        
         self.client = Minio(
             endpoint,
             access_key=access_key,

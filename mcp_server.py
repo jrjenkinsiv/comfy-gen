@@ -2,13 +2,30 @@
 """Comprehensive MCP Server for ComfyUI Image/Video Generation.
 
 This server exposes tools for:
-- Image generation (generate_image, img2img, inpaint, upscale, face_restore)
+
+Core Generation:
+- Image generation (generate_image, img2img)
 - Video generation (generate_video, image_to_video)
-- Model management (list_models, suggest_model, search_civitai, download_model)
-- Gallery management (list_images, get_image_info, delete_image, get_history)
-- Prompt engineering (build_prompt, suggest_negative, analyze_prompt)
-- Progress/control (get_progress, cancel, get_queue, get_system_status)
-- Service management (start, stop, restart, check status)
+
+Model Management:
+- list_models, list_loras, get_model_info
+- suggest_model, suggest_loras
+- search_civitai (model discovery)
+
+Gallery & History:
+- list_images, get_image_info, delete_image, get_history
+
+Prompt Engineering:
+- build_prompt, suggest_negative, analyze_prompt
+
+Progress & Control:
+- get_progress, cancel, get_queue, get_system_status
+
+Service Management:
+- start, stop, restart, check ComfyUI server status
+
+Advanced features (pending custom workflows):
+- Inpainting, upscaling, face restoration
 
 Run this server to allow MCP clients (like Claude Desktop) to generate images/videos.
 """
