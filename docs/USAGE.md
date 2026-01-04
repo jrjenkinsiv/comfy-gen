@@ -143,6 +143,9 @@ python3 generate.py \
 
 | Parameter | Range | Default | Effect |
 |-----------|-------|---------|--------|
+| `--prompt` | string | - | Positive text prompt (required unless using --prompt-preset) |
+| `--negative-prompt` | string | - | Negative text prompt (what to avoid) |
+| `--prompt-preset` | string | - | Use template from prompt_catalog.yaml (automotive, portrait, landscape, game_icon) |
 | `--steps` | 1-150 | 20 | Sampling steps (more = finer detail) |
 | `--cfg` | 1.0-20.0 | 7.0 | Prompt adherence (higher = stricter) |
 | `--seed` | -1 or int | random | Random seed for reproducibility |
@@ -151,6 +154,7 @@ python3 generate.py \
 | `--sampler` | string | varies | Sampler algorithm |
 | `--scheduler` | string | normal | Noise scheduler |
 | `--denoise` | 0.0-1.0 | 1.0 | Denoising strength (img2img) |
+| `--preset` | string | - | Generation preset (draft, balanced, high-quality, fast, ultra) |
 
 **Samplers:**
 - `euler` - Fast, simple, good for drafts
@@ -519,6 +523,71 @@ A structured collection of prompt patterns is available in `prompt_catalog.yaml`
 - **Model-Specific Adjustments** - CFG and step recommendations by model
 
 Use the catalog to build consistent, high-quality prompts.
+
+### Using Prompt Presets
+
+The `--prompt-preset` flag loads pre-configured prompt templates from `prompt_catalog.yaml`:
+
+**Available Templates:**
+- `automotive` - Professional automotive photography
+- `portrait` - Portrait photography with studio lighting
+- `landscape` - Scenic landscape photography
+- `game_icon` - Top-down game asset icons
+
+**Basic Usage:**
+
+```bash
+# Use automotive template with defaults
+python3 generate.py \
+    --workflow workflows/flux-dev.json \
+    --prompt-preset automotive \
+    --output /tmp/car.png
+
+# This expands to:
+# Positive: "metallic silver sports car parked, coastal highway, golden hour, professional automotive photography, shot with wide-angle lens at f/2.8, warm sunset light, 8K resolution, sharp focus"
+# Negative: "bad quality, blurry, cartoon, anime, duplicate cars, watermark, text, 3d render, multiple cars, people, crowds"
+```
+
+**Override with Custom Prompt:**
+
+```bash
+# Use preset as base, override with specific prompt
+python3 generate.py \
+    --workflow workflows/flux-dev.json \
+    --prompt-preset automotive \
+    --prompt "red Porsche 911 racing on a track" \
+    --output /tmp/porsche.png
+
+# Uses the custom prompt instead of the template
+```
+
+**Combine with Other Flags:**
+
+```bash
+# Preset + LoRA + generation parameters
+python3 generate.py \
+    --workflow workflows/flux-dev.json \
+    --prompt-preset portrait \
+    --lora portrait-pro.safetensors:0.8 \
+    --steps 50 \
+    --cfg 8.0 \
+    --output /tmp/portrait.png
+```
+
+**Template Variables:**
+
+Each template includes default variables that can be customized in `prompt_catalog.yaml`. For example, the automotive template uses:
+- `color`: metallic silver, deep blue, guards red, pristine white, black
+- `car_model`: sports car, sedan, SUV, luxury car, sports coupe
+- `location`: coastal highway, modern architecture, rain-soaked street, race track
+- `time_of_day`: golden hour, blue hour, night with neon lights, bright sunny day
+
+**Benefits:**
+- Consistent prompt structure across generations
+- Pre-optimized negative prompts for each use case
+- Easy to reproduce results
+- Saves time with common scenarios
+- Metadata tracking of which preset was used
 
 ### CRITICAL: Use Detailed, Verbose Prompts
 
