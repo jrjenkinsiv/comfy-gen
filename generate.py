@@ -10,11 +10,15 @@ import json
 import requests
 import time
 import sys
+import signal
 from pathlib import Path
 from minio import Minio
 from minio.error import S3Error
 
 COMFYUI_HOST = "http://192.168.1.215:8188"  # ComfyUI running on moira
+
+# Global variable to track current prompt ID for cleanup
+current_prompt_id = None
 
 # MinIO configuration
 MINIO_ENDPOINT = "192.168.1.215:9000"
@@ -41,11 +45,13 @@ def modify_prompt(workflow, new_prompt):
 
 def queue_workflow(workflow):
     """Send workflow to ComfyUI server."""
+    global current_prompt_id
     url = f"{COMFYUI_HOST}/prompt"
     response = requests.post(url, json={"prompt": workflow})
     if response.status_code == 200:
         result = response.json()
         prompt_id = result["prompt_id"]
+        current_prompt_id = prompt_id
         print(f"Queued workflow with ID: {prompt_id}")
         return prompt_id
     else:
@@ -135,12 +141,74 @@ def upload_to_minio(file_path, object_name):
         print(f"[ERROR] MinIO error: {e}")
         return None
 
+def cancel_generation(prompt_id):
+    """Cancel a specific generation by prompt ID."""
+    # First, try to delete from queue
+    url = f"{COMFYUI_HOST}/queue"
+    payload = {"delete": [prompt_id]}
+    try:
+        response = requests.post(url, json=payload)
+        if response.status_code == 200:
+            print(f"[OK] Cancelled generation {prompt_id}")
+            return True
+    except requests.RequestException:
+        pass
+    
+    # Also interrupt current generation in case it's running
+    try:
+        interrupt_url = f"{COMFYUI_HOST}/interrupt"
+        requests.post(interrupt_url)
+        print(f"[OK] Interrupted current generation")
+        return True
+    except requests.RequestException as e:
+        print(f"[ERROR] Failed to cancel: {e}")
+        return False
+
+def signal_handler(sig, frame):
+    """Handle Ctrl+C gracefully."""
+    print("\n[WARN] Cancellation requested...")
+    if current_prompt_id:
+        print(f"[INFO] Cancelling generation {current_prompt_id}...")
+        cancel_generation(current_prompt_id)
+        # Clean up partial output if it exists
+        cleanup_partial_outputs()
+    print("[OK] Cancelled successfully")
+    sys.exit(0)
+
+def cleanup_partial_outputs():
+    """Clean up any partial output files."""
+    # Remove temporary output files that might be partially downloaded
+    try:
+        import glob
+        temp_files = glob.glob("/tmp/*.png.tmp") + glob.glob("/tmp/*.mp4.tmp")
+        for f in temp_files:
+            try:
+                Path(f).unlink()
+                print(f"[INFO] Cleaned up partial file: {f}")
+            except Exception:
+                pass
+    except Exception:
+        pass
+
 def main():
+    # Set up signal handler for Ctrl+C
+    signal.signal(signal.SIGINT, signal_handler)
+    
     parser = argparse.ArgumentParser(description="Generate images with ComfyUI")
-    parser.add_argument("--workflow", required=True, help="Path to workflow JSON")
-    parser.add_argument("--prompt", required=True, help="Text prompt")
+    parser.add_argument("--workflow", help="Path to workflow JSON")
+    parser.add_argument("--prompt", help="Text prompt")
     parser.add_argument("--output", default="output.png", help="Output image path")
+    parser.add_argument("--cancel", metavar="PROMPT_ID", help="Cancel generation by prompt ID")
     args = parser.parse_args()
+
+    # Handle cancellation mode
+    if args.cancel:
+        success = cancel_generation(args.cancel)
+        sys.exit(0 if success else 1)
+    
+    # Validate required arguments for generation mode
+    if not args.workflow or not args.prompt:
+        parser.error("--workflow and --prompt are required for generation")
 
     workflow = load_workflow(args.workflow)
     workflow = modify_prompt(workflow, args.prompt)
