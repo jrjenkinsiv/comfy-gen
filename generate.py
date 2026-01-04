@@ -45,6 +45,10 @@ RETRY_BACKOFF = 2  # exponential backoff multiplier
 # Default negative prompts
 DEFAULT_SD_NEGATIVE_PROMPT = "bad quality, blurry, low resolution, watermark, text, deformed, ugly, duplicate"
 
+# WebSocket configuration
+WS_CONNECT_DELAY = 0.5  # seconds to wait for WebSocket connection
+WS_POLL_INTERVAL = 2  # seconds between status polling
+
 
 class ProgressTracker:
     """Track real-time progress via ComfyUI WebSocket."""
@@ -65,7 +69,6 @@ class ProgressTracker:
         self.error = None
         self.start_time = None
         self.current_node = None
-        self.node_progress = {}
         self.running = False
         self.thread = None
         
@@ -151,8 +154,10 @@ class ProgressTracker:
                     if node:
                         self._log_progress({"node": f"Completed node {node}"})
                         
-        except json.JSONDecodeError:
-            pass  # Ignore malformed messages
+        except json.JSONDecodeError as e:
+            # Log malformed JSON in non-quiet mode for debugging
+            if not self.quiet:
+                print(f"[WARN] Malformed WebSocket message: {e}")
         except Exception as e:
             if not self.quiet:
                 print(f"[WARN] Error processing WebSocket message: {e}")
@@ -195,7 +200,7 @@ class ProgressTracker:
         self.thread.start()
         
         # Give WebSocket time to connect
-        time.sleep(0.5)
+        time.sleep(WS_CONNECT_DELAY)
     
     def stop(self):
         """Stop tracking progress."""
@@ -755,7 +760,7 @@ def wait_for_completion(prompt_id, quiet=False, json_progress=False):
                 if not quiet:
                     print(f"[ERROR] Error checking status: {response.text}")
             
-            time.sleep(2)  # Reduced from 5s since we have WebSocket updates
+            time.sleep(WS_POLL_INTERVAL)  # Poll less frequently since we have WebSocket updates
     finally:
         tracker.stop()
     

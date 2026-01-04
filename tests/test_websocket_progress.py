@@ -5,7 +5,7 @@ import sys
 import json
 import time
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock, call
+from unittest.mock import Mock, patch
 from io import StringIO
 
 # Add parent directory to path to import generate
