@@ -167,10 +167,126 @@ python3 generate.py \
 
 ## Adding New Models
 
-1. Download model to appropriate subdirectory in `C:\Users\jrjen\comfy\models\`
-2. Update this registry with filename, type, and notes
-3. Restart ComfyUI if running
-4. Test with `curl http://192.168.1.215:8188/object_info` to verify model appears
+### Model Sources
+
+1. **Hugging Face**: https://huggingface.co/models
+2. **CivitAI**: https://civitai.com/
+3. **Official Repositories**: Check model documentation
+
+### Installation Steps
+
+1. **Download model** to appropriate subdirectory in `C:\Users\jrjen\comfy\models\`:
+   ```powershell
+   # On moira (Windows)
+   # For checkpoints:
+   curl -L <model_url> -o "C:\Users\jrjen\comfy\models\checkpoints\model_name.safetensors"
+   
+   # For LoRAs:
+   curl -L <lora_url> -o "C:\Users\jrjen\comfy\models\loras\lora_name.safetensors"
+   ```
+
+2. **Update this registry** with filename, type, and notes
+
+3. **Restart ComfyUI** if running:
+   ```bash
+   python3 scripts/restart_comfyui.py
+   ```
+
+4. **Verify model appears** in API:
+   ```bash
+   curl -s http://192.168.1.215:8188/object_info | python3 -c "
+   import json, sys
+   data = json.load(sys.stdin)
+   ckpts = data.get('CheckpointLoaderSimple', {}).get('input', {}).get('required', {}).get('ckpt_name', [[]])[0]
+   for c in ckpts: print(c)
+   "
+   ```
+
+5. **Update lora_catalog.yaml** if it's a LoRA (see [LORA_CATALOG.md](LORA_CATALOG.md))
+
+### Example: Adding a New LoRA
+
+```bash
+# 1. Download
+ssh moira
+cd C:\Users\jrjen\comfy\models\loras
+curl -L https://civitai.com/api/download/models/12345 -o new_lora.safetensors
+
+# 2. Restart ComfyUI
+python C:\Users\jrjen\comfy-gen\scripts\restart_comfyui.py
+
+# 3. Verify (from magneto)
+curl -s http://192.168.1.215:8188/object_info | python3 -c "
+import json, sys
+data = json.load(sys.stdin)
+loras = data.get('LoraLoader', {}).get('input', {}).get('required', {}).get('lora_name', [[]])[0]
+print('new_lora.safetensors' in loras)
+"
+
+# 4. Update documentation
+# - Add to MODEL_REGISTRY.md
+# - Add to lora_catalog.yaml with tags and compatibility
+```
+
+---
+
+## Compatibility Matrix
+
+### Base Models and LoRAs
+
+| LoRA | SD 1.5 | Wan 2.2 T2V High | Wan 2.2 T2V Low | Wan 2.2 I2V High | Wan 2.2 I2V Low |
+|------|--------|------------------|-----------------|------------------|-----------------|
+| **Acceleration LoRAs** | | | | | |
+| wan2.2_t2v_lightx2v_4steps_lora_v1.1_high_noise | ❌ | ✅ | ❌ | ❌ | ❌ |
+| wan2.2_t2v_lightx2v_4steps_lora_v1.1_low_noise | ❌ | ❌ | ✅ | ❌ | ❌ |
+| wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise | ❌ | ❌ | ❌ | ✅ | ❌ |
+| wan2.2_i2v_lightx2v_4steps_lora_v1_low_noise | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Wan2.2-I2V-A14B-4steps-lora-rank64-Seko-V1_high_noise_model | ❌ | ❌ | ❌ | ✅ | ❌ |
+| **Physics/Motion LoRAs** | | | | | |
+| BoobPhysics_WAN_v6 | ❌ | ✅ | ✅ | ✅ | ✅ |
+| BounceHighWan2_2 | ❌ | ✅ | ❌ | ✅ | ❌ |
+| BounceLowWan2_2 | ❌ | ❌ | ✅ | ❌ | ✅ |
+| wan-thiccum-v3 | ❌ | ✅ | ✅ | ✅ | ✅ |
+
+**Legend:**
+- ✅ Compatible and tested
+- ❌ Not compatible
+- ⚠️ Experimental/untested
+
+### Workflow Compatibility
+
+| Workflow | Primary Model | Required LoRAs | Input Image | Output Type |
+|----------|---------------|----------------|-------------|-------------|
+| flux-dev.json | v1-5-pruned-emaonly-fp16.safetensors | None | No | PNG (512x512) |
+| sd15-img2img.json | v1-5-pruned-emaonly-fp16.safetensors | None | Yes | PNG (variable) |
+| wan22-t2v.json | wan2.2_t2v_high_noise_14B_fp8_scaled.safetensors | wan2.2_t2v_lightx2v_4steps_lora_v1.1_high_noise | No | MP4 (848x480, 81 frames) |
+| wan22-i2v.json | wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors | wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise | Yes | MP4 (848x480, 81 frames) |
+
+---
+
+## Model Performance
+
+### Generation Times (Approximate)
+
+| Model | Resolution | Steps | GPU | Time |
+|-------|------------|-------|-----|------|
+| SD 1.5 (flux-dev) | 512x512 | 20 | RTX 5090 | 10-15s |
+| SD 1.5 (img2img) | 512x512 | 20 | RTX 5090 | 10-20s |
+| Wan 2.2 T2V | 848x480 (81 frames) | 4 | RTX 5090 | 2-5 min |
+| Wan 2.2 I2V | 848x480 (81 frames) | 4 | RTX 5090 | 2-5 min |
+
+**Notes:**
+- Times vary based on current GPU load and queue depth
+- 4-step LoRAs reduce Wan 2.2 generation time significantly (from 15+ min to 2-5 min)
+- Multiple concurrent generations will increase individual times
+
+### VRAM Usage
+
+| Model | VRAM Required | Notes |
+|-------|---------------|-------|
+| SD 1.5 | ~4 GB | Can run on most GPUs |
+| Wan 2.2 (FP8) | ~12 GB | Requires high-end GPU |
+| Wan 2.2 + LoRAs | ~14 GB | Additional overhead |
 
 ## Viewing Available Models via API
 

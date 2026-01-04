@@ -99,6 +99,48 @@ To enable these tools in Claude Desktop:
 
 5. The tools will now be available when chatting with Claude.
 
+### Integration with VS Code
+
+To enable these tools in VS Code with the MCP extension:
+
+1. Install the MCP extension in VS Code (if not already installed)
+
+2. Create or edit `.vscode/mcp.json` in your workspace:
+
+```json
+{
+  "mcpServers": {
+    "comfyui-service-manager": {
+      "command": "python3",
+      "args": ["mcp_server.py"],
+      "cwd": "${workspaceFolder}"
+    }
+  }
+}
+```
+
+3. Reload VS Code window
+
+4. The MCP tools will be available to Copilot/AI assistants in VS Code
+
+**Alternative: Global VS Code Configuration**
+
+You can also configure MCP globally in VS Code settings:
+
+1. Open VS Code Settings (JSON)
+2. Add to your `settings.json`:
+
+```json
+{
+  "mcp.servers": {
+    "comfyui-service-manager": {
+      "command": "python3",
+      "args": ["/absolute/path/to/comfy-gen/mcp_server.py"]
+    }
+  }
+}
+```
+
 ### Integration with Other MCP Clients
 
 The server follows the standard MCP protocol and can be integrated with any MCP-compatible client:
@@ -203,9 +245,75 @@ Service Management Scripts
 
 ## Future Enhancements
 
-Potential additions to the MCP server:
-- MinIO service management tools
-- Generation queue management
-- Workflow management
-- Model status and inventory
-- System resource monitoring
+Potential additions to the MCP server (see issue #18 for comprehensive MCP server):
+
+### Generation Tools (Planned)
+- `generate_image` - Direct image generation from prompts
+- `generate_video` - Video generation with Wan 2.2
+- `transform_image` - Image-to-image transformations
+- `validate_generation` - CLIP-based validation
+
+### Queue Management (Planned)
+- `list_queue` - View queued and running jobs
+- `cancel_job` - Cancel specific jobs
+- `clear_queue` - Cancel all jobs
+- `get_queue_status` - Detailed queue statistics
+
+### Workflow Management (Planned)
+- `list_workflows` - Available workflow templates
+- `validate_workflow` - Pre-flight workflow validation
+- `get_workflow_info` - Workflow metadata and requirements
+
+### Model Management (Planned)
+- `list_models` - Available models and LoRAs
+- `check_model` - Verify model exists
+- `get_model_info` - Model metadata and compatibility
+
+### System Monitoring (Planned)
+- `get_system_stats` - GPU usage, memory, queue depth
+- `get_generation_history` - Recent generations
+- `get_minio_stats` - Storage usage and available images
+
+These tools will enable full automation and integration with AI assistants, making ComfyGen completely controllable via natural language.
+
+## Configuration Examples
+
+### Example: Multiple MCP Servers
+
+You can run multiple MCP servers simultaneously:
+
+```json
+{
+  "mcpServers": {
+    "comfyui-service-manager": {
+      "command": "python3",
+      "args": ["/path/to/comfy-gen/mcp_server.py"]
+    },
+    "comfyui-generation": {
+      "command": "python3",
+      "args": ["/path/to/comfy-gen/mcp_generation_server.py"],
+      "description": "Image/video generation tools (future)"
+    }
+  }
+}
+```
+
+### Example: Environment Variables
+
+Pass environment variables to the MCP server:
+
+```json
+{
+  "mcpServers": {
+    "comfyui-service-manager": {
+      "command": "python3",
+      "args": ["mcp_server.py"],
+      "cwd": "/path/to/comfy-gen",
+      "env": {
+        "COMFYUI_HOST": "http://192.168.1.215:8188",
+        "MINIO_ENDPOINT": "192.168.1.215:9000"
+      }
+    }
+  }
+}
+```
