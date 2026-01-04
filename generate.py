@@ -7,22 +7,23 @@ Usage:
 
 import argparse
 import json
-import requests
-import time
-import sys
-import signal
 import os
-import tempfile
-import uuid
 import re
+import signal
+import sys
+import tempfile
 import threading
+import time
+import uuid
+from io import BytesIO
 from pathlib import Path
+from urllib.parse import urlparse
+
+import requests
+import websocket
 from minio import Minio
 from minio.error import S3Error
-from urllib.parse import urlparse
-from io import BytesIO
 from PIL import Image
-import websocket
 
 COMFYUI_HOST = "http://192.168.1.215:8188"  # ComfyUI running on moira
 
@@ -48,6 +49,8 @@ DEFAULT_SD_NEGATIVE_PROMPT = "bad quality, blurry, low resolution, watermark, te
 # WebSocket configuration
 WS_CONNECT_DELAY = 0.5  # seconds to wait for WebSocket connection
 WS_POLL_INTERVAL = 2  # seconds between status polling
+WS_THREAD_JOIN_TIMEOUT = 2  # seconds to wait for thread to join
+WS_COMPLETION_CHECK_INTERVAL = 0.5  # seconds between completion checks
 
 
 class ProgressTracker:
@@ -207,7 +210,7 @@ class ProgressTracker:
         if self.ws:
             self.ws.close()
         if self.thread:
-            self.thread.join(timeout=2)
+            self.thread.join(timeout=WS_THREAD_JOIN_TIMEOUT)
     
     def wait_for_completion(self, timeout=None):
         """Wait for generation to complete.
@@ -224,7 +227,7 @@ class ProgressTracker:
                 return False
             if timeout and (time.time() - start) > timeout:
                 return False
-            time.sleep(0.5)
+            time.sleep(WS_COMPLETION_CHECK_INTERVAL)
         return True
 
 

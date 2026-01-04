@@ -14,8 +14,8 @@ Usage:
 import sys
 from pathlib import Path
 
-# Add parent directory to path
-sys.path.insert(0, str(Path(__file__).parent.parent))
+# Add current directory to path
+sys.path.insert(0, str(Path(__file__).parent))
 
 def test_basic_progress():
     """Test basic progress tracking (requires live server)."""
