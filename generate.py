@@ -12,9 +12,14 @@ import time
 import sys
 import signal
 import os
+import tempfile
+import uuid
 from pathlib import Path
 from minio import Minio
 from minio.error import S3Error
+from urllib.parse import urlparse
+from io import BytesIO
+from PIL import Image
 
 COMFYUI_HOST = "http://192.168.1.215:8188"  # ComfyUI running on moira
 
@@ -29,6 +34,119 @@ def load_workflow(workflow_path):
     with open(workflow_path, 'r') as f:
         return json.load(f)
 
+def download_image(url, temp_path):
+    """Download image from URL to temporary file."""
+    try:
+        response = requests.get(url, timeout=30)
+        if response.status_code == 200:
+            with open(temp_path, 'wb') as f:
+                f.write(response.content)
+            print(f"[OK] Downloaded image from {url}")
+            return True
+        else:
+            print(f"[ERROR] Failed to download image: HTTP {response.status_code}")
+            return False
+    except Exception as e:
+        print(f"[ERROR] Failed to download image: {e}")
+        return False
+
+def preprocess_image(image_path, resize=None, crop=None):
+    """Preprocess image with resize and crop options.
+    
+    Args:
+        image_path: Path to input image
+        resize: Tuple of (width, height) or None
+        crop: Crop mode - 'center', 'cover', 'contain', or None
+    
+    Returns:
+        Path to processed image (same as input if no processing)
+    """
+    if not resize and not crop:
+        return image_path
+    
+    try:
+        img = Image.open(image_path)
+        original_size = img.size
+        
+        # Handle resize
+        if resize:
+            target_w, target_h = resize
+            
+            if crop == 'cover':
+                # Scale to cover target, crop excess
+                scale = max(target_w / img.width, target_h / img.height)
+                new_w = int(img.width * scale)
+                new_h = int(img.height * scale)
+                img = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+                
+                # Center crop
+                left = (new_w - target_w) // 2
+                top = (new_h - target_h) // 2
+                img = img.crop((left, top, left + target_w, top + target_h))
+                
+            elif crop == 'contain':
+                # Scale to fit inside target, pad if needed
+                scale = min(target_w / img.width, target_h / img.height)
+                new_w = int(img.width * scale)
+                new_h = int(img.height * scale)
+                img = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
+                
+                # Create padded image
+                padded = Image.new('RGB', (target_w, target_h), (0, 0, 0))
+                paste_x = (target_w - new_w) // 2
+                paste_y = (target_h - new_h) // 2
+                padded.paste(img, (paste_x, paste_y))
+                img = padded
+                
+            elif crop == 'center':
+                # Resize then center crop
+                img = img.resize((target_w, target_h), Image.Resampling.LANCZOS)
+            else:
+                # Simple resize
+                img = img.resize((target_w, target_h), Image.Resampling.LANCZOS)
+        
+        # Save processed image
+        img.save(image_path)
+        print(f"[OK] Preprocessed image: {original_size} -> {img.size}")
+        return image_path
+        
+    except Exception as e:
+        print(f"[ERROR] Failed to preprocess image: {e}")
+        return image_path
+
+def upload_image_to_comfyui(image_path):
+    """Upload image to ComfyUI input directory.
+    
+    Args:
+        image_path: Local path to image file
+    
+    Returns:
+        Uploaded filename (without path) or None on failure
+    """
+    try:
+        # Generate unique filename to avoid conflicts
+        ext = Path(image_path).suffix
+        filename = f"input_{uuid.uuid4().hex[:8]}{ext}"
+        
+        url = f"{COMFYUI_HOST}/upload/image"
+        with open(image_path, 'rb') as f:
+            files = {'image': (filename, f, 'image/png')}
+            data = {'overwrite': 'true'}
+            response = requests.post(url, files=files, data=data, timeout=30)
+        
+        if response.status_code == 200:
+            result = response.json()
+            uploaded_name = result.get('name', filename)
+            print(f"[OK] Uploaded image to ComfyUI: {uploaded_name}")
+            return uploaded_name
+        else:
+            print(f"[ERROR] Failed to upload image: {response.text}")
+            return None
+            
+    except Exception as e:
+        print(f"[ERROR] Failed to upload image to ComfyUI: {e}")
+        return None
+
 def modify_prompt(workflow, positive_prompt, negative_prompt=""):
     """Modify the prompt in the workflow."""
     # Update positive prompt (node 2)
@@ -41,6 +159,33 @@ def modify_prompt(workflow, positive_prompt, negative_prompt=""):
         workflow["3"]["inputs"]["text"] = negative_prompt
         print(f"Updated negative prompt in node 3")
     
+    return workflow
+
+def modify_input_image(workflow, uploaded_filename):
+    """Modify workflow to use uploaded input image.
+    
+    Searches for LoadImage nodes and updates the image filename.
+    """
+    found = False
+    for node_id, node in workflow.items():
+        if node.get("class_type") == "LoadImage":
+            if "inputs" in node:
+                node["inputs"]["image"] = uploaded_filename
+                print(f"Updated input image in node {node_id}: {uploaded_filename}")
+                found = True
+    
+    if not found:
+        print("[WARN] No LoadImage node found in workflow")
+    
+    return workflow
+
+def modify_denoise(workflow, denoise_value):
+    """Modify denoise strength in KSampler node."""
+    for node_id, node in workflow.items():
+        if node.get("class_type") == "KSampler":
+            if "inputs" in node:
+                node["inputs"]["denoise"] = denoise_value
+                print(f"Updated denoise strength in node {node_id}: {denoise_value}")
     return workflow
 
 def queue_workflow(workflow):
@@ -215,6 +360,10 @@ def main():
     parser.add_argument("--prompt", help="Positive text prompt")
     parser.add_argument("--negative-prompt", default="", help="Negative text prompt")
     parser.add_argument("--output", default="output.png", help="Output image path")
+    parser.add_argument("--input-image", "-i", help="Input image path (local file or URL) for img2img/I2V")
+    parser.add_argument("--resize", help="Resize input image to WxH (e.g., 512x512)")
+    parser.add_argument("--crop", choices=['center', 'cover', 'contain'], help="Crop mode for resize")
+    parser.add_argument("--denoise", type=float, help="Denoise strength (0.0-1.0) for img2img")
     parser.add_argument("--cancel", metavar="PROMPT_ID", help="Cancel a specific prompt by ID")
     args = parser.parse_args()
     
@@ -235,6 +384,66 @@ def main():
 
     workflow = load_workflow(args.workflow)
     workflow = modify_prompt(workflow, args.prompt, args.negative_prompt)
+    
+    # Handle input image if provided
+    temp_file = None
+    if args.input_image:
+        try:
+            # Check if input is URL or local file
+            parsed = urlparse(args.input_image)
+            if parsed.scheme in ('http', 'https'):
+                # Download from URL
+                temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.png')
+                temp_file.close()
+                if not download_image(args.input_image, temp_file.name):
+                    print("[ERROR] Failed to download input image")
+                    sys.exit(1)
+                image_path = temp_file.name
+            else:
+                # Use local file
+                if not os.path.exists(args.input_image):
+                    print(f"[ERROR] Input image not found: {args.input_image}")
+                    sys.exit(1)
+                # Copy to temp file for preprocessing
+                temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=Path(args.input_image).suffix)
+                temp_file.close()
+                with open(args.input_image, 'rb') as src:
+                    with open(temp_file.name, 'wb') as dst:
+                        dst.write(src.read())
+                image_path = temp_file.name
+            
+            # Preprocess image if needed
+            resize = None
+            if args.resize:
+                try:
+                    w, h = args.resize.lower().split('x')
+                    resize = (int(w), int(h))
+                except ValueError:
+                    print(f"[ERROR] Invalid resize format: {args.resize}. Use WxH (e.g., 512x512)")
+                    sys.exit(1)
+            
+            image_path = preprocess_image(image_path, resize=resize, crop=args.crop)
+            
+            # Upload to ComfyUI
+            uploaded_filename = upload_image_to_comfyui(image_path)
+            if not uploaded_filename:
+                print("[ERROR] Failed to upload input image to ComfyUI")
+                sys.exit(1)
+            
+            # Modify workflow to use uploaded image
+            workflow = modify_input_image(workflow, uploaded_filename)
+            
+        finally:
+            # Clean up temp file
+            if temp_file and os.path.exists(temp_file.name):
+                try:
+                    os.remove(temp_file.name)
+                except:
+                    pass
+    
+    # Apply denoise strength if specified
+    if args.denoise is not None:
+        workflow = modify_denoise(workflow, args.denoise)
 
     prompt_id = queue_workflow(workflow)
     if not prompt_id:

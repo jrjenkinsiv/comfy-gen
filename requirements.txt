@@ -2,3 +2,4 @@ requests
 torch
 torchvision
 minio
+Pillow

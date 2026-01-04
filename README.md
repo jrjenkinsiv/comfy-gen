@@ -18,6 +18,24 @@ python3 generate.py --workflow workflows/flux-dev.json \
     --prompt "a sunset over mountains" \
     --output /tmp/sunset.png
 
+# Image-to-image (img2img) with SD 1.5
+python3 generate.py --workflow workflows/sd15-img2img.json \
+    --input-image /path/to/source.png \
+    --prompt "oil painting style" \
+    --denoise 0.7 \
+    --output /tmp/result.png
+
+# Image-to-video with Wan 2.2
+python3 generate.py --workflow workflows/wan22-i2v.json \
+    --input-image /path/to/frame.png \
+    --prompt "camera slowly pans right" \
+    --output /tmp/result.mp4
+
+# Use an image from URL
+python3 generate.py --workflow workflows/sd15-img2img.json \
+    --input-image "http://192.168.1.215:9000/comfy-gen/previous_image.png" \
+    --prompt "add more detail"
+
 # View in browser
 open "http://192.168.1.215:9000/comfy-gen/"
 ```
@@ -67,6 +85,41 @@ List all images:
 ```bash
 curl -s http://192.168.1.215:9000/comfy-gen/ | grep -oP '(?<=<Key>)[^<]+'
 ```
+
+## Input Image Options
+
+For img2img and image-to-video workflows, you can provide an input image:
+
+```bash
+# Basic img2img
+python3 generate.py --workflow workflows/sd15-img2img.json \
+    --input-image /path/to/image.png \
+    --prompt "your prompt"
+
+# With preprocessing
+python3 generate.py --workflow workflows/sd15-img2img.json \
+    --input-image /path/to/image.png \
+    --resize 512x512 \
+    --crop cover \
+    --denoise 0.7 \
+    --prompt "your prompt"
+
+# From URL
+python3 generate.py --workflow workflows/sd15-img2img.json \
+    --input-image "http://192.168.1.215:9000/comfy-gen/source.png" \
+    --prompt "your prompt"
+```
+
+**Options:**
+- `--input-image, -i`: Path to local image file or URL
+- `--resize WxH`: Resize to target dimensions (e.g., 512x512)
+- `--crop MODE`: Crop mode when resizing
+  - `center`: Resize and center crop
+  - `cover`: Scale to cover target, crop excess
+  - `contain`: Scale to fit inside target, pad with black
+- `--denoise FLOAT`: Denoise strength (0.0-1.0), controls how much the output differs from input
+  - Lower values (0.3-0.5): More faithful to input
+  - Higher values (0.7-0.9): More creative freedom
 
 ## Starting ComfyUI
 
