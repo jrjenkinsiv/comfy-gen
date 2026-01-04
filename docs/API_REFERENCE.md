@@ -691,6 +691,137 @@ for i, prompt in enumerate(prompts):
 
 ---
 
+## MCP Server API
+
+The MCP server provides tools for AI-driven image generation with progress tracking.
+
+### New Features (Progress Tracking & Local Output)
+
+#### `generate_image` Tool
+
+Enhanced with progress tracking and local file output capabilities.
+
+**New Parameters:**
+- `output_path` (str, optional): Local file path to save the generated image (in addition to MinIO storage)
+- `json_progress` (bool, default=False): Enable structured JSON progress updates during generation
+
+**Returns:**
+Enhanced response with:
+- `local_path` (str): Path to locally saved file if `output_path` was provided
+- `progress_updates` (list): Array of progress update objects if `json_progress=True`
+
+**Progress Update Format:**
+```json
+{
+  "type": "progress",
+  "prompt_id": "abc123",
+  "step": 15,
+  "max_steps": 30,
+  "percent": 50,
+  "eta_seconds": 12.5,
+  "message": "Sampling: 15/30 steps (50%)"
+}
+```
+
+**Progress Update Types:**
+- `connected`: WebSocket connection established
+- `start`: Generation started
+- `progress`: Sampling progress update
+- `node`: Node execution update
+- `cached`: Cached results being used
+- `complete`: Generation completed
+- `error`: Error occurred
+
+**Example:**
+```python
+result = await generate_image(
+    prompt="a sunset over mountains",
+    output_path="/tmp/sunset.png",
+    json_progress=True
+)
+
+# Result includes:
+# - url: MinIO URL for web access
+# - local_path: Local file path
+# - progress_updates: List of all progress events
+```
+
+---
+
+#### `validate_workflow` Tool
+
+Validate workflow without executing it (dry run).
+
+**Parameters:**
+- `model` (str): Model to use (sd15, flux, sdxl)
+- `prompt` (str): Test prompt for validation
+- `width` (int): Output width
+- `height` (int): Output height
+
+**Returns:**
+```json
+{
+  "status": "valid" | "invalid",
+  "workflow_file": "flux-dev.json",
+  "is_valid": true,
+  "errors": [],
+  "warnings": [],
+  "missing_models": []
+}
+```
+
+**Example:**
+```python
+# Validate before generating
+validation = await validate_workflow(
+    model="sd15",
+    prompt="test",
+    width=512,
+    height=512
+)
+
+if validation["is_valid"]:
+    # Proceed with generation
+    result = await generate_image(...)
+else:
+    print(f"Errors: {validation['errors']}")
+```
+
+---
+
+#### `get_progress` Tool
+
+Get real-time progress for a specific generation job.
+
+**Parameters:**
+- `prompt_id` (str, optional): Specific prompt ID to check. If not provided, returns general queue status.
+
+**Returns:**
+```json
+{
+  "status": "running" | "pending" | "completed" | "not_found",
+  "prompt_id": "abc123",
+  "position": "current" | 1,
+  "queue_length": 3
+}
+```
+
+**Example:**
+```python
+# Start generation
+result = await generate_image(prompt="...", json_progress=False)
+prompt_id = result["prompt_id"]
+
+# Poll for progress
+while True:
+    progress = await get_progress(prompt_id)
+    if progress["status"] == "completed":
+        break
+    time.sleep(2)
+```
+
+---
+
 ## See Also
 
 - [USAGE.md](USAGE.md) - Usage guide for CLI and MCP server

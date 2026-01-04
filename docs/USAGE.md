@@ -278,7 +278,7 @@ The MCP server provides tools across 7 categories:
 
 **`generate_image(prompt, ...)`**
 
-Generate image from text prompt.
+Generate image from text prompt with optional progress tracking and local file output.
 
 Args:
 - `prompt` (str): What to generate
@@ -291,8 +291,28 @@ Args:
 - `sampler` (str): Sampler algorithm (default: euler)
 - `scheduler` (str): Scheduler type (default: normal)
 - `seed` (int): Random seed, -1 for random (default: -1)
+- `output_path` (str): Optional local file path to save image
+- `json_progress` (bool): Enable structured progress updates (default: False)
 
-Returns: `{status, url, prompt_id, metadata}`
+Returns: `{status, url, local_path, prompt_id, metadata, progress_updates}`
+
+**Progress Tracking Example:**
+```python
+result = await generate_image(
+    prompt="a sunset over mountains, cinematic lighting",
+    output_path="/tmp/sunset.png",
+    json_progress=True
+)
+
+# Access progress updates
+for update in result["progress_updates"]:
+    if update["type"] == "progress":
+        print(f"Step {update['step']}/{update['max_steps']} ({update['percent']}%)")
+
+# Image saved to both:
+print(f"MinIO URL: {result['url']}")
+print(f"Local file: {result['local_path']}")
+```
 
 **`img2img(input_image, prompt, ...)`**
 
@@ -360,12 +380,41 @@ Returns: `{status, url, prompt_id, metadata}`
 - `suggest_negative(model_type)` - Get recommended negative prompt
 - `analyze_prompt(prompt)` - Analyze prompt and suggest improvements
 
-#### 7. Progress & Control (4 tools)
+#### 7. Progress & Control (5 tools)
 
 - `get_progress(prompt_id)` - Get current generation progress
 - `cancel(prompt_id)` - Cancel current or specific generation
 - `get_queue()` - View queued jobs
 - `get_system_status()` - Get GPU/VRAM/server health info
+- `validate_workflow(model, prompt, width, height)` - Validate workflow without generating (dry run)
+
+**Progress Tracking:**
+```python
+# Start generation
+result = await generate_image(prompt="test", json_progress=False)
+
+# Poll for progress
+progress = await get_progress(result["prompt_id"])
+# Returns: {"status": "running", "position": "current", ...}
+```
+
+**Dry Run Validation:**
+```python
+# Validate before generating
+validation = await validate_workflow(
+    model="sd15",
+    prompt="test",
+    width=512,
+    height=512
+)
+
+if validation["is_valid"]:
+    # Proceed with actual generation
+    result = await generate_image(...)
+else:
+    print(f"Validation errors: {validation['errors']}")
+    print(f"Missing models: {validation['missing_models']}")
+```
 
 ### MCP Examples
 
