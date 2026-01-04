@@ -1311,11 +1311,12 @@ def main():
             sys.exit(EXIT_FAILURE)
     
     # Validate required args for generation mode
+    # Note: --cancel and --list-loras exit early and never reach these checks
     if not args.workflow:
-        parser.error("--workflow is required (unless using --cancel or --list-loras)")
+        parser.error("--workflow is required")
     
     if not args.dry_run and not args.prompt:
-        parser.error("--prompt is required (unless using --dry-run, --cancel, or --list-loras)")
+        parser.error("--prompt is required (unless using --dry-run)")
     
     # Check server availability first
     if not check_server_availability():
