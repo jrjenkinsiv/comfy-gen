@@ -18,6 +18,35 @@ python3 generate.py --workflow workflows/flux-dev.json \
     --prompt "a sunset over mountains" \
     --output /tmp/sunset.png
 
+# Image-to-image transformation (SD 1.5)
+python3 generate.py \
+    --workflow workflows/sd15-img2img.json \
+    --input-image /path/to/source.png \
+    --prompt "oil painting style" \
+    --denoise 0.7
+
+# Image-to-video (Wan 2.2)
+python3 generate.py \
+    --workflow workflows/wan22-i2v.json \
+    --input-image /path/to/frame.png \
+    --prompt "camera slowly pans right"
+
+# From URL
+python3 generate.py \
+    --workflow workflows/sd15-img2img.json \
+    --input-image "http://192.168.1.215:9000/comfy-gen/previous_image.png" \
+    --prompt "add more detail" \
+    --denoise 0.5
+
+# With image preprocessing
+python3 generate.py \
+    --workflow workflows/sd15-img2img.json \
+    --input-image /path/to/source.jpg \
+    --resize 512x512 \
+    --crop center \
+    --prompt "enhance details" \
+    --denoise 0.6
+
 # View in browser
 open "http://192.168.1.215:9000/comfy-gen/"
 ```
@@ -55,6 +84,35 @@ magneto (dev) --> GitHub --> ant-man (runner) --> moira (ComfyUI + RTX 5090)
 All models stored in: `C:\Users\jrjen\comfy\models\` on moira.
 
 See [docs/MODEL_REGISTRY.md](docs/MODEL_REGISTRY.md) for complete inventory.
+
+## Input Image Processing
+
+The `--input-image` argument supports both local file paths and URLs for img2img and image-to-video workflows.
+
+### Preprocessing Options
+
+**Resize**: `--resize WIDTHxHEIGHT`
+- Resizes input image to specified dimensions
+- Example: `--resize 512x512`
+
+**Crop Modes**: `--crop MODE`
+- `center`: Center crop to target aspect ratio, then resize
+- `cover`: Scale to cover target dimensions, crop excess
+- `contain`: Scale to fit inside target, pad with black if needed
+- Example: `--crop center`
+
+**Denoise**: `--denoise STRENGTH`
+- Controls how much the output differs from input (0.0-1.0)
+- Lower values preserve more of the original image
+- Higher values allow more creative freedom
+- Example: `--denoise 0.7`
+
+### Workflow Support
+
+| Workflow | Type | Description |
+|----------|------|-------------|
+| `sd15-img2img.json` | Image-to-Image | SD 1.5 based transformation |
+| `wan22-i2v.json` | Image-to-Video | Wan 2.2 video generation from single frame |
 
 ## Viewing Images
 
