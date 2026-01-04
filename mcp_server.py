@@ -26,7 +26,8 @@ import os
 import sys
 import json
 import asyncio
-import requests
+import logging
+import aiohttp
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 from datetime import datetime
@@ -34,6 +35,13 @@ from datetime import datetime
 from mcp.server.fastmcp import FastMCP
 from minio import Minio
 from minio.error import S3Error
+
+# Setup logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='[%(levelname)s] %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 # Configuration from environment variables with defaults
 COMFYUI_HOST = os.getenv("COMFYUI_HOST", "http://192.168.1.215:8188")
@@ -80,21 +88,18 @@ def load_workflow_template(workflow_type: str) -> Dict:
 def modify_workflow_prompt(workflow: Dict, prompt: str, negative_prompt: str = "") -> Dict:
     """Modify the prompt in the workflow JSON."""
     # Find and update text nodes in the workflow
+    found_positive = False
     for node_id, node in workflow.items():
         if isinstance(node, dict) and "inputs" in node:
             if "text" in node["inputs"]:
                 # First text node is typically the positive prompt
-                if not hasattr(modify_workflow_prompt, "found_positive"):
+                if not found_positive:
                     node["inputs"]["text"] = prompt
-                    modify_workflow_prompt.found_positive = True
+                    found_positive = True
                 elif negative_prompt:
                     # Second text node is typically the negative prompt
                     node["inputs"]["text"] = negative_prompt
                     break
-    
-    # Reset state for next call
-    if hasattr(modify_workflow_prompt, "found_positive"):
-        delattr(modify_workflow_prompt, "found_positive")
     
     return workflow
 
@@ -146,7 +151,7 @@ def add_loras_to_workflow(workflow: Dict, loras: List[Dict]) -> Dict:
     # In practice, we'd need to properly insert LoraLoader nodes
     # and rewire the connections in the workflow graph
     # For now, we'll just note this limitation
-    print(f"[WARN] LoRA support not fully implemented in workflow modification")
+    logger.warning("LoRA support not fully implemented in workflow modification")
     return workflow
 
 
@@ -191,18 +196,19 @@ async def generate_image(
         
         current_workflow = workflow
         
-        # Queue the workflow
+        # Queue the workflow using async HTTP
         url = f"{COMFYUI_HOST}/prompt"
-        response = requests.post(url, json={"prompt": workflow})
-        
-        if response.status_code != 200:
-            return {
-                "status": "error",
-                "error": f"Failed to queue workflow: {response.text}"
-            }
-        
-        result = response.json()
-        current_prompt_id = result["prompt_id"]
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, json={"prompt": workflow}) as response:
+                if response.status != 200:
+                    text = await response.text()
+                    return {
+                        "status": "error",
+                        "error": f"Failed to queue workflow: {text}"
+                    }
+                
+                result = await response.json()
+                current_prompt_id = result["prompt_id"]
         
         # Wait for completion
         status = await wait_for_completion(current_prompt_id)
@@ -215,7 +221,7 @@ async def generate_image(
         
         # Download and upload to MinIO
         output_path = f"/tmp/output_{current_prompt_id}.png"
-        if download_output(status, output_path):
+        if await download_output(status, output_path):
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             object_name = f"{timestamp}_generated.png"
             image_url = upload_to_minio(output_path, object_name)
@@ -290,16 +296,17 @@ async def list_models() -> Dict[str, List[str]]:
     """
     try:
         url = f"{COMFYUI_HOST}/object_info"
-        response = requests.get(url)
-        
-        if response.status_code != 200:
-            return {
-                "status": "error",
-                "error": f"Failed to fetch models: {response.text}",
-                "checkpoints": []
-            }
-        
-        data = response.json()
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                if response.status != 200:
+                    text = await response.text()
+                    return {
+                        "status": "error",
+                        "error": f"Failed to fetch models: {text}",
+                        "checkpoints": []
+                    }
+                
+                data = await response.json()
         
         # Extract checkpoint names
         checkpoints = []
@@ -322,6 +329,7 @@ async def list_models() -> Dict[str, List[str]]:
         }
 
 
+
 @mcp.tool()
 async def list_loras() -> Dict[str, Any]:
     """List available LoRA files from ComfyUI.
@@ -331,16 +339,17 @@ async def list_loras() -> Dict[str, Any]:
     """
     try:
         url = f"{COMFYUI_HOST}/object_info"
-        response = requests.get(url)
-        
-        if response.status_code != 200:
-            return {
-                "status": "error",
-                "error": f"Failed to fetch LoRAs: {response.text}",
-                "loras": []
-            }
-        
-        data = response.json()
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                if response.status != 200:
+                    text = await response.text()
+                    return {
+                        "status": "error",
+                        "error": f"Failed to fetch LoRAs: {text}",
+                        "loras": []
+                    }
+                
+                data = await response.json()
         
         # Extract LoRA names
         loras = []
@@ -364,6 +373,7 @@ async def list_loras() -> Dict[str, Any]:
         }
 
 
+
 @mcp.tool()
 async def get_progress() -> Dict[str, Any]:
     """Check the progress of the current generation job.
@@ -380,52 +390,52 @@ async def get_progress() -> Dict[str, Any]:
         }
     
     try:
-        # Check queue status
-        url = f"{COMFYUI_HOST}/queue"
-        response = requests.get(url)
-        
-        if response.status_code != 200:
-            return {
-                "status": "error",
-                "error": f"Failed to check queue: {response.text}"
-            }
-        
-        queue_data = response.json()
-        
-        # Check if our prompt is in the queue
-        queue_running = queue_data.get("queue_running", [])
-        queue_pending = queue_data.get("queue_pending", [])
-        
-        for item in queue_running:
-            if len(item) > 0 and item[1] == current_prompt_id:
-                return {
-                    "status": "running",
-                    "prompt_id": current_prompt_id,
-                    "message": "Generation in progress"
-                }
-        
-        for item in queue_pending:
-            if len(item) > 0 and item[1] == current_prompt_id:
-                position = queue_pending.index(item)
-                return {
-                    "status": "queued",
-                    "prompt_id": current_prompt_id,
-                    "position": position,
-                    "message": f"Queued at position {position}"
-                }
-        
-        # Check history to see if completed
-        history_url = f"{COMFYUI_HOST}/history/{current_prompt_id}"
-        history_response = requests.get(history_url)
-        
-        if history_response.status_code == 200:
-            history = history_response.json()
-            if current_prompt_id in history:
-                return {
-                    "status": "completed",
-                    "prompt_id": current_prompt_id,
-                    "message": "Generation completed"
-                }
+        async with aiohttp.ClientSession() as session:
+            # Check queue status
+            url = f"{COMFYUI_HOST}/queue"
+            async with session.get(url) as response:
+                if response.status != 200:
+                    text = await response.text()
+                    return {
+                        "status": "error",
+                        "error": f"Failed to check queue: {text}"
+                    }
+                
+                queue_data = await response.json()
+            
+            # Check if our prompt is in the queue
+            queue_running = queue_data.get("queue_running", [])
+            queue_pending = queue_data.get("queue_pending", [])
+            
+            for item in queue_running:
+                if len(item) > 0 and item[1] == current_prompt_id:
+                    return {
+                        "status": "running",
+                        "prompt_id": current_prompt_id,
+                        "message": "Generation in progress"
+                    }
+            
+            for item in queue_pending:
+                if len(item) > 0 and item[1] == current_prompt_id:
+                    position = queue_pending.index(item)
+                    return {
+                        "status": "queued",
+                        "prompt_id": current_prompt_id,
+                        "position": position,
+                        "message": f"Queued at position {position}"
+                    }
+            
+            # Check history to see if completed
+            history_url = f"{COMFYUI_HOST}/history/{current_prompt_id}"
+            async with session.get(history_url) as history_response:
+                if history_response.status == 200:
+                    history = await history_response.json()
+                    if current_prompt_id in history:
+                        return {
+                            "status": "completed",
+                            "prompt_id": current_prompt_id,
+                            "message": "Generation completed"
+                        }
         
         return {
             "status": "unknown",
@@ -457,20 +467,21 @@ async def cancel_generation() -> Dict[str, Any]:
     
     try:
         url = f"{COMFYUI_HOST}/interrupt"
-        response = requests.post(url)
-        
-        if response.status_code == 200:
-            cancelled_id = current_prompt_id
-            current_prompt_id = None
-            return {
-                "status": "success",
-                "message": f"Cancelled generation {cancelled_id}"
-            }
-        else:
-            return {
-                "status": "error",
-                "error": f"Failed to cancel: {response.text}"
-            }
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url) as response:
+                if response.status == 200:
+                    cancelled_id = current_prompt_id
+                    current_prompt_id = None
+                    return {
+                        "status": "success",
+                        "message": f"Cancelled generation {cancelled_id}"
+                    }
+                else:
+                    text = await response.text()
+                    return {
+                        "status": "error",
+                        "error": f"Failed to cancel: {text}"
+                    }
             
     except Exception as e:
         return {
@@ -582,25 +593,26 @@ async def wait_for_completion(prompt_id: str, timeout: int = 300) -> Optional[Di
     url = f"{COMFYUI_HOST}/history/{prompt_id}"
     start_time = asyncio.get_event_loop().time()
     
-    while True:
-        elapsed = asyncio.get_event_loop().time() - start_time
-        if elapsed > timeout:
-            print(f"[ERROR] Timeout waiting for prompt {prompt_id}")
-            return None
-        
-        response = requests.get(url)
-        if response.status_code == 200:
-            history = response.json()
-            if prompt_id in history:
-                status = history[prompt_id]
-                if "outputs" in status:
-                    return status
-        
-        # Wait before next poll
-        await asyncio.sleep(2)
+    async with aiohttp.ClientSession() as session:
+        while True:
+            elapsed = asyncio.get_event_loop().time() - start_time
+            if elapsed > timeout:
+                logger.error(f"Timeout waiting for prompt {prompt_id}")
+                return None
+            
+            async with session.get(url) as response:
+                if response.status == 200:
+                    history = await response.json()
+                    if prompt_id in history:
+                        status = history[prompt_id]
+                        if "outputs" in status:
+                            return status
+            
+            # Wait before next poll
+            await asyncio.sleep(2)
 
 
-def download_output(status: Dict, output_path: str) -> bool:
+async def download_output(status: Dict, output_path: str) -> bool:
     """Download the generated image from ComfyUI.
     
     Args:
@@ -611,18 +623,20 @@ def download_output(status: Dict, output_path: str) -> bool:
         True if successful, False otherwise
     """
     outputs = status.get("outputs", {})
-    for node_id, node_outputs in outputs.items():
-        if "images" in node_outputs:
-            for image in node_outputs["images"]:
-                filename = image["filename"]
-                subfolder = image.get("subfolder", "")
-                url = f"{COMFYUI_HOST}/view?filename={filename}&subfolder={subfolder}&type=output"
-                
-                response = requests.get(url)
-                if response.status_code == 200:
-                    with open(output_path, 'wb') as f:
-                        f.write(response.content)
-                    return True
+    async with aiohttp.ClientSession() as session:
+        for node_id, node_outputs in outputs.items():
+            if "images" in node_outputs:
+                for image in node_outputs["images"]:
+                    filename = image["filename"]
+                    subfolder = image.get("subfolder", "")
+                    url = f"{COMFYUI_HOST}/view?filename={filename}&subfolder={subfolder}&type=output"
+                    
+                    async with session.get(url) as response:
+                        if response.status == 200:
+                            content = await response.read()
+                            with open(output_path, 'wb') as f:
+                                f.write(content)
+                            return True
     return False
 
 
@@ -667,7 +681,7 @@ def upload_to_minio(file_path: str, object_name: str) -> str:
         return f"http://{MINIO_ENDPOINT}/{BUCKET_NAME}/{object_name}"
         
     except Exception as e:
-        print(f"[ERROR] Failed to upload to MinIO: {e}")
+        logger.error(f"Failed to upload to MinIO: {e}")
         return ""
 
 
