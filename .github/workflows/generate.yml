@@ -1,0 +1,69 @@
+name: Generate Images
+
+on:
+  workflow_dispatch:
+    inputs:
+      prompt:
+        description: 'Image prompt'
+        required: true
+        type: string
+      workflow:
+        description: 'Workflow file (e.g., flux-dev.json)'
+        required: true
+        type: string
+        default: 'flux-dev.json'
+
+jobs:
+  generate:
+    runs-on: [self-hosted, Linux, ARM64]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy scripts to moira
+        env:
+          MOIRA_HOST: 192.168.1.215
+          MOIRA_USER: jrjenkinsiv
+          MOIRA_PATH: /home/jrjenkinsiv/comfy-gen
+          DEPLOY_KEY: /home/jrjenkinsiv/.ssh/moira_deploy
+        run: |
+          set -euo pipefail
+
+          mkdir -p "$HOME/.ssh"
+          chmod 700 "$HOME/.ssh"
+          ssh-keyscan -H "$MOIRA_HOST" >> "$HOME/.ssh/known_hosts" 2>/dev/null || true
+
+          rsync -az --delete \
+            -e "ssh -i $DEPLOY_KEY -o StrictHostKeyChecking=yes" \
+            --exclude ".git/" \
+            --exclude ".github/" \
+            ./ "$MOIRA_USER@$MOIRA_HOST:$MOIRA_PATH/"
+
+          echo "Deployed to $MOIRA_USER@$MOIRA_HOST:$MOIRA_PATH"
+
+      - name: Generate image
+        env:
+          MOIRA_HOST: 192.168.1.215
+          MOIRA_USER: jrjenkinsiv
+          MOIRA_PATH: /home/jrjenkinsiv/comfy-gen
+          DEPLOY_KEY: /home/jrjenkinsiv/.ssh/moira_deploy
+          PROMPT: ${{ inputs.prompt }}
+          WORKFLOW: ${{ inputs.workflow }}
+        run: |
+          ssh -i "$DEPLOY_KEY" "$MOIRA_USER@$MOIRA_HOST" "cd $MOIRA_PATH && python generate.py --workflow workflows/$WORKFLOW --prompt '$PROMPT' --output output.png"
+
+      - name: Download result from moira
+        env:
+          MOIRA_HOST: 192.168.1.215
+          MOIRA_USER: jrjenkinsiv
+          MOIRA_PATH: /home/jrjenkinsiv/comfy-gen
+          DEPLOY_KEY: /home/jrjenkinsiv/.ssh/moira_deploy
+        run: |
+          rsync -az \
+            -e "ssh -i $DEPLOY_KEY -o StrictHostKeyChecking=yes" \
+            "$MOIRA_USER@$MOIRA_HOST:$MOIRA_PATH/output.png" ./output.png
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-image
+          path: output.png
