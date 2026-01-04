@@ -1312,7 +1312,8 @@ def create_metadata_json(
     minio_url,
     workflow=None,
     output_path=None,
-    generation_time_seconds=None
+    generation_time_seconds=None,
+    quality_result=None
 ):
     """Create metadata JSON for experiment tracking.
     
@@ -1328,6 +1329,7 @@ def create_metadata_json(
         workflow: Optional workflow dict to extract model/VAE/resolution info
         output_path: Optional output file path to calculate file size
         generation_time_seconds: Optional generation time in seconds
+        quality_result: Optional quality scoring result from QualityScorer
     
     Returns:
         dict: Metadata dictionary ready for JSON serialization
@@ -1381,12 +1383,12 @@ def create_metadata_json(
         },
         
         "quality": {
-            "composite_score": None,
-            "grade": None,
-            "technical": None,
-            "aesthetic": None,
-            "prompt_adherence": {"clip": validation_score} if validation_score is not None else None,
-            "detail": None
+            "composite_score": quality_result.get("composite_score") if quality_result else None,
+            "grade": quality_result.get("grade") if quality_result else None,
+            "technical": quality_result.get("technical") if quality_result else None,
+            "aesthetic": quality_result.get("aesthetic") if quality_result else None,
+            "prompt_adherence": quality_result.get("prompt_adherence") if quality_result else ({"clip": validation_score} if validation_score is not None else None),
+            "detail": quality_result.get("detail") if quality_result else None
         },
         
         "refinement": {
@@ -1662,6 +1664,7 @@ def main():
     parser.add_argument("--quiet", action="store_true", help="Suppress progress output")
     parser.add_argument("--json-progress", action="store_true", help="Output machine-readable JSON progress")
     parser.add_argument("--no-metadata", action="store_true", help="Disable JSON metadata sidecar upload")
+    parser.add_argument("--quality-score", action="store_true", help="Run multi-dimensional quality scoring after generation")
     
     # Advanced generation parameters
     parser.add_argument("--steps", type=int, help="Number of sampling steps (1-150, default: 20)")
@@ -2010,6 +2013,7 @@ def main():
     max_attempts = args.retry_limit if args.auto_retry else 1
     minio_url = None
     validation_result = None
+    quality_result = None
     generation_time_seconds = None
     
     while attempt < max_attempts:
@@ -2042,6 +2046,39 @@ def main():
             if attempt >= max_attempts:
                 sys.exit(EXIT_FAILURE)
             continue
+        
+        # Run quality scoring if requested
+        if args.quality_score:
+            try:
+                from comfy_gen.quality import score_image
+                
+                if not args.quiet:
+                    print(f"[INFO] Running quality assessment...")
+                
+                # Get current prompt (may be adjusted for retry)
+                current_positive = args.prompt if attempt == 1 else adjusted_positive
+                
+                quality_result = score_image(args.output, current_positive)
+                
+                if "error" not in quality_result:
+                    if not args.quiet:
+                        print(f"[OK] Quality Grade: {quality_result['grade']} (Score: {quality_result['composite_score']:.2f}/10)")
+                        print(f"[INFO] Technical: {quality_result['technical']['brisque']:.2f}/10, Aesthetic: {quality_result['aesthetic']:.2f}/10, Detail: {quality_result['detail']:.2f}/10")
+                        if quality_result.get('prompt_adherence'):
+                            print(f"[INFO] Prompt Adherence: {quality_result['prompt_adherence']['clip']:.2f}/10")
+                else:
+                    if not args.quiet:
+                        print(f"[WARN] Quality assessment failed: {quality_result['error']}")
+                    quality_result = None
+                    
+            except ImportError:
+                if not args.quiet:
+                    print("[WARN] Quality module not available. Install dependencies: pip install pyiqa")
+                quality_result = None
+            except Exception as e:
+                if not args.quiet:
+                    print(f"[ERROR] Quality assessment failed: {e}")
+                quality_result = None
         
         # Run validation if requested
         if args.validate:
@@ -2085,7 +2122,8 @@ def main():
                             minio_url=minio_url,
                             workflow=workflow,
                             output_path=args.output,
-                            generation_time_seconds=generation_time_seconds
+                            generation_time_seconds=generation_time_seconds,
+                            quality_result=quality_result
                         )
                         metadata_url = upload_metadata_to_minio(metadata, object_name)
                         if metadata_url and not args.quiet:
@@ -2111,7 +2149,8 @@ def main():
                                 minio_url=minio_url,
                                 workflow=workflow,
                                 output_path=args.output,
-                                generation_time_seconds=generation_time_seconds
+                                generation_time_seconds=generation_time_seconds,
+                                quality_result=quality_result
                             )
                             metadata_url = upload_metadata_to_minio(metadata, object_name)
                             if metadata_url and not args.quiet:
@@ -2138,7 +2177,8 @@ def main():
                                 minio_url=minio_url,
                                 workflow=workflow,
                                 output_path=args.output,
-                                generation_time_seconds=generation_time_seconds
+                                generation_time_seconds=generation_time_seconds,
+                                quality_result=quality_result
                             )
                             metadata_url = upload_metadata_to_minio(metadata, object_name)
                             if metadata_url and not args.quiet:
@@ -2165,7 +2205,8 @@ def main():
                         minio_url=minio_url,
                         workflow=workflow,
                         output_path=args.output,
-                        generation_time_seconds=generation_time_seconds
+                        generation_time_seconds=generation_time_seconds,
+                        quality_result=quality_result
                     )
                     metadata_url = upload_metadata_to_minio(metadata, object_name)
                     if metadata_url and not args.quiet:
@@ -2190,7 +2231,8 @@ def main():
                         minio_url=minio_url,
                         workflow=workflow,
                         output_path=args.output,
-                        generation_time_seconds=generation_time_seconds
+                        generation_time_seconds=generation_time_seconds,
+                        quality_result=quality_result
                     )
                     metadata_url = upload_metadata_to_minio(metadata, object_name)
                     if metadata_url and not args.quiet:
@@ -2213,7 +2255,8 @@ def main():
                     minio_url=minio_url,
                     workflow=workflow,
                     output_path=args.output,
-                    generation_time_seconds=generation_time_seconds
+                    generation_time_seconds=generation_time_seconds,
+                    quality_result=quality_result
                 )
                 metadata_url = upload_metadata_to_minio(metadata, object_name)
                 if metadata_url and not args.quiet:
