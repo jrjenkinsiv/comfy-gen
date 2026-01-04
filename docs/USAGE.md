@@ -460,6 +460,11 @@ Need video/animation?
 
 ComfyGen supports specialized workflows for generating game-ready assets including icons, sprites, VFX, and UI elements.
 
+**Note on Output Paths:**
+- Linux/macOS: Use `/tmp/filename.png` for temporary files
+- Windows (moira): Use `C:\temp\filename.png` or relative paths like `./output/filename.png`
+- Examples below use `/tmp/` - adjust for your platform
+
 ### Quick Start - Game Assets
 
 **Battleship Icon (Top-Down):**

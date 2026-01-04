@@ -10,6 +10,20 @@ This guide provides step-by-step instructions for downloading and testing the ga
 
 ## Download Instructions
 
+**Finding Version IDs:**
+To download from CivitAI, you need the model version ID:
+1. Go to the CivitAI model page (links provided below)
+2. Click on the version you want (usually the latest)
+3. Look at the URL or the download button - the version ID is in the URL
+4. Alternative: Click "Download" button and copy the download URL which includes the version ID
+5. Or use the model page directly in browser to download, then transfer to moira
+
+**Example:**
+- Model page: `https://civitai.com/models/110237/battleships`
+- Version page: `https://civitai.com/models/110237?modelVersionId=118526`
+- Version ID: `118526`
+- Download URL: `https://civitai.com/api/download/models/118526`
+
 ### 1. Icons & Flat Design LoRAs
 
 #### Flux LoRA - Flat Art Style Game Assets

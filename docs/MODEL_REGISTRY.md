@@ -84,6 +84,8 @@ LoRAs for generating game-ready assets (icons, sprites, UI elements, effects).
 
 **Status:** Research completed, models pending download and testing.
 
+**Important:** SDXL LoRAs require an SDXL checkpoint (not SD 1.5 or Flux). If you don't have an SDXL checkpoint, use the SD 1.5 alternatives listed below.
+
 #### Game Icons & Flat Design
 
 | Model Name | Type | Compatible With | Source | Notes |

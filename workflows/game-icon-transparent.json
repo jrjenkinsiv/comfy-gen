@@ -107,7 +107,7 @@
     "class_type": "SaveImage",
     "_meta": {
       "title": "Save Image",
-      "notes": "Output will be PNG with white background. For true transparency, install LayerDiffusion extension in ComfyUI."
+      "notes": "Output will be PNG with white background. For true transparency with alpha channel, install LayerDiffusion extension in ComfyUI. See docs/GAME_ASSET_TESTING.md for installation guide."
     }
   },
   "_workflow_meta": {

@@ -184,11 +184,11 @@ loras:
   # Pixel Art LoRAs
   - filename: "NOT_INSTALLED_retro_game_art_sdxl.safetensors"
     tags: ["pixel-art", "retro", "game-asset", "sdxl"]
-    compatible_with: ["flux1-dev-fp8.safetensors"]  # May need SDXL checkpoint
+    compatible_with: ["SDXL_checkpoint_required.safetensors"]  # Requires SDXL checkpoint, not SD 1.5 or Flux
     recommended_strength: 0.8  # Range: 0.7-1.0
     description: "Low color depth pixelated retro game style (MS-DOS/Amiga). Trigger: 'r3tr0'"
     use_cases: ["retro game assets", "pixel art", "8-bit style", "16-bit style"]
-    notes: "CivitAI: https://civitai.com/models/553027/sdxl-lora-retro-game-art. Trigger: r3tr0"
+    notes: "CivitAI: https://civitai.com/models/553027/sdxl-lora-retro-game-art. Trigger: r3tr0. REQUIRES SDXL CHECKPOINT."
     
   - filename: "NOT_INSTALLED_retro_game_art_sd15.safetensors"
     tags: ["pixel-art", "retro", "game-asset", "sd15"]
@@ -226,11 +226,11 @@ loras:
   # VFX & Explosion LoRAs
   - filename: "NOT_INSTALLED_explosion_matrix_v2.safetensors"
     tags: ["explosion", "vfx", "fire", "game-effect", "sdxl"]
-    compatible_with: ["flux1-dev-fp8.safetensors"]  # May need SDXL checkpoint
+    compatible_with: ["SDXL_checkpoint_required.safetensors"]  # Requires SDXL checkpoint, not SD 1.5 or Flux
     recommended_strength: 0.8  # Range: 0.6-1.0
     description: "Stylized explosions and fire effects. Trigger: 'exploder'. Secondary: explosion, fire, lava, fireball"
     use_cases: ["explosion sprites", "fire effects", "game VFX", "lava effects"]
-    notes: "CivitAI: https://civitai.com/models/1069206/explosion-matrix. Clip Skip 1-2 recommended"
+    notes: "CivitAI: https://civitai.com/models/1069206/explosion-matrix. Clip Skip 1-2 recommended. REQUIRES SDXL CHECKPOINT."
     
   - filename: "NOT_INSTALLED_firevfx_v2.safetensors"
     tags: ["fire", "vfx", "magic", "game-effect", "sd15"]
