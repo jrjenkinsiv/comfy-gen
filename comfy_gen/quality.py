@@ -28,7 +28,13 @@ class QualityScorer:
     def __init__(self):
         """Initialize the quality scorer."""
         self.validator = None
-        if CLIP_AVAILABLE:
+        # Don't eagerly load CLIP model - only load when needed
+        # if CLIP_AVAILABLE:
+        #     self.validator = ImageValidator()
+    
+    def _ensure_validator(self):
+        """Lazy-load the CLIP validator when needed."""
+        if self.validator is None and CLIP_AVAILABLE:
             self.validator = ImageValidator()
     
     def score_image(
@@ -68,16 +74,22 @@ class QualityScorer:
         
         # Get CLIP score for prompt adherence
         prompt_adherence_score = 5.0  # Default neutral score
-        if self.validator and CLIP_AVAILABLE:
-            clip_result = self.validator.compute_clip_score(
-                image_path, prompt, negative_prompt
-            )
-            if "error" not in clip_result:
-                # Convert CLIP score (0-1) to 0-10 scale
-                # CLIP scores typically range 0.2-0.4 for good matches
-                # Map 0.25 -> 5.0, 0.35 -> 7.5, 0.45+ -> 10.0
-                clip_score = clip_result.get("positive_score", 0.0)
-                prompt_adherence_score = self._normalize_clip_score(clip_score)
+        try:
+            if CLIP_AVAILABLE:
+                self._ensure_validator()
+                if self.validator:
+                    clip_result = self.validator.compute_clip_score(
+                        image_path, prompt, negative_prompt
+                    )
+                    if "error" not in clip_result:
+                        # Convert CLIP score (0-1) to 0-10 scale
+                        # CLIP scores typically range 0.2-0.4 for good matches
+                        # Map 0.25 -> 5.0, 0.35 -> 7.5, 0.45+ -> 10.0
+                        clip_score = clip_result.get("positive_score", 0.0)
+                        prompt_adherence_score = self._normalize_clip_score(clip_score)
+        except Exception:
+            # Silently fall back to default score if CLIP loading fails
+            pass
         
         # For now, use heuristics for other dimensions
         # These will be replaced with actual metrics when pyiqa is available
