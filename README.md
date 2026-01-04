@@ -19,17 +19,16 @@ magneto (dev) -> GitHub -> ant-man (runner) -> moira (ComfyUI + GPU)
 
 ## Setup
 
-1. Install ComfyUI on moira
-2. Configure workflow templates
-3. Set up GitHub Actions pipeline
-4. Run generation scripts
+ComfyUI is assumed to be already running on moira at localhost:8188.
 
 ## Usage
 
-```bash
-# Generate image from workflow
-python generate.py --workflow flux-dev.json --prompt "a cat in space"
-```
+Trigger the "Generate Images" workflow with a prompt and workflow file.
+
+Generated images are stored in MinIO on moira. Access via:
+- MinIO Console: http://192.168.1.215:9000 (login with minioadmin/minioadmin)
+- Bucket: comfy-gen
+- Direct URL: Logged in workflow output
 
 ## Infrastructure Integration
 

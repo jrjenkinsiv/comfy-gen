@@ -1,4 +1,4 @@
 requests
 torch
 torchvision
-comfyui  # if available, but probably need to install manually
+minio

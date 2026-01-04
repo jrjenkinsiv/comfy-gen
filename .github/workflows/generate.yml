@@ -50,20 +50,3 @@ jobs:
           WORKFLOW: ${{ inputs.workflow }}
         run: |
           ssh -i "$DEPLOY_KEY" "$MOIRA_USER@$MOIRA_HOST" "cd $MOIRA_PATH && python generate.py --workflow workflows/$WORKFLOW --prompt '$PROMPT' --output output.png"
-
-      - name: Download result from moira
-        env:
-          MOIRA_HOST: 192.168.1.215
-          MOIRA_USER: jrjenkinsiv
-          MOIRA_PATH: /home/jrjenkinsiv/comfy-gen
-          DEPLOY_KEY: /home/jrjenkinsiv/.ssh/moira_deploy
-        run: |
-          rsync -az \
-            -e "ssh -i $DEPLOY_KEY -o StrictHostKeyChecking=yes" \
-            "$MOIRA_USER@$MOIRA_HOST:$MOIRA_PATH/output.png" ./output.png
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: generated-image
-          path: output.png

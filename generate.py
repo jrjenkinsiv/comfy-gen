@@ -11,8 +11,16 @@ import requests
 import time
 import sys
 from pathlib import Path
+from minio import Minio
+from minio.error import S3Error
 
 COMFYUI_HOST = "http://localhost:8188"  # ComfyUI running on moira
+
+# MinIO configuration
+MINIO_ENDPOINT = "localhost:9000"
+MINIO_ACCESS_KEY = "minioadmin"
+MINIO_SECRET_KEY = "minioadmin"
+BUCKET_NAME = "comfy-gen"
 
 def load_workflow(workflow_path):
     """Load workflow JSON."""
@@ -86,6 +94,29 @@ def download_output(status, output_path):
                     print(f"Error downloading image: {response.text}")
     return False
 
+def upload_to_minio(file_path, object_name):
+    """Upload file to MinIO."""
+    try:
+        client = Minio(
+            MINIO_ENDPOINT,
+            access_key=MINIO_ACCESS_KEY,
+            secret_key=MINIO_SECRET_KEY,
+            secure=False  # HTTP, not HTTPS
+        )
+
+        # Make bucket if not exists
+        if not client.bucket_exists(BUCKET_NAME):
+            client.make_bucket(BUCKET_NAME)
+            print(f"Created bucket {BUCKET_NAME}")
+
+        # Upload
+        client.fput_object(BUCKET_NAME, object_name, file_path)
+        print(f"Uploaded {file_path} to MinIO bucket {BUCKET_NAME} as {object_name}")
+        return f"http://192.168.1.215:9000/{BUCKET_NAME}/{object_name}"
+    except S3Error as e:
+        print(f"MinIO error: {e}")
+        return None
+
 def main():
     parser = argparse.ArgumentParser(description="Generate images with ComfyUI")
     parser.add_argument("--workflow", required=True, help="Path to workflow JSON")
@@ -102,7 +133,16 @@ def main():
 
     status = wait_for_completion(prompt_id)
     if status:
-        download_output(status, args.output)
+        if download_output(status, args.output):
+            # Upload to MinIO
+            import datetime
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            object_name = f"{timestamp}_{Path(args.output).name}"
+            minio_url = upload_to_minio(args.output, object_name)
+            if minio_url:
+                print(f"Image available at: {minio_url}")
+            else:
+                print("Failed to upload to MinIO")
 
 if __name__ == "__main__":
     main()
