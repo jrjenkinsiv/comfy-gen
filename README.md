@@ -18,9 +18,39 @@ python3 generate.py --workflow workflows/flux-dev.json \
     --prompt "a sunset over mountains" \
     --output /tmp/sunset.png
 
+# Cancel a specific generation
+python3 generate.py --cancel <prompt_id>
+
 # View in browser
 open "http://192.168.1.215:9000/comfy-gen/"
 ```
+
+## Cancelling Generations
+
+ComfyGen supports multiple ways to cancel running or queued generations:
+
+```bash
+# Cancel currently running generation
+python3 scripts/cancel_generation.py
+
+# Cancel specific generation by prompt ID
+python3 scripts/cancel_generation.py <prompt_id>
+
+# Cancel using generate.py
+python3 generate.py --cancel <prompt_id>
+
+# List current queue and running jobs
+python3 scripts/cancel_generation.py --list
+
+# Cancel during generation with Ctrl+C
+# Press Ctrl+C while generate.py is running
+```
+
+The cancellation will:
+- Interrupt the current generation on ComfyUI
+- Remove the job from the queue
+- Clean up any partial output files
+- Display confirmation message
 
 ## Architecture
 
@@ -80,6 +110,7 @@ ssh moira "C:\\Users\\jrjen\\comfy\\.venv\\Scripts\\python.exe C:\\Users\\jrjen\
 | Script | Purpose |
 |--------|---------|
 | `scripts/start_comfyui.py` | Start ComfyUI server on moira (run via SSH) |
+| `scripts/cancel_generation.py` | Cancel or list ComfyUI generation queue |
 | `scripts/set_bucket_policy.py` | Make MinIO bucket publicly readable |
 | `scripts/create_bucket.py` | Create the comfy-gen MinIO bucket |
 
