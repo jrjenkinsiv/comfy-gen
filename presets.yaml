@@ -4,7 +4,40 @@
 # overridden with specific CLI arguments.
 
 # Default negative prompt applied to all generations unless overridden
-default_negative_prompt: "bad quality, blurry, low resolution, watermark, text, deformed, ugly, duplicate, multiple subjects, crowd, extra limbs, mutated, disfigured"
+# Research shows: SD models struggle with "duplicate" prevention in negative prompts
+# Solution: Must use POSITIVE weighting for "single" instead
+default_negative_prompt: "bad quality, blurry, low resolution, watermark, text, signature, deformed, ugly, extra limbs, mutated, disfigured, poorly drawn, bad anatomy, jpeg artifacts"
+
+# Subject-specific negative prompts for common use cases
+negative_prompts:
+  vehicles:
+    # For single car/vehicle generation
+    - "multiple vehicles, duplicate cars, two cars, three cars, car show, parking lot, vehicle crowd, cloned car, ghost car, reflected car, mirrored vehicles, convoy, traffic"
+  people:
+    # For single person generation
+    - "multiple people, two people, crowd, group, clone, duplicate person, ghost person, extra person, background people"
+  objects:
+    # For single object/product
+    - "multiple objects, duplicate, two objects, clones, copies, repeated pattern"
+  general:
+    # Always avoid
+    - "bad quality, blurry, low resolution, watermark, text, signature, deformed, ugly, extra limbs, mutated, disfigured, poorly drawn, bad anatomy"
+
+# Positive prompt helpers for single subject emphasis
+positive_emphasis:
+  single_subject:
+    # Use these in POSITIVE prompt with weights for best results
+    - "(single:1.5)"          # Emphasize singularity
+    - "(one:1.4)"             # Reinforce one subject
+    - "(only one:1.3)"        # Explicit quantity
+    - "isolated"              # Subject isolation
+    - "lone"                  # Solo emphasis
+  composition:
+    # Composition that reduces duplicates
+    - "centered composition"
+    - "subject isolation"
+    - "clean background"
+    - "shallow depth of field" # Blurs potential duplicates
 
 # Validation settings
 validation:
