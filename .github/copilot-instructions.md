@@ -282,64 +282,96 @@ See `docs/USAGE.md` for:
 
 ## 9. Copilot Assignment & Unassignment
 
-### How to Assign Copilot to an Issue
+**CRITICAL:** Copilot is a BOT account (`BOT_kgDOC9w8XQ`). Standard CLI commands do NOT work for BOT accounts. You MUST use **GraphQL mutations**.
 
-**CRITICAL: Use the MCP tool, NOT `gh issue edit`**
+### Key IDs
+- **Copilot BOT ID:** `BOT_kgDOC9w8XQ` (constant across all repos)
+- **Issue Node ID:** Must be fetched per-issue (see below)
 
-The `gh issue edit --add-assignee Copilot` command does NOT reliably trigger Copilot to start working. It may add the assignee but Copilot won't pick up the issue.
+### Step 1: Get Issue Node ID
 
-**Correct Method - Use MCP Tool:**
-```
-mcp_github_assign_copilot_to_issue(owner="jrjenkinsiv", repo="comfy-gen", issueNumber=<N>)
-```
-
-This is the ONLY reliable way to trigger Copilot to start working on an issue.
-
-**Fallback (if MCP tool fails):**
 ```bash
-# Use the GitHub API directly
-gh api repos/jrjenkinsiv/comfy-gen/issues/<N>/assignees -X POST -f 'assignees[]=Copilot'
+gh api graphql -f query='
+query {
+  repository(owner: "jrjenkinsiv", name: "comfy-gen") {
+    issue(number: <N>) {
+      id
+      assignees(first: 5) { nodes { login, id } }
+    }
+  }
+}'
 ```
 
-### How to Unassign Copilot from an Issue
+### Step 2: Assign Copilot (Triggers Agent)
 
-**Use `gh issue edit` for removal - this DOES work:**
 ```bash
-gh issue edit <N> --remove-assignee Copilot
+gh api graphql -f query='
+mutation {
+  addAssigneesToAssignable(input: {
+    assignableId: "<ISSUE_NODE_ID>"
+    assigneeIds: ["BOT_kgDOC9w8XQ"]
+  }) {
+    assignable {
+      ... on Issue { assignees(first: 5) { nodes { login } } }
+    }
+  }
+}'
 ```
 
-### How to Reset/Reassign (Trigger Fresh Work)
+### Step 3: Unassign Copilot
+
+```bash
+gh api graphql -f query='
+mutation {
+  removeAssigneesFromAssignable(input: {
+    assignableId: "<ISSUE_NODE_ID>"
+    assigneeIds: ["BOT_kgDOC9w8XQ"]
+  }) {
+    assignable {
+      ... on Issue { assignees(first: 5) { nodes { login } } }
+    }
+  }
+}'
+```
+
+### What Does NOT Work (BOT accounts)
+
+| Method | Assign | Unassign | Triggers Agent |
+|--------|--------|----------|----------------|
+| `gh issue edit --add-assignee Copilot` | ❌ | ❌ | ❌ |
+| `gh issue edit --remove-assignee Copilot` | N/A | ❌ | N/A |
+| REST API POST/DELETE | ❌ | ❌ | ❌ |
+| `mcp_github_assign_copilot_to_issue` | ❌ (bug) | N/A | ❌ |
+| **GraphQL mutation** | ✅ | ✅ | ✅ |
+
+### Reset/Reassign Procedure
 
 When Copilot is stuck, rate-limited, or a PR has conflicts:
 
 ```bash
-# Step 1: Remove Copilot (this works)
-gh issue edit <N> --remove-assignee Copilot
+# 1. Get issue node ID
+gh api graphql -f query='query { repository(owner: "jrjenkinsiv", name: "comfy-gen") { issue(number: <N>) { id } } }'
 
-# Step 2: Assign fresh using MCP tool (triggers new work from current main)
-# Use: mcp_github_assign_copilot_to_issue(owner, repo, issueNumber)
+# 2. Unassign via GraphQL (use the id from step 1)
+gh api graphql -f query='mutation { removeAssigneesFromAssignable(input: { assignableId: "<ID>", assigneeIds: ["BOT_kgDOC9w8XQ"] }) { assignable { ... on Issue { assignees(first:5) { nodes { login } } } } } }'
+
+# 3. Reassign via GraphQL (triggers fresh work from current main)
+gh api graphql -f query='mutation { addAssigneesToAssignable(input: { assignableId: "<ID>", assigneeIds: ["BOT_kgDOC9w8XQ"] }) { assignable { ... on Issue { assignees(first:5) { nodes { login } } } } } }'
 ```
 
-**Why this matters:**
-- Removing triggers Copilot to abandon any in-progress work
-- Re-assigning via MCP tool triggers a fresh start from updated `main`
-- The old PR/branch will be superseded by the new work
+### Verification
 
-### Assignment Verification
-
-After assigning, verify with:
+After assigning, a PR should appear within 30-60 seconds:
 ```bash
-gh issue view <N> --json assignees --jq '.assignees[].login'
+gh pr list --state open --json number,title,createdAt
 ```
-
-Expected output should include `Copilot`.
 
 ## 10. Troubleshooting
 
-- **Assignment Stuck:** Use reset procedure above (unassign via `gh`, reassign via MCP tool).
-- **Dirty Merges / Stale PRs:** Unassign then reassign the **issue** (not the PR). Copilot will create a fresh branch.
-- **Rate Limited (PR Stopped):** Wait 1-2 hours, then use reset procedure.
-- **MCP Tool Returns Error:** Fall back to API method: `gh api repos/.../issues/<N>/assignees -X POST -f 'assignees[]=Copilot'`
+- **Assignment Stuck:** Use GraphQL reset procedure in Section 9 (unassign then reassign via GraphQL mutations).
+- **Dirty Merges / Stale PRs:** Unassign then reassign the **issue** via GraphQL. Copilot will create a fresh branch.
+- **Rate Limited (PR Stopped):** Wait 1-2 hours, then use GraphQL reset procedure.
+- **MCP Tool `mcp_github_assign_copilot_to_issue` Fails:** Known bug - use GraphQL mutations instead.
 - **ComfyUI not responding:** SSH to moira, check `tasklist | findstr python`, restart with `start_comfyui.py`.
 - **Model not found:** Verify model exists in `C:\Users\jrjen\comfy\models\` and workflow references correct filename.
 - **MinIO access denied:** Bucket policy may have reset. Run `scripts/set_bucket_policy.py`.
