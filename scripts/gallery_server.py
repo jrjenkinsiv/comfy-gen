@@ -684,12 +684,19 @@ class GalleryHandler(http.server.BaseHTTPRequestHandler):
         pass  # Suppress logging
 
 
+class ThreadingTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
+    """Handle each request in a separate thread to prevent blocking."""
+    allow_reuse_address = True
+    daemon_threads = True
+
+
 def main():
-    with socketserver.TCPServer(("", PORT), GalleryHandler) as httpd:
+    server = ThreadingTCPServer(("", PORT), GalleryHandler)
+    with server:
         print(f"[OK] Gallery server running at http://localhost:{PORT}")
         print("[INFO] Press Ctrl+C to stop")
         try:
-            httpd.serve_forever()
+            server.serve_forever()
         except KeyboardInterrupt:
             print("\n[OK] Server stopped")
 

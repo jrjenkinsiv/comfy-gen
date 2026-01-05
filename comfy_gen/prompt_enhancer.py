@@ -123,40 +123,125 @@ class PromptEnhancer:
             print(f"[ERROR] Failed to load model {self.model_name}: {e}", file=sys.stderr)
             raise
     
+    def _get_style_guidelines(self, style: Optional[str] = None) -> str:
+        """Get style-specific guidelines from the catalog."""
+        if not style:
+            return ""
+        
+        # Check model-specific guidelines
+        model_guidance = ""
+        if self.catalog and "model_specific" in self.catalog:
+            model_spec = self.catalog["model_specific"]
+            if style in ["photorealistic", "portrait", "landscape"]:
+                if "flux" in model_spec:
+                    flux = model_spec["flux"]
+                    model_guidance = f"\nModel guidance: {flux.get('notes', '')}. Prompt style: {flux.get('prompt_style', 'natural-language')}."
+            elif style in ["pixel", "cartoon", "vector", "game-asset"]:
+                if "sd15" in model_spec:
+                    sd = model_spec["sd15"]
+                    model_guidance = f"\nModel guidance: {sd.get('notes', '')}. Prompt style: {sd.get('prompt_style', 'keyword-heavy')}."
+        
+        # Get style modifiers from catalog
+        style_mods = []
+        if self.catalog and "style_modifiers" in self.catalog:
+            mods = self.catalog["style_modifiers"]
+            if style == "photorealistic" and "photography_styles" in mods:
+                style_mods = mods["photography_styles"][:3]
+            elif style == "artistic" and "artistic_styles" in mods:
+                style_mods = mods["artistic_styles"][:3]
+            elif style in ["game-asset", "pixel", "vector"]:
+                style_mods = ["top-down view", "clean edges", "centered composition", "isolated subject"]
+        
+        style_examples = f"\nRelevant style keywords: {', '.join(style_mods)}" if style_mods else ""
+        
+        return f"{model_guidance}{style_examples}"
+    
+    def _get_quality_boosters_text(self) -> str:
+        """Extract quality boosters from catalog as formatted text."""
+        if not self.catalog or "quality_boosters" not in self.catalog:
+            return "8K resolution, sharp focus, professional photography, cinematic lighting"
+        
+        boosters = self.catalog["quality_boosters"]
+        examples = []
+        
+        for category in ["resolution", "lighting", "sharpness", "composition"]:
+            if category in boosters:
+                items = boosters[category]
+                if items and len(items) > 0:
+                    # Get keyword from first item with "high" effectiveness
+                    high_eff = [b["keyword"] for b in items if b.get("effectiveness") == "high"]
+                    if high_eff:
+                        examples.append(high_eff[0])
+        
+        return ", ".join(examples) if examples else "8K resolution, sharp focus, cinematic lighting"
+    
+    def _get_negative_hints(self, style: Optional[str] = None) -> str:
+        """Get negative prompt hints from catalog."""
+        if not self.catalog or "negative_presets" not in self.catalog:
+            return ""
+        
+        presets = self.catalog["negative_presets"]
+        preset_key = "universal"
+        
+        if style:
+            if style == "photorealistic":
+                preset_key = "photorealistic"
+            elif style in ["portrait", "nsfw"]:
+                preset_key = "single_portrait"
+            elif style in ["game-asset", "pixel", "vector"]:
+                preset_key = "game_assets"
+            elif style == "landscape":
+                preset_key = "landscape"
+        
+        if preset_key in presets:
+            return f"\nRecommended negative elements to avoid: {presets[preset_key].get('prompt', '')}"
+        
+        return ""
+    
     def _build_system_prompt(self, style: Optional[str] = None) -> str:
-        """Build system prompt with guidelines for enhancement.
+        """Build comprehensive system prompt with catalog knowledge.
         
         Args:
             style: Optional style hint (photorealistic, artistic, game-asset, etc.)
         """
-        # Extract quality boosters from catalog
-        quality_hints = []
-        if self.catalog and "quality_boosters" in self.catalog:
-            boosters = self.catalog["quality_boosters"]
-            if "resolution" in boosters:
-                quality_hints.append("resolution keywords (8K, 4K, ultra detailed)")
-            if "lighting" in boosters:
-                quality_hints.append("lighting (cinematic, volumetric, golden hour)")
-            if "sharpness" in boosters:
-                quality_hints.append("sharpness (sharp focus, crystal clear)")
-            if "composition" in boosters:
-                quality_hints.append("composition (professional photography)")
+        quality_boosters = self._get_quality_boosters_text()
+        style_guidelines = self._get_style_guidelines(style)
+        negative_hints = self._get_negative_hints(style)
         
-        style_context = ""
-        if style:
-            style_context = f"\n- Target style: {style}"
+        # Include single-subject pattern if relevant (portraits, characters)
+        single_subject_guidance = ""
+        if style in ["portrait", "nsfw", "character"]:
+            if self.catalog and "single_subject_patterns" in self.catalog:
+                patterns = self.catalog["single_subject_patterns"]
+                if "positive_prefix" in patterns:
+                    prefix = patterns["positive_prefix"].get("strong", "")
+                    single_subject_guidance = f"\n\nCRITICAL for single-person images: Start with emphasis like '{prefix}' to prevent duplicate subjects."
         
-        system_prompt = f"""You are an expert prompt engineer for AI image generation. Your task is to enhance user prompts to produce higher quality images.
+        system_prompt = f"""You are an expert prompt engineer for Stable Diffusion and Flux AI image generation models. Your task is to transform short, simple prompts into detailed, production-quality prompts that generate excellent images.
 
-Guidelines:
-- Add descriptive details about lighting, composition, and camera settings
-- Include quality boosters: {', '.join(quality_hints) if quality_hints else 'detailed, high resolution, sharp focus'}
-- Maintain the original subject and intent
-- Keep prompts natural and readable
-- Target length: 100-200 tokens
-- DO NOT add explanations or meta-commentary{style_context}
+YOUR ROLE:
+- You receive a basic prompt idea from the user
+- You output a single enhanced prompt (no explanation, no meta-commentary)
+- The enhanced prompt should be 100-200 words of vivid, specific description
 
-Output ONLY the enhanced prompt, nothing else."""
+ENHANCEMENT STRATEGY:
+1. SUBJECT CLARITY: Keep the original subject but add specific details (age, appearance, pose, expression)
+2. SCENE CONTEXT: Add environment, setting, time of day, weather/atmosphere
+3. TECHNICAL QUALITY: Include quality boosters like: {quality_boosters}
+4. CAMERA/COMPOSITION: Specify lens type, focal length, aperture, perspective, framing
+5. LIGHTING: Describe light sources, direction, quality (soft/hard), color temperature
+6. STYLE CONSISTENCY: Match the visual style throughout the prompt{style_guidelines}{single_subject_guidance}{negative_hints}
+
+RULES:
+- Output ONLY the enhanced prompt text, nothing else
+- Do NOT include "Enhanced prompt:" or similar labels
+- Do NOT add negative prompt suggestions (those are separate)
+- Do NOT use bullet points or formatting - write as flowing natural text
+- Maintain the user's original intent and subject
+
+EXAMPLE:
+User: "a cat"
+Output: A majestic orange tabby cat with vibrant amber eyes perched gracefully on a weathered wooden fence post, bathed in warm golden hour sunlight that creates a soft rim light around its fluffy fur. The background features a blurred meadow with wildflowers in soft bokeh. Professional pet photography captured with an 85mm f/1.4 lens, shallow depth of field isolating the subject, ultra-detailed fur texture visible in 8K resolution, National Geographic style wildlife portrait."""
         
         return system_prompt
     
