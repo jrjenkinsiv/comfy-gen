@@ -722,7 +722,41 @@ python3 generate.py --cancel <prompt_id>
 
 ## Development
 
-See [.github/copilot-instructions.md](.github/copilot-instructions.md) for contribution guidelines.
+### Setting Up the Development Environment
+
+```bash
+# Create Python 3.12 virtual environment (required for MCP server)
+/usr/local/bin/python3.12 -m venv .venv
+
+# Activate the venv
+source .venv/bin/activate
+
+# Install in development mode with all dependencies
+pip install -e .
+
+# Install additional dependencies
+pip install 'accelerate==1.1.0' 'transformers==4.37.2' pyiqa mcp httpx websockets
+
+# For pyiqa quality scoring (requires numpy<2)
+pip install 'numpy<2' 'opencv-python-headless<4.12'
+```
+
+**Why Python 3.12?** The MCP (Model Context Protocol) server requires Python 3.10+. The system Python on macOS is 3.9.
+
+### Using the venv
+
+```bash
+# All comfy-gen commands should be run with the venv activated
+source .venv/bin/activate
+python generate.py --workflow ... --prompt "..."
+
+# Or use the full path
+.venv/bin/python generate.py ...
+```
+
+### Contribution Guidelines
+
+See [.github/copilot-instructions.md](.github/copilot-instructions.md) for full contribution guidelines.
 
 **Key Rules:**
 - All scripts must be Python (no batch/PowerShell)
