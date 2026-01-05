@@ -55,19 +55,26 @@ class HuggingFaceClient:
             }
             direction = -1  # Descending order
             
+            # Note: tags parameter is not used directly in list_models
+            # Instead, we filter results after fetching
             models = self.api.list_models(
                 search=query if query else None,
                 filter=search_filter,
                 sort=sort_mapping.get(sort, "downloads"),
                 direction=direction,
-                limit=limit,
+                limit=limit * 2 if tags else limit,  # Fetch more if we need to filter
                 pipeline_tag=pipeline_tag,
-                tags=tags,
             )
             
             # Simplify response format to match CivitAI pattern
             results = []
             for model in models:
+                # Filter by tags if specified
+                if tags:
+                    model_tags = set(model.tags or [])
+                    if not any(tag in model_tags for tag in tags):
+                        continue
+                
                 results.append({
                     "id": model.id,
                     "name": model.id.split('/')[-1],  # Extract model name from repo ID
@@ -82,6 +89,10 @@ class HuggingFaceClient:
                     "private": model.private,
                     "gated": getattr(model, 'gated', False),
                 })
+                
+                # Stop if we have enough results after filtering
+                if len(results) >= limit:
+                    break
             
             return results
         except Exception as e:
