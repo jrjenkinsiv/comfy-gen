@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Documentation
+    url: https://github.com/jrjenkinsiv/comfy-gen/blob/main/README.md
+    about: Check the README and docs/ directory for usage information
+  - name: Copilot Instructions
+    url: https://github.com/jrjenkinsiv/comfy-gen/blob/main/.github/copilot-instructions.md
+    about: Review agent workflow and assignment rules

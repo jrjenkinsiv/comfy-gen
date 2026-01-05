@@ -1,0 +1,106 @@
+name: Standard Task
+description: Create a task for the Copilot agent to implement
+title: "[Task]: "
+labels: ["serial-assignment"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Issue Template for Copilot Agent Workflow
+        
+        This template ensures issues contain all information needed for autonomous agent assignment and execution.
+        
+        **Important:** Before assigning to @copilot, verify:
+        1. Context section is complete and clear
+        2. Acceptance criteria are specific and testable
+        3. Appropriate label is selected (serial-assignment, parallel-ok, local-network, or human-required)
+        
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: |
+        Provide background information and explain WHY this task is needed.
+        Include:
+        - What problem does this solve?
+        - What files/components are affected?
+        - Any relevant technical constraints or dependencies
+        - Links to related issues or PRs
+      placeholder: |
+        Example:
+        The current workflow execution lacks proper error handling for network timeouts. Users experience silent failures when ComfyUI server is unreachable, making debugging difficult.
+        
+        Affected files:
+        - generate.py (main execution loop)
+        - comfy_gen/client.py (API client)
+        
+        Related: #45 (timeout improvements)
+    validations:
+      required: true
+      
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance Criteria
+      description: |
+        Define WHAT needs to be done - specific, testable conditions that must be met.
+        Use checkboxes for multi-step tasks.
+      placeholder: |
+        - [ ] Add connection timeout handling to ComfyUI API client
+        - [ ] Display user-friendly error message when server is unreachable
+        - [ ] Add retry logic with exponential backoff (3 attempts max)
+        - [ ] Update error exit codes: use exit code 2 for connection failures
+        - [ ] Add unit tests for timeout scenarios 
+    validations:
+      required: true
+      
+  - type: textarea
+    id: notes
+    attributes:
+      label: Technical Notes (Optional)
+      description: |
+        Additional implementation details, gotchas, or suggestions.
+        This section is optional but helpful for complex tasks.
+      placeholder: |
+        - Use requests library timeout parameter (current default: no timeout)
+        - Check existing retry logic in upload_to_minio() for reference pattern
+        - Ensure error messages follow project convention: [ERROR], [WARN], [OK] prefixes
+        - No emojis (Windows cp1252 encoding constraint)
+    validations:
+      required: false
+      
+  - type: dropdown
+    id: assignment-type
+    attributes:
+      label: Assignment Type
+      description: |
+        Select the appropriate assignment category:
+        - **serial-assignment**: Code changes to high-conflict files (generate.py, core workflows) - ONE AT A TIME
+        - **parallel-ok**: Isolated changes (new workflows, scripts, docs) - can batch 3-5
+        - **local-network**: Requires local network access (SSH, ComfyUI API, generation) - Orchestrator only
+        - **human-required**: Needs true human intervention (physical access, subjective decisions)
+      options:
+        - serial-assignment
+        - parallel-ok
+        - local-network
+        - human-required
+      default: 0
+    validations:
+      required: true
+      
+  - type: checkboxes
+    id: pre-assignment-checklist
+    attributes:
+      label: Pre-Assignment Checklist (For Orchestrator)
+      description: Complete before assigning to @copilot
+      options:
+        - label: Read issue body - understand full scope
+          required: false
+        - label: Read ALL issue comments for updates/blockers
+          required: false
+        - label: Check for linked/open PRs referencing this issue
+          required: false
+        - label: Evaluate remaining work - update issue if needed
+          required: false
+        - label: Verify label accuracy matches current state
+          required: false
