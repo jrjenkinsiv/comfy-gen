@@ -1652,7 +1652,7 @@ def get_retry_params(
     if base_cfg is None:
         base_cfg = 7.0
     if base_seed is None:
-        base_seed = random.randint(0, 2**32 - 1)
+        base_seed = random.randint(0, 2**31 - 1)
     
     params = {
         'steps': base_steps,
@@ -1678,14 +1678,15 @@ def get_retry_params(
         params['steps'] = int(base_steps * step_multipliers[idx])
         params['cfg'] = min(20.0, base_cfg + cfg_increases[idx])  # Cap at 20.0
         # Use different seed each attempt
-        params['seed'] = random.randint(0, 2**32 - 1)
+        params['seed'] = random.randint(0, 2**31 - 1)
         
     elif strategy == 'seed_search':
         # Seed search: keep params same, try different seeds
         # Use deterministic seeds based on attempt for reproducibility
         seed_offsets = [0, 1000, 5000]
         idx = min(attempt - 1, len(seed_offsets) - 1)
-        params['seed'] = base_seed + seed_offsets[idx]
+        # Prevent overflow by capping at max safe seed value
+        params['seed'] = min(2**31 - 1, base_seed + seed_offsets[idx])
         
     elif strategy == 'prompt_enhance':
         # Prompt enhancement: add quality boosters progressively
@@ -1707,7 +1708,7 @@ def get_retry_params(
             params['positive_prompt'] = enhanced_prompt
         
         # Use different seed each attempt
-        params['seed'] = random.randint(0, 2**32 - 1)
+        params['seed'] = random.randint(0, 2**31 - 1)
     
     return params
 
@@ -2343,7 +2344,7 @@ def main():
     # Store base parameters for retry strategies
     base_steps = steps
     base_cfg = cfg
-    base_seed = seed if seed is not None else random.randint(0, 2**32 - 1)
+    base_seed = seed if seed is not None else random.randint(0, 2**31 - 1)
     
     while attempt < max_attempts:
         attempt += 1
