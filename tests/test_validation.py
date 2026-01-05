@@ -4,7 +4,7 @@
 import sys
 import os
 import tempfile
-import traceback
+import traceback  # Used for detailed error reporting in exception handler
 from pathlib import Path
 
 # Add parent directory to path to import comfy_gen

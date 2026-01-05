@@ -19,7 +19,9 @@ from typing import Dict, Optional, Any, TYPE_CHECKING
 from pathlib import Path
 
 if TYPE_CHECKING:
-    import torch
+    import torch as torch_type
+else:
+    torch_type = None  # type: ignore
 
 try:
     import torch
@@ -28,7 +30,6 @@ try:
     CLIP_AVAILABLE = True
 except ImportError:
     CLIP_AVAILABLE = False
-    torch = None  # type: ignore
 
 try:
     from ultralytics import YOLO
@@ -109,7 +110,7 @@ class ImageValidator:
         
         return chunks if chunks else [prompt]
     
-    def _get_text_embedding(self, prompt: str) -> "torch.Tensor":
+    def _get_text_embedding(self, prompt: str):
         """Get averaged text embedding for a prompt, handling long prompts via chunking.
         
         Args:
