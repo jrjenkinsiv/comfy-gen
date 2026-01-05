@@ -837,12 +837,45 @@ python3 scripts/gallery_server.py
 ```
 
 **Features:**
-- Grid view with thumbnails
-- Search by prompt text
-- Filter: All / With LoRA / Validated
-- Sort: Newest / Oldest
-- Click to view full-size
-- Shows: seed, steps, cfg, LoRAs, validation score
+
+**Phase 1: View Preferences**
+- **Multiple View Modes**: Grid (Small/Medium/Large) and List view
+- **Thumbnail Size Control**: Choose between small (200px), medium (300px), or large (400px) grid layouts
+- **Advanced Search**: Search by prompt text in real-time
+- **Multiple Filters**: 
+  - All Images / With LoRA / Validated (CLIP > 0.9) / Favorites
+  - Quality grade filter (A / B+ / C+ / D+)
+- **Flexible Sorting**: Newest / Oldest / Quality Score / Name A-Z
+- **Persistent Preferences**: View settings automatically saved to localStorage
+
+**Phase 2: Quality Integration**
+- **Quality Score Display**: Composite quality scores shown prominently on thumbnails
+- **Color-Coded Grades**: Visual grade indicators with color-coded overlays
+  - Grade A: Dark green
+  - Grade B: Medium green
+  - Grade C: Yellow-green
+  - Grade D: Orange-red
+  - Grade F: Dark red
+- **Quality Filtering**: Filter images by minimum quality grade threshold
+- **Quality-Based Sorting**: Sort gallery by quality scores
+
+**Phase 3: Image Management**
+- **Multi-Select**: 
+  - Ctrl/Cmd + Click: Toggle individual selection
+  - Shift + Click: Select range
+- **Bulk Operations**:
+  - Toggle favorite status for multiple images
+  - Download selected images (ZIP - requires server implementation)
+  - Bulk delete (requires server implementation)
+- **Favorites System**: Star/favorite images for quick access
+- **Action Bar**: Appears when images are selected with bulk operation buttons
+
+**Additional Features:**
+- **Full-Size Preview**: Click images to view in modal overlay
+- **Lazy Loading**: Efficient loading of thumbnails for better performance
+- **Responsive Design**: Optimized for desktop and tablet viewing
+- **Keyboard Shortcuts**: ESC to close modal or clear selection
+- **Quality Metadata**: Shows CLIP scores, technical scores, and generation parameters
 
 ### MinIO Console
 
