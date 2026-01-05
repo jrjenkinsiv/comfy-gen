@@ -214,3 +214,81 @@ All tests pass:
 - `test_metadata_backward_compat.py` - Backward compatibility verification
 
 Run tests: `python3 tests/test_metadata.py`
+
+## PNG Metadata Embedding
+
+### Overview
+
+Starting with the metadata embedding feature, generation metadata is now embedded directly into PNG files using PNG text chunks (tEXt). This ensures metadata travels with the image and is accessible to external tools.
+
+### Embedded Fields
+
+The following PNG text chunks are embedded in each generated image:
+
+1. **`comfygen_metadata`** - Full JSON metadata (nested format shown above)
+2. **`parameters`** - CivitAI-compatible parameter string
+3. **`prompt`** - Positive prompt text
+4. **`negative_prompt`** - Negative prompt text
+5. **`model`** - Model filename
+6. **`seed`** - Random seed
+7. **`steps`** - Number of steps
+8. **`cfg`** - CFG scale
+9. **`sampler`** - Sampler name
+
+### CivitAI Compatibility
+
+The `parameters` field uses CivitAI's format for broad compatibility:
+
+```
+[prompt], Negative prompt: [negative], Steps: X, Sampler: Y, CFG scale: Z, Seed: N, Size: WxH, Model: [model], Lora: [name]:[strength]
+```
+
+This format is recognized by:
+- CivitAI image upload
+- ExifTool
+- Many image viewers with metadata support
+
+### Reading Metadata
+
+Metadata can be read from PNG files using:
+
+1. **ComfyGen CLI**: `python generate.py metadata show <image.png>`
+2. **Python API**: `from comfy_gen.metadata import read_metadata_from_png`
+3. **External Tools**: ExifTool, ImageMagick, etc.
+
+Example with ExifTool:
+```bash
+exiftool -parameters image.png
+exiftool -comfygen_metadata image.png
+```
+
+### Backward Compatibility
+
+- PNG embedding is **enabled by default** but can be disabled with `--no-embed-metadata`
+- Sidecar JSON files are **still created** for backward compatibility
+- Gallery server checks embedded metadata first, falls back to sidecar JSON
+- Old images without embedded metadata continue to work with sidecar JSONs
+
+### Implementation
+
+PNG metadata embedding is handled by the `comfy_gen.metadata` module:
+
+```python
+from comfy_gen.metadata import embed_metadata_in_png, read_metadata_from_png
+
+# Embed metadata
+embed_metadata_in_png("/path/to/image.png", metadata_dict)
+
+# Read metadata
+metadata = read_metadata_from_png("/path/to/image.png")
+```
+
+The embedding happens automatically when `generate.py` saves images, using PIL's PngInfo API.
+
+### Benefits
+
+1. **Portability**: Metadata travels with the image file
+2. **No Sidecar Loss**: No risk of losing JSON sidecar files
+3. **Tool Compatibility**: Works with ExifTool, ImageMagick, and image viewers
+4. **CivitAI Upload**: Images can be uploaded to CivitAI with full generation info
+5. **Searchability**: Desktop tools can index and search by metadata

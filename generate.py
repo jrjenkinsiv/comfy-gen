@@ -1453,6 +1453,36 @@ def upload_metadata_to_minio(metadata, object_name):
         print(f"[ERROR] Failed to upload metadata: {e}")
         return None
 
+def embed_metadata_in_output(output_path, metadata):
+    """Embed metadata into PNG output file.
+    
+    Args:
+        output_path: Path to the output PNG file
+        metadata: Metadata dictionary
+    
+    Returns:
+        bool: True if successful, False otherwise
+    """
+    try:
+        # Only embed in PNG files
+        if not output_path.lower().endswith('.png'):
+            return False
+        
+        # Import metadata module
+        from comfy_gen.metadata import embed_metadata_in_png
+        
+        # Embed metadata in place
+        success = embed_metadata_in_png(output_path, metadata)
+        
+        if success:
+            print(f"[OK] Embedded metadata in PNG file")
+        
+        return success
+        
+    except Exception as e:
+        print(f"[WARN] Failed to embed metadata in PNG: {e}")
+        return False
+
 def interrupt_generation():
     """Interrupt currently running generation."""
     try:
@@ -1638,6 +1668,30 @@ def run_generation(
 def main():
     global current_prompt_id, current_output_path
     
+    # Handle special metadata show command before argparse
+    if len(sys.argv) >= 3 and sys.argv[1] == "metadata" and sys.argv[2] == "show":
+        if len(sys.argv) < 4:
+            print("Usage: python generate.py metadata show <image.png>")
+            sys.exit(EXIT_CONFIG_ERROR)
+        
+        image_path = sys.argv[3]
+        
+        if not os.path.exists(image_path):
+            print(f"[ERROR] Image file not found: {image_path}")
+            sys.exit(EXIT_FAILURE)
+        
+        from comfy_gen.metadata import read_metadata_from_png, format_metadata_for_display
+        
+        metadata = read_metadata_from_png(image_path)
+        
+        if metadata:
+            print(format_metadata_for_display(metadata))
+            sys.exit(EXIT_SUCCESS)
+        else:
+            print(f"[ERROR] No embedded metadata found in {image_path}")
+            print(f"[INFO] Check for a sidecar JSON file: {image_path}.json")
+            sys.exit(EXIT_FAILURE)
+    
     parser = argparse.ArgumentParser(description="Generate images with ComfyUI")
     parser.add_argument("--workflow", help="Path to workflow JSON")
     parser.add_argument("--prompt", help="Positive text prompt")
@@ -1665,6 +1719,7 @@ def main():
     parser.add_argument("--quiet", action="store_true", help="Suppress progress output")
     parser.add_argument("--json-progress", action="store_true", help="Output machine-readable JSON progress")
     parser.add_argument("--no-metadata", action="store_true", help="Disable JSON metadata sidecar upload")
+    parser.add_argument("--no-embed-metadata", action="store_true", help="Disable embedding metadata in PNG files (default: enabled)")
     parser.add_argument("--quality-score", action="store_true", help="Run multi-dimensional quality scoring after generation")
     
     # Advanced generation parameters
@@ -2146,6 +2201,10 @@ def main():
                         metadata_url = upload_metadata_to_minio(metadata, object_name)
                         if metadata_url and not args.quiet:
                             print(f"[OK] Metadata available at: {metadata_url}")
+                        
+                        # Embed metadata in PNG file
+                        if not args.no_embed_metadata:
+                            embed_metadata_in_output(args.output, metadata)
                     break
                 else:
                     if not args.quiet:
@@ -2173,6 +2232,10 @@ def main():
                             metadata_url = upload_metadata_to_minio(metadata, object_name)
                             if metadata_url and not args.quiet:
                                 print(f"[OK] Metadata available at: {metadata_url}")
+                            
+                            # Embed metadata in PNG file
+                            if not args.no_embed_metadata:
+                                embed_metadata_in_output(args.output, metadata)
                         break
                     elif attempt >= max_attempts:
                         if not args.quiet:
@@ -2201,6 +2264,10 @@ def main():
                             metadata_url = upload_metadata_to_minio(metadata, object_name)
                             if metadata_url and not args.quiet:
                                 print(f"[OK] Metadata available at: {metadata_url}")
+                            
+                            # Embed metadata in PNG file
+                            if not args.no_embed_metadata:
+                                embed_metadata_in_output(args.output, metadata)
                         break
                     # Continue to next retry attempt
                     
@@ -2229,6 +2296,10 @@ def main():
                     metadata_url = upload_metadata_to_minio(metadata, object_name)
                     if metadata_url and not args.quiet:
                         print(f"[OK] Metadata available at: {metadata_url}")
+                    
+                    # Embed metadata in PNG file
+                    if not args.no_embed_metadata:
+                        embed_metadata_in_output(args.output, metadata)
                 break
             except Exception as e:
                 if not args.quiet:
@@ -2255,6 +2326,10 @@ def main():
                     metadata_url = upload_metadata_to_minio(metadata, object_name)
                     if metadata_url and not args.quiet:
                         print(f"[OK] Metadata available at: {metadata_url}")
+                    
+                    # Embed metadata in PNG file
+                    if not args.no_embed_metadata:
+                        embed_metadata_in_output(args.output, metadata)
                 break
         else:
             # No validation requested - upload metadata immediately
@@ -2279,6 +2354,10 @@ def main():
                 metadata_url = upload_metadata_to_minio(metadata, object_name)
                 if metadata_url and not args.quiet:
                     print(f"[OK] Metadata available at: {metadata_url}")
+                
+                # Embed metadata in PNG file
+                if not args.no_embed_metadata:
+                    embed_metadata_in_output(args.output, metadata)
             break
     
     # Final output

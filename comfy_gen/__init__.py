@@ -2,6 +2,7 @@
 
 __version__ = "0.1.0"
 
-# Make quality and validation modules available
+# Make quality, validation, and metadata modules available
 from . import quality
 from . import validation
+from . import metadata
