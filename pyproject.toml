@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "comfy-gen"
+version = "0.2.0"
+description = "Programmatic image/video generation using ComfyUI API"
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "requests",
+    "torch",
+    "torchvision",
+    "minio",
+    "Pillow",
+    "transformers",
+    "mcp",
+    "websocket-client",
+    "pyyaml",
+    "httpx",
+    "aiofiles",
+    "pyiqa",
+    "ultralytics",
+    "huggingface_hub",
+    "click>=8.0",
+]
+
+[project.scripts]
+comfy = "comfy_gen.cli:main"
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
+]
+
+[tool.setuptools.packages.find]
+include = ["comfy_gen*", "comfygen*"]

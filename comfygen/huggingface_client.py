@@ -146,7 +146,8 @@ class HuggingFaceClient:
         self,
         model_id: str,
         filename: str,
-        local_dir: str,
+        local_dir: Optional[str] = None,
+        cache_dir: Optional[str] = None,
         progress_callback: Optional[callable] = None
     ) -> Optional[str]:
         """Download a specific file from a model repository.
@@ -154,18 +155,22 @@ class HuggingFaceClient:
         Args:
             model_id: HuggingFace model ID
             filename: File to download (e.g., "model.safetensors")
-            local_dir: Local directory to save file
+            local_dir: Local directory to save file (alternative to cache_dir)
+            cache_dir: Cache directory (alternative to local_dir)
             progress_callback: Optional callback for progress updates
             
         Returns:
             Path to downloaded file or None on failure
         """
         try:
+            # Use cache_dir if provided, otherwise local_dir
+            target_dir = cache_dir or local_dir
+            
             # Download file
             downloaded_path = hf_hub_download(
                 repo_id=model_id,
                 filename=filename,
-                local_dir=local_dir,
+                local_dir=target_dir,
                 token=self.token,
             )
             
