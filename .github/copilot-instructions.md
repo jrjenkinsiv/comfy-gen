@@ -572,3 +572,42 @@ Trigger phrase detected
     v
 [Step 6] Report summary to user
 ```
+
+## 12. Infrastructure Placement Guidelines
+
+**Before creating a new service, ask: "Which machine fits this role?"**
+
+### Service Placement Decision Tree
+
+When building new services, be intentional about placement to avoid later migrations:
+
+| Machine | Primary Role | Deploy Here If... | Do NOT Deploy If... |
+|---------|--------------|-------------------|---------------------|
+| **magneto** | Development workstation | - Development tools only<br>- Short-lived testing scripts<br>- One-off experiments | - Long-running services<br>- Production workloads<br>- Persistent databases<br>- Public-facing services |
+| **cerebro** | Monitoring & persistent services | - Monitoring dashboards<br>- Metrics collection<br>- Persistent databases (PostgreSQL)<br>- Web UIs for browsing/analytics<br>- MLflow tracking server<br>- Gallery server | - GPU workloads<br>- Heavy compute tasks<br>- CI/CD runners<br>- Development experiments |
+| **moira** | GPU workloads & storage | - ComfyUI server<br>- Model training<br>- Image/video generation<br>- MinIO object storage<br>- GPU-accelerated tasks | - Monitoring tools<br>- CI/CD runners<br>- Non-GPU web services |
+| **ant-man** | CI/CD only | - GitHub Actions runner<br>- CI pipeline tasks | - Persistent services<br>- Manual workloads<br>- User-facing services<br>- Anything requiring local network access from outside CI |
+
+### Quick Reference: Current Services by Machine
+
+| Machine | IP | Currently Running Services |
+|---------|-----|---------------------------|
+| **magneto** | 192.168.1.124 | Development workstation (VS Code, git, local testing) |
+| **cerebro** | *(not in infra table)* | Gallery server, PostgreSQL, MLflow, monitoring dashboards |
+| **moira** | 192.168.1.215 | ComfyUI server (`:8188`), MinIO (`:9000`), GPU tasks (RTX 5090) |
+| **ant-man** | 192.168.1.253 | GitHub Actions runner (ARM64) |
+
+### Decision Checklist for New Services
+
+Before implementing a new service, answer these questions:
+
+1. **Does it need GPU access?** → moira
+2. **Is it a persistent monitoring/analytics tool?** → cerebro
+3. **Is it part of CI/CD automation?** → ant-man
+4. **Is it temporary development tooling?** → magneto (but consider if it should be elsewhere)
+
+**Example Migration Pattern (Anti-Pattern):**
+- Issue jrjenkinsiv/comfy-gen#96: Gallery server was initially placed on magneto (dev workstation) but belonged on cerebro (persistent services). This required manual migration.
+- **Lesson:** Long-running web services with persistent state → cerebro, NOT magneto.
+
+**When in doubt:** Default to cerebro for web services, moira for GPU/storage tasks.
