@@ -226,6 +226,30 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             cursor: pointer;
         }
         .loading { text-align: center; padding: 50px; color: #888; }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            padding: 15px 0;
+            flex-wrap: wrap;
+        }
+        .pagination:empty { display: none; }
+        .page-btn {
+            padding: 8px 14px;
+            border: 1px solid #333;
+            border-radius: 5px;
+            background: #2a2a4a;
+            color: #eee;
+            cursor: pointer;
+            font-size: 14px;
+            min-width: 40px;
+            text-align: center;
+        }
+        .page-btn:hover:not(.active):not(:disabled) { background: #3a3a5a; }
+        .page-btn.active { background: #00d9ff; color: #000; font-weight: bold; }
+        .page-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .page-info { color: #888; font-size: 14px; margin: 0 10px; }
         @media (max-width: 768px) {
             .gallery.grid-small { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
             .gallery.grid-medium { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
@@ -275,6 +299,12 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             <option value="quality">Quality Score</option>
             <option value="name">Name A-Z</option>
         </select>
+        <select id="perPage">
+            <option value="10">10 per page</option>
+            <option value="20" selected>20 per page</option>
+            <option value="50">50 per page</option>
+            <option value="100">100 per page</option>
+        </select>
         <button onclick="loadGallery()">Refresh</button>
     </div>
     
@@ -286,9 +316,13 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         <button class="secondary" onclick="clearSelection()">Clear Selection</button>
     </div>
     
+    <div class="pagination" id="paginationTop"></div>
+    
     <div class="gallery grid-medium" id="gallery">
         <div class="loading">Loading gallery...</div>
     </div>
+    
+    <div class="pagination" id="paginationBottom"></div>
     
     <div class="modal" id="modal" onclick="closeModal()">
         <span class="modal-close">&times;</span>
@@ -302,6 +336,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         let selectedImages = new Set();
         let favorites = new Set();
         let viewMode = { type: 'grid', size: 'medium' };
+        let currentPage = 1;
+        let perPage = 20;
         
         // Load preferences from localStorage
         function loadPreferences() {
@@ -316,6 +352,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     if (prefs.filter) document.getElementById('filter').value = prefs.filter;
                     if (prefs.qualityFilter) document.getElementById('qualityFilter').value = prefs.qualityFilter;
                     if (prefs.sort) document.getElementById('sort').value = prefs.sort;
+                    if (prefs.perPage) {
+                        perPage = prefs.perPage;
+                        document.getElementById('perPage').value = prefs.perPage;
+                    }
                 } catch (e) {
                     console.error('Failed to load preferences:', e);
                 }
@@ -330,7 +370,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 favorites: Array.from(favorites),
                 filter: document.getElementById('filter').value,
                 qualityFilter: document.getElementById('qualityFilter').value,
-                sort: document.getElementById('sort').value
+                sort: document.getElementById('sort').value,
+                perPage: perPage
             };
             localStorage.setItem('galleryPreferences', JSON.stringify(prefs));
         }
@@ -483,10 +524,26 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             
             if (filtered.length === 0) {
                 gallery.innerHTML = '<div class="loading">No images match your filters</div>';
+                document.getElementById('paginationTop').innerHTML = '';
+                document.getElementById('paginationBottom').innerHTML = '';
                 return;
             }
             
-            gallery.innerHTML = filtered.map(img => {
+            // Pagination
+            const totalPages = Math.ceil(filtered.length / perPage);
+            if (currentPage > totalPages) currentPage = totalPages;
+            if (currentPage < 1) currentPage = 1;
+            
+            const startIdx = (currentPage - 1) * perPage;
+            const endIdx = Math.min(startIdx + perPage, filtered.length);
+            const pageImages = filtered.slice(startIdx, endIdx);
+            
+            // Render pagination controls
+            const paginationHtml = renderPagination(currentPage, totalPages, filtered.length, startIdx, endIdx);
+            document.getElementById('paginationTop').innerHTML = paginationHtml;
+            document.getElementById('paginationBottom').innerHTML = paginationHtml;
+            
+            gallery.innerHTML = pageImages.map(img => {
                 const isFavorite = favorites.has(img.key);
                 const isSelected = selectedImages.has(img.key);
                 return `
@@ -622,6 +679,56 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             return div.innerHTML;
         }
         
+        function renderPagination(current, total, totalItems, startIdx, endIdx) {
+            if (total <= 1) return '';
+            
+            let html = `<span class="page-info">Showing ${startIdx + 1}-${endIdx} of ${totalItems}</span>`;
+            
+            // Previous button
+            html += `<button class="page-btn" onclick="goToPage(${current - 1})" ${current === 1 ? 'disabled' : ''}>&laquo; Prev</button>`;
+            
+            // Page numbers with ellipsis
+            const pages = [];
+            const maxVisible = 7;
+            
+            if (total <= maxVisible) {
+                for (let i = 1; i <= total; i++) pages.push(i);
+            } else {
+                pages.push(1);
+                if (current > 3) pages.push('...');
+                
+                let start = Math.max(2, current - 1);
+                let end = Math.min(total - 1, current + 1);
+                
+                if (current <= 3) end = 4;
+                if (current >= total - 2) start = total - 3;
+                
+                for (let i = start; i <= end; i++) pages.push(i);
+                
+                if (current < total - 2) pages.push('...');
+                pages.push(total);
+            }
+            
+            for (const p of pages) {
+                if (p === '...') {
+                    html += `<span class="page-info">...</span>`;
+                } else {
+                    html += `<button class="page-btn ${p === current ? 'active' : ''}" onclick="goToPage(${p})">${p}</button>`;
+                }
+            }
+            
+            // Next button
+            html += `<button class="page-btn" onclick="goToPage(${current + 1})" ${current === total ? 'disabled' : ''}>Next &raquo;</button>`;
+            
+            return html;
+        }
+        
+        function goToPage(page) {
+            currentPage = page;
+            renderGallery();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+        
         function openModal(event, url) {
             event.stopPropagation();
             document.getElementById('modal-img').src = url;
@@ -633,16 +740,27 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         }
         
         // Event listeners
-        document.getElementById('search').addEventListener('input', renderGallery);
+        document.getElementById('search').addEventListener('input', () => {
+            currentPage = 1;  // Reset to first page on search
+            renderGallery();
+        });
         document.getElementById('filter').addEventListener('change', () => {
+            currentPage = 1;  // Reset to first page on filter change
             renderGallery();
             savePreferences();
         });
         document.getElementById('qualityFilter').addEventListener('change', () => {
+            currentPage = 1;  // Reset to first page on filter change
             renderGallery();
             savePreferences();
         });
         document.getElementById('sort').addEventListener('change', () => {
+            renderGallery();
+            savePreferences();
+        });
+        document.getElementById('perPage').addEventListener('change', (e) => {
+            perPage = parseInt(e.target.value);
+            currentPage = 1;  // Reset to first page
             renderGallery();
             savePreferences();
         });
