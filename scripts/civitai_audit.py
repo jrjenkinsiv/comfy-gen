@@ -24,7 +24,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict, Optional
 
 import requests
 import yaml
@@ -41,7 +41,7 @@ KNOWN_HF_REPOS = {
 }
 
 
-def get_hash_from_moira(filename: str) -> str | None:
+def get_hash_from_moira(filename: str) -> Optional[str]:
     """Get SHA256 hash of a LoRA file on moira via SSH."""
     cmd = f'ssh moira "powershell -Command \\"(Get-FileHash -Algorithm SHA256 \'{MOIRA_LORA_PATH}\\{filename}\').Hash\\"" 2>/dev/null'
     try:
@@ -56,7 +56,7 @@ def get_hash_from_moira(filename: str) -> str | None:
     return None
 
 
-def lookup_civitai_by_hash(hash_val: str) -> dict[str, Any] | None:
+def lookup_civitai_by_hash(hash_val: str) -> Optional[Dict[str, Any]]:
     """Look up model version on CivitAI by SHA256 hash."""
     try:
         resp = requests.get(
@@ -81,7 +81,7 @@ def lookup_civitai_by_hash(hash_val: str) -> dict[str, Any] | None:
     return None
 
 
-def lookup_huggingface_repo(repo_id: str) -> dict[str, Any] | None:
+def lookup_huggingface_repo(repo_id: str) -> Optional[Dict[str, Any]]:
     """Verify a HuggingFace repo exists and get metadata."""
     try:
         resp = requests.get(
@@ -106,7 +106,7 @@ def lookup_huggingface_repo(repo_id: str) -> dict[str, Any] | None:
     return None
 
 
-def check_catalog_source(filename: str, catalog_path: str = "lora_catalog.yaml") -> dict[str, Any] | None:
+def check_catalog_source(filename: str, catalog_path: str = "lora_catalog.yaml") -> Optional[Dict[str, Any]]:
     """Check if a LoRA has source info in the catalog."""
     try:
         with open(catalog_path, "r") as f:
@@ -188,7 +188,7 @@ def audit_lora(filename: str, catalog_path: str = "lora_catalog.yaml") -> dict[s
     return result
 
 
-def categorize_base_model(base_model: str | None) -> str:
+def categorize_base_model(base_model: Optional[str]) -> str:
     """Categorize base model into simple categories."""
     if not base_model:
         return "unknown"
