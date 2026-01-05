@@ -33,6 +33,15 @@ Even documentation changes by the Orchestrator must be tracked:
 3.  Create a Pull Request.
 4.  **Self-Correction:** If CI fails, fix it immediately.
 
+**Meta-Issue Responsibilities:**
+When assigned a meta-issue (instruction/documentation updates):
+1.  Read the CURRENT version of the file being updated (don't assume you know it)
+2.  Identify the specific gap or confusion mentioned in the issue
+3.  Add minimal, precise guidance that addresses ONLY the stated gap
+4.  Preserve existing structure and formatting
+5.  Do NOT refactor unrelated sections
+6.  Test documentation changes by reading them back to ensure clarity
+
 ## 2. Project Overview
 
 **ComfyGen** is a programmatic image/video generation pipeline using ComfyUI. It enables text-based workflow execution, bypassing the ComfyUI GUI for automation and CI/CD integration.
@@ -68,6 +77,33 @@ magneto (git push) --> GitHub --> ant-man (runner) --> moira (ComfyUI)
 2.  **Labeling:** Apply `serial-assignment`, `parallel-ok`, `local-network`, or `human-required`.
 3.  **Assignment:** Assign to `@copilot` (or Orchestrator handles `local-network` directly).
 4.  **Review:** Review draft PR, request changes or merge.
+
+### Meta-Issue Handling (Instruction Updates)
+
+**Meta-issues** are issues about the workflow itself (e.g., updating copilot-instructions.md, issue templates, workflow documentation).
+
+**Assignment Rules for Meta-Issues:**
+- **Copilot can handle:** Updates to `.github/copilot-instructions.md` when the issue has clear, specific acceptance criteria
+- **Orchestrator self-assigns:** Complex workflow redesigns or when the gap is unclear and requires workflow context to diagnose
+- **Either can handle:** Documentation updates (README, docs/, examples/)
+- **Label as `parallel-ok`:** Instruction updates don't conflict with code changes
+
+**Meta-Issue Template:**
+When creating issues about instruction updates, include:
+1. **Context:** What workflow gap or confusion occurred?
+2. **Acceptance Criteria:** What specific section/guidance needs to be added?
+3. **Example:** Reference the issue number that exposed the gap
+
+**Example Meta-Issue:**
+```
+Title: Add guidance for meta-issue handling
+Context: Issues about updating instructions themselves create circular dependency
+Acceptance Criteria:
+- [ ] Add section explaining who handles meta-issues (Orchestrator vs Copilot)
+- [ ] Define "meta-issue" clearly
+- [ ] Provide examples of meta-issue patterns
+Example: Issue #XX exposed this gap when Copilot was unsure how to handle an issue about issue handling
+```
 
 ### Pre-Assignment Checklist (MANDATORY)
 
