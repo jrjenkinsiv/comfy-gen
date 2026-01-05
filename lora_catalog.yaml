@@ -257,6 +257,8 @@ loras:
     recommended_strength: 0.7
     description: "Adult POV content for Wan 2.2 I2V high noise"
     category: "nsfw"
+    source: "HuggingFace rahul7star/wan2.2Lora"
+    civitai_verified: false
 
   - filename: "wan2.2-i2v-low-pov-insertion-v1.0.safetensors"
     tags: ["nsfw", "adult", "wan2.2", "i2v", "low-noise", "pov"]
@@ -264,6 +266,8 @@ loras:
     recommended_strength: 0.7
     description: "Adult POV content for Wan 2.2 I2V low noise"
     category: "nsfw"
+    source: "HuggingFace rahul7star/wan2.2Lora"
+    civitai_verified: false
 
   - filename: "wan2.2-i2v-high-oral-insertion-v1.0.safetensors"
     tags: ["nsfw", "adult", "wan2.2", "i2v", "high-noise", "oral"]
@@ -271,6 +275,8 @@ loras:
     recommended_strength: 0.7
     description: "Adult oral content for Wan 2.2 I2V high noise"
     category: "nsfw"
+    source: "HuggingFace rahul7star/wan2.2Lora"
+    civitai_verified: false
 
   - filename: "wan2.2-i2v-low-oral-insertion-v1.0.safetensors"
     tags: ["nsfw", "adult", "wan2.2", "i2v", "low-noise", "oral"]
@@ -278,6 +284,8 @@ loras:
     recommended_strength: 0.7
     description: "Adult oral content for Wan 2.2 I2V low noise"
     category: "nsfw"
+    source: "HuggingFace rahul7star/wan2.2Lora"
+    civitai_verified: false
 
   - filename: "wan2.2-i2v-high-cumshot-v1.0.safetensors"
     tags: ["nsfw", "adult", "wan2.2", "i2v", "high-noise", "cumshot"]
@@ -285,6 +293,8 @@ loras:
     recommended_strength: 0.7
     description: "Adult cumshot content for Wan 2.2 I2V high noise"
     category: "nsfw"
+    source: "HuggingFace rahul7star/wan2.2Lora"
+    civitai_verified: false
 
   - filename: "wan2.2-i2v-low-cumshot-v1.0.safetensors"
     tags: ["nsfw", "adult", "wan2.2", "i2v", "low-noise", "cumshot"]
@@ -292,6 +302,8 @@ loras:
     recommended_strength: 0.7
     description: "Adult cumshot content for Wan 2.2 I2V low noise"
     category: "nsfw"
+    source: "HuggingFace rahul7star/wan2.2Lora"
+    civitai_verified: false
 
   - filename: "WAN-2.2-I2V-HandjobBlowjobCombo-HIGH-v1.safetensors"
     tags: ["nsfw", "adult", "wan2.2", "i2v", "high-noise", "handjob", "blowjob"]
@@ -313,6 +325,8 @@ loras:
     recommended_strength: 0.7
     description: "Adult POV handjob for Wan 2.2 T2V high noise"
     category: "nsfw"
+    source: "HuggingFace rahul7star/wan2.2Lora"
+    civitai_verified: false
 
   - filename: "Wan2.2 - T2V - POV Hand Job - LOW 14B.safetensors"
     tags: ["nsfw", "adult", "wan2.2", "t2v", "low-noise", "handjob", "pov"]
@@ -320,6 +334,8 @@ loras:
     recommended_strength: 0.7
     description: "Adult POV handjob for Wan 2.2 T2V low noise"
     category: "nsfw"
+    source: "HuggingFace rahul7star/wan2.2Lora"
+    civitai_verified: false
 
   - filename: "Wan2.2 - T2V - Facial - LOW 14B.safetensors"
     tags: ["nsfw", "adult", "wan2.2", "t2v", "low-noise", "facial"]
@@ -327,6 +343,8 @@ loras:
     recommended_strength: 0.7
     description: "Adult facial content for Wan 2.2 T2V low noise"
     category: "nsfw"
+    source: "HuggingFace rahul7star/wan2.2Lora"
+    civitai_verified: false
 
   - filename: "Wan2.2 v2 - T2V - Body Shots - LOW 14B.safetensors"
     tags: ["nsfw", "adult", "wan2.2", "t2v", "low-noise", "bodyshot"]
@@ -334,6 +352,8 @@ loras:
     recommended_strength: 0.7
     description: "Adult body shots for Wan 2.2 T2V low noise"
     category: "nsfw"
+    source: "HuggingFace rahul7star/wan2.2Lora"
+    civitai_verified: false
 
   - filename: "wan22-f4c3spl4sh-100epoc-high-k3nk.safetensors"
     tags: ["nsfw", "adult", "wan2.2", "high-noise", "facial"]
