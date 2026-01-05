@@ -11,3 +11,4 @@ httpx
 aiofiles
 pyiqa
 ultralytics
+huggingface_hub
