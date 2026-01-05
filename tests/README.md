@@ -4,6 +4,169 @@
 
 This document describes the testing strategy for comfy-gen, including unit tests, integration tests, and manual validation procedures.
 
+## Running Tests
+
+```bash
+# Run all tests
+pytest tests/ -v
+
+# Run specific test file
+pytest tests/test_validation.py -v
+
+# Run tests matching pattern
+pytest -k "test_lora" -v
+
+# Run manual tests (require local network)
+python3 tests/manual_test_prompt_presets.py
+python3 tests/manual_test_transparent.py
+```
+
+## Test Files
+
+| File | Purpose | Network Required | Notes |
+|------|---------|------------------|-------|
+| `test_validation.py` | CLIP validation, YOLO person counting | No | Uses mocks for missing files |
+| `test_quality.py` | Image quality scoring (pyiqa) | No | Gracefully handles missing pyiqa |
+| `test_generate.py` | Server availability, error handling | No | Mocked server responses |
+| `test_lora_injection.py` | LoRA chain injection logic | No | Mocked file I/O |
+| `test_metadata.py` | Metadata extraction, workflow params | No | Mocked local network calls |
+| `test_prompt_enhancer.py` | Prompt enhancement fallback | No | Mocked transformers |
+| `test_advanced_params.py` | Advanced parameter validation | No | Mocked workflows |
+| `test_integration_params.py` | Parameter integration tests | No | Mocked ComfyUI API |
+| `test_websocket_progress.py` | WebSocket progress tracking | No | Mocked WebSocket |
+| `test_config_loader.py` | Config file loading | No | Uses temp files |
+| `test_prompt_presets.py` | Preset loading and validation | No | Mocked file I/O |
+| `test_transparent.py` | Transparent image generation | No | Mocked ComfyUI API |
+| `test_refinement.py` | Image refinement workflows | No | Mocked workflows |
+| `test_mcp_server.py` | MCP server tool registration | No | Async tool listing only |
+| `test_mcp_presets.py` | MCP preset tools | No | Mocked presets |
+| `test_mcp_validation.py` | MCP validation tools | Yes | Requires local ComfyUI server |
+| `test_comprehensive_mcp.py` | Full MCP workflow | Yes | Requires ComfyUI + MinIO |
+| `test_civitai_mcp.py` | CivitAI MCP tools | Internet | Requires CivitAI API access |
+| `test_civitai_integration.py` | CivitAI API integration | Internet | Real API calls |
+| `test_huggingface_mcp.py` | HuggingFace MCP tools | Internet | Requires HF API access |
+| `test_quality_integration.py` | Quality scoring integration | Yes | Requires real images |
+| `test_metadata_backward_compat.py` | Metadata backward compatibility | No | Uses sample data |
+| `test_metadata_embedding.py` | PNG metadata embedding | No | Creates temp images |
+| `test_metadata_schema_example.py` | Metadata schema examples | No | Documentation test |
+| `test_progress_tracking.py` | Generation progress tracking | No | Mocked WebSocket |
+| `manual_test_prompt_presets.py` | Manual preset testing | Yes | Requires ComfyUI server |
+| `manual_test_transparent.py` | Manual transparency test | Yes | Requires ComfyUI server |
+
+## Test Strategy
+
+### Unit Tests
+- **Scope:** Individual functions and classes in isolation
+- **Mocking:** Extensive use of `unittest.mock` for external dependencies
+- **Network:** No network access required
+- **CI:** Can run in CI environment (GitHub Actions)
+
+### Integration Tests
+- **Scope:** Multiple components working together
+- **Mocking:** Minimal - tests real interactions between components
+- **Network:** May require local ComfyUI server and MinIO
+- **CI:** Run on self-hosted runner with local network access
+
+### Manual Tests
+- **Scope:** Full end-to-end workflows requiring human verification
+- **Mocking:** None - uses real ComfyUI API and generates actual images
+- **Network:** Requires local network access to ComfyUI server (192.168.1.215:8188)
+- **CI:** Not suitable for automated CI
+
+### External API Tests
+- **Scope:** CivitAI and HuggingFace integrations
+- **Mocking:** None for integration tests, mocked for unit tests
+- **Network:** Requires internet access
+- **CI:** Can run in CI with API keys in secrets
+
+## Mocking Strategy
+
+### ComfyUI API
+- **Tool:** `unittest.mock.patch` with `requests.get`/`requests.post`
+- **Mock Responses:** Simulated queue status, generation results, system stats
+- **Example:**
+  ```python
+  with patch('requests.post') as mock_post:
+      mock_post.return_value.json.return_value = {"prompt_id": "test-123"}
+      result = queue_workflow(workflow, server_address)
+  ```
+
+### MinIO
+- **Tool:** `unittest.mock` for MinIO client operations
+- **Mock Operations:** Bucket listing, file uploads, URL generation
+- **Note:** No dedicated MinIO mocking library used (e.g., moto is for AWS S3)
+- **Example:**
+  ```python
+  with patch('minio.Minio') as mock_minio:
+      mock_client = mock_minio.return_value
+      mock_client.bucket_exists.return_value = True
+  ```
+
+### File System
+- **Tool:** `tempfile` module for temporary files/directories
+- **Strategy:** Create real temp files for I/O tests, clean up automatically
+- **Example:**
+  ```python
+  with tempfile.NamedTemporaryFile(suffix='.png') as tmp:
+      test_image_path = tmp.name
+      # Test code using test_image_path
+  ```
+
+### Transformers/ML Models
+- **Tool:** `unittest.mock.patch` for model loading and inference
+- **Strategy:** Mock model outputs to avoid downloading large models in tests
+- **Example:**
+  ```python
+  with patch('transformers.pipeline') as mock_pipeline:
+      mock_pipeline.return_value.return_value = [{"generated_text": "enhanced prompt"}]
+  ```
+
+## CI Integration
+
+### Current Setup
+- **Platform:** GitHub Actions with self-hosted runner (ant-man)
+- **Runner:** ARM64 Linux with local network access
+- **Workflow:** `.github/workflows/generate.yml`
+
+### Test Execution in CI
+Currently, CI focuses on generation workflows rather than running pytest. Future CI improvements could include:
+
+```yaml
+# Future CI test job
+- name: Run Unit Tests
+  run: |
+    pytest tests/ -v -m "not network_required"
+    
+- name: Run Integration Tests (Local Network)
+  run: |
+    pytest tests/ -v -m "network_required"
+  if: runner.name == 'ant-man'  # Self-hosted runner only
+```
+
+### Test Markers (Proposed)
+```python
+# In test files, add markers:
+import pytest
+
+@pytest.mark.network_required
+def test_comfyui_api():
+    """Test that requires local ComfyUI server."""
+    pass
+
+@pytest.mark.internet_required
+def test_civitai_api():
+    """Test that requires internet access."""
+    pass
+```
+
+### Pre-commit Checks
+```bash
+# Run before committing (no network required)
+pytest tests/ -v -m "not network_required and not internet_required"
+ruff check . --fix
+mypy comfygen/ --config-file pyproject.toml
+```
+
 ## Test Categories
 
 ### 1. Unit Tests (`tests/`)
