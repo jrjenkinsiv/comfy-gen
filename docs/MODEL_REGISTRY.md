@@ -5,7 +5,30 @@ This document tracks all models and LoRAs installed on moira for ComfyUI.
 **Last Updated:** 2026-01-04  
 **Model Directory:** `C:\Users\jrjen\comfy\models\`
 
-## Downloading Models
+## Quick Download
+
+Use the download script for easy model installation:
+
+```bash
+# Search for models
+python scripts/download_model.py --search "realistic" --type checkpoint --limit 10
+
+# Download by CivitAI model ID
+python scripts/download_model.py --model-id 43331 --type checkpoint
+
+# Download by specific version ID
+python scripts/download_model.py --version-id 176425 --type checkpoint
+
+# Download a LoRA
+python scripts/download_model.py --model-id 82098 --type lora
+
+# Dry-run (show info without downloading)
+python scripts/download_model.py --model-id 43331 --type checkpoint --dry-run
+```
+
+**Supported types:** `checkpoint`, `lora`, `vae`, `embedding`, `hypernetwork`
+
+## API Key Setup
 
 Models can be downloaded from multiple sources:
 
@@ -22,10 +45,6 @@ echo "CIVITAI_API_KEY=your_key_here" >> .env
 echo "HF_TOKEN=hf_your_token_here" >> .env
 ```
 
-**Download scripts:**
-- CivitAI: `comfygen/civitai_client.py` (uses `CIVITAI_API_KEY` automatically)
-- HuggingFace: `huggingface-cli download` or direct download
-
 ## Directory Structure
 
 ```
@@ -36,15 +55,45 @@ C:\Users\jrjen\comfy\models\
 ├── text_encoders/    # T5, CLIP encoders
 ├── diffusion_models/ # Wan 2.2 diffusion models
 ├── unet/             # UNet models
+├── embeddings/       # Textual inversions
 └── sams/             # Segment Anything models
 ```
 
+---
+
 ## Checkpoints (Base Models)
 
-| Filename | Type | Size | Notes |
-|----------|------|------|-------|
-| `v1-5-pruned-emaonly-fp16.safetensors` | SD 1.5 | ~2GB | General purpose, fast |
-| `realisticVisionV60B1_v51HyperVAE.safetensors` | SD 1.5 Hyper | ~4GB | **RECOMMENDED** Photorealistic, 2M+ downloads on CivitAI. Best for portraits and realistic content. |
+### Currently Installed (Verified Working)
+
+| Filename | Type | Size | Workflow | Score | Notes |
+|----------|------|------|----------|-------|-------|
+| `realisticVisionV60B1_v51HyperVAE.safetensors` | SD 1.5 Hyper | 4GB | `realistic-vision.json` | 0.675 | **TOP** Best photorealism, includes VAE. |
+| `majicmixRealistic_v7.safetensors` | SD 1.5 | 2GB | `majicmix-realistic.json` | 0.674 | Excellent for portraits/NSFW. 1.1M+ downloads. |
+| `ponyDiffusionV6XL_v6StartWithThisOne.safetensors` | SDXL/Pony | 6.6GB | `pony-v6.json` | 0.664 | SDXL-based. Use score_9 tags. Native 1024x1024. |
+| `v1-5-pruned-emaonly-fp16.safetensors` | SD 1.5 | 2GB | `flux-dev.json` | ~0.55 | Baseline model. Fast but lower quality. |
+
+### Pony Diffusion V6 XL - Special Tags
+
+Pony requires special quality tags in the prompt:
+```
+Positive: score_9, score_8_up, score_7_up, [your prompt here]
+Negative: score_4, score_3, score_2, score_1, [your negatives]
+```
+
+### Models NOT Working
+
+| Model | Issue | Reason |
+|-------|-------|--------|
+| PornMaster Z-image | NextDiT architecture | Requires custom ComfyUI nodes not installed |
+| Any NextDiT/Transformer models | Incompatible | Standard workflows don't support NextDiT |
+
+### Recommended Downloads
+
+```bash
+# Realistic checkpoints (highly rated on CivitAI)
+python scripts/download_model.py --model-id 25694 --type checkpoint  # epiCRealism (816K downloads)
+python scripts/download_model.py --model-id 4384 --type checkpoint   # DreamShaper (high quality)
+```
 
 ## Diffusion Models
 
@@ -66,6 +115,7 @@ C:\Users\jrjen\comfy\models\
 
 | Filename | Type | Notes |
 |----------|------|-------|
+| `sdxl_vae.safetensors` | SDXL VAE | For SDXL/Pony models (ponyDiffusionV6XL) |
 | `wan_2.1_vae.safetensors` | Wan VAE | For Wan video models |
 | `wan2.2_t2v_high_noise_14B_fp8_scaled.safetensors` | Wan VAE | Alternate VAE |
 
@@ -90,6 +140,13 @@ LoRA files are stored in `C:\Users\jrjen\comfy\models\loras\`.
 | `wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise.safetensors` | Wan 2.2 I2V High | 4-step acceleration |
 | `wan2.2_i2v_lightx2v_4steps_lora_v1_low_noise.safetensors` | Wan 2.2 I2V Low | 4-step acceleration |
 | `Wan2.2-I2V-A14B-4steps-lora-rank64-Seko-V1_high_noise_model.safetensors` | Wan 2.2 I2V | 4-step Seko |
+
+### Detail Enhancement LoRAs
+
+| Filename | Compatible With | Strength | Notes |
+|----------|----------------|----------|-------|
+| `more_details.safetensors` | SD 1.5/SDXL | 0.5 | Adds fine detail to faces/skin. Stack with add_detail. |
+| `add_detail.safetensors` | SD 1.5/SDXL | 0.4 | Complementary detail enhancement. Use after more_details. |
 
 ### Physics/Motion LoRAs
 
