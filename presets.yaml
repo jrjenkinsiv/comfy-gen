@@ -89,3 +89,37 @@ presets:
     validate: true
     auto_retry: true
     positive_threshold: 0.30   # Higher threshold for ultra quality
+
+  # Realistic Vision optimized preset - for photorealistic human portraits
+  realistic-portrait:
+    workflow: workflows/realistic-vision.json
+    steps: 150
+    cfg: 9.0
+    sampler: dpmpp_sde
+    scheduler: karras
+    width: 1024
+    height: 1024
+    validate: true
+    loras:
+      - name: more_details.safetensors
+        strength: 0.6          # Subtle detail enhancement
+      - name: add_detail.safetensors
+        strength: 0.4          # Additional detail tweaking
+    notes: "Best for photorealistic portraits. Use Realistic Vision checkpoint."
+
+  # Adult/NSFW portrait preset - optimized for explicit content
+  nsfw-portrait:
+    workflow: workflows/realistic-vision.json
+    steps: 150
+    cfg: 11.0                  # Higher CFG for better prompt adherence
+    sampler: dpmpp_sde
+    scheduler: karras
+    width: 1024
+    height: 1024
+    validate: true
+    loras:
+      - name: more_details.safetensors
+        strength: 0.5
+      - name: big_breasts_v2_epoch_30.safetensors
+        strength: 0.7
+    notes: "For adult content. Requires explicit prompts."

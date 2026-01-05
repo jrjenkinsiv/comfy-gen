@@ -150,6 +150,30 @@ loras:
     use_cases: ["cartoon characters", "disney style", "animated look"]
 
   # ========================================
+  # DETAIL ENHANCEMENT LoRAs - Improve quality and sharpness
+  # ========================================
+  # These LoRAs enhance detail, sharpness, and overall image quality.
+  # Can be stacked with other LoRAs for best results.
+
+  - filename: "more_details.safetensors"
+    tags: ["detail", "enhancement", "quality", "sharpness", "sd15", "realistic"]
+    compatible_with: ["v1-5-pruned-emaonly-fp16.safetensors", "realisticVisionV60B1_v51HyperVAE.safetensors"]
+    recommended_strength: 0.5  # Range: 0.3-0.8, higher can over-sharpen
+    description: "Add More Details - Enhances fine details and textures in images"
+    use_cases: ["photorealistic images", "portraits", "detail enhancement", "quality boost"]
+    notes: "Stack with other LoRAs. Use 0.3-0.5 for subtle enhancement, 0.6-0.8 for strong detail."
+    source: "CivitAI ID 82098"
+
+  - filename: "add_detail.safetensors"
+    tags: ["detail", "enhancement", "quality", "tweaker", "sd15", "realistic"]
+    compatible_with: ["v1-5-pruned-emaonly-fp16.safetensors", "realisticVisionV60B1_v51HyperVAE.safetensors"]
+    recommended_strength: 0.4  # Range: 0.2-0.7, works well with more_details
+    description: "Detail Tweaker - Fine-tune detail levels in generated images"
+    use_cases: ["detail adjustment", "quality enhancement", "texture improvement"]
+    notes: "Can use negative strength (-0.5 to -1.0) to soften/smooth images. Positive adds detail."
+    source: "CivitAI ID 58390"
+
+  # ========================================
   # GAME ASSET LoRAs - Icons, sprites, and UI elements
   # ========================================
   # These LoRAs are optimized for generating game assets like icons,

@@ -44,6 +44,7 @@ C:\Users\jrjen\comfy\models\
 | Filename | Type | Size | Notes |
 |----------|------|------|-------|
 | `v1-5-pruned-emaonly-fp16.safetensors` | SD 1.5 | ~2GB | General purpose, fast |
+| `realisticVisionV60B1_v51HyperVAE.safetensors` | SD 1.5 Hyper | ~4GB | **RECOMMENDED** Photorealistic, 2M+ downloads on CivitAI. Best for portraits and realistic content. |
 
 ## Diffusion Models
 

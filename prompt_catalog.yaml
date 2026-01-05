@@ -215,11 +215,72 @@ model_specific:
 # Log results from systematic testing here
 # Format: test_id, prompt_variant, seed, validation_score, notes
 
-test_results: []
-# Will be populated by testing script
-# Example:
-# - test_id: "001"
-#   prompt: "8K resolution, sharp focus, cinematic lighting"
-#   seed: 12345
-#   validation_score: 0.95
-#   notes: "High quality boosters effective"
+test_results:
+  # Successful nude portrait generation - 2026-01-04
+  - test_id: "nsfw_portrait_001"
+    date: "2026-01-04"
+    workflow: "workflows/flux-dev.json"
+    checkpoint: "v1-5-pruned-emaonly-fp16.safetensors"
+    prompt: "A highly detailed photorealistic image of a stunning adult woman in her prime, late 20s, with long wavy chestnut hair falling naturally over her bare shoulders, flawless porcelain skin with subtle natural makeup highlighting her high cheekbones and full lips, piercing green eyes with long lashes gazing directly at the camera with confident allure. She is completely nude, standing gracefully in a lush botanical garden during golden hour, her voluptuous hourglass figure fully exposed - large natural full breasts with prominent pink nipples erect in the warm breeze, narrow waist flaring to wide childbearing hips, and a perfectly round firm ass. Water droplets from recent rain glisten on her smooth skin, highlighting every curve and muscle definition. The garden features exotic tropical flowers in vibrant colors, palm fronds swaying gently, a marble fountain in the background with cascading water, and dappled sunlight filtering through the canopy creating natural rim lighting that accentuates her nude form. Professional nude art photography in the style of Playboy centerfolds and high-end erotic fashion magazines, captured with a Phase One medium format camera and 80mm lens at f/1.8 for exquisite shallow depth of field that keeps her body in perfect focus while softly blurring the lush garden background. Cinematic lighting with golden hour sun rays creating volumetric light beams, rich color grading with warm golden tones on her skin contrasting with cool blue shadows, hyper-realistic skin texture showing individual pores and fine body hair, 8K resolution with microscopic detail in every strand of hair, leaf vein, water droplet, and skin imperfection."
+    negative_prompt: "bad quality, blurry, low resolution, watermark, text, signatures, deformed, ugly, old, wrinkled, skinny, thin, bony, flat chest, small butt, artificial, fake, plastic, tattoos, piercings, heavy makeup, obese, fat, overweight, cartoon, anime, CGI, 3D render, distorted anatomy, unrealistic proportions, harsh lighting, overexposed, underexposed, grainy, pixelated, jpeg artifacts, multiple people, crowds, clothed, covered, shy, modest, conservative, prudish, amateur photography, digital artifacts, compression artifacts, noise, banding, color fringing, extra fingers, mutated hands, bad hands, missing fingers, fused fingers, too many fingers, malformed limbs, long neck, poorly drawn face, cloned face, cross-eyed, extra arms, extra legs, fused limbs"
+    settings:
+      steps: 150
+      cfg: 13.0
+      seed: 12351
+      sampler: dpmpp_sde
+      scheduler: karras
+      width: 1024
+      height: 1024
+    loras:
+      - name: realism_lora.safetensors
+        strength: 0.9
+      - name: big_breasts_v2_epoch_30.safetensors
+        strength: 0.85
+    validation_score: 0.647
+    image_url: "http://192.168.1.215:9000/comfy-gen/20260104_160118_nude_woman_garden_ultimate.png"
+    notes: "Validation passed. Issue: Generated 3 people instead of 1. CLIP validation doesn't catch duplicates."
+
+# ========================================
+# SAVED PROMPTS FOR REUSE
+# ========================================
+# Production-ready prompts that have been tested and validated
+
+saved_prompts:
+  # Nude female portrait - botanical garden setting
+  nude_woman_garden:
+    category: "nsfw"
+    subject: "adult woman nude portrait"
+    tested_with: "Realistic Vision V6.0, SD 1.5"
+    positive: |
+      A highly detailed photorealistic image of a stunning adult woman in her prime, late 20s, with long wavy chestnut hair falling naturally over her bare shoulders, flawless porcelain skin with subtle natural makeup highlighting her high cheekbones and full lips, piercing green eyes with long lashes gazing directly at the camera with confident allure. She is completely nude, standing gracefully in a lush botanical garden during golden hour, her voluptuous hourglass figure fully exposed - large natural full breasts with prominent pink nipples, narrow waist flaring to wide childbearing hips, and a perfectly round firm ass. Water droplets from recent rain glisten on her smooth skin. The garden features exotic tropical flowers, palm fronds, a marble fountain with cascading water, and dappled sunlight creating natural rim lighting. Professional nude art photography, captured with a Phase One medium format camera and 80mm lens at f/1.8 for shallow depth of field. Cinematic golden hour lighting, 8K resolution.
+    negative: |
+      bad quality, blurry, low resolution, watermark, text, signatures, deformed, ugly, old, wrinkled, skinny, thin, bony, flat chest, small butt, artificial, fake, plastic, tattoos, piercings, heavy makeup, obese, fat, overweight, cartoon, anime, CGI, 3D render, distorted anatomy, unrealistic proportions, harsh lighting, overexposed, underexposed, grainy, pixelated, jpeg artifacts, multiple people, two people, three people, crowds, group, duplicate, clone, extra person, clothed, covered, amateur photography, extra fingers, mutated hands, bad hands, malformed limbs
+    recommended_settings:
+      steps: 150
+      cfg: 11.0
+      sampler: dpmpp_sde
+      scheduler: karras
+      width: 1024
+      height: 1024
+    recommended_loras:
+      - "more_details.safetensors:0.5"
+      - "big_breasts_v2_epoch_30.safetensors:0.7"
+    notes: "Use (single woman:1.5), (one person:1.4) in prompt to reduce duplicates. Add 'isolated subject' for better results."
+
+  # Beach/tropical setting
+  woman_beach_sunset:
+    category: "nsfw"  
+    subject: "adult woman beach portrait"
+    positive: |
+      Radiant adult woman with wavy chestnut brown hair with subtle highlights, wearing a flowing white bohemian-style maxi dress with delicate lace trim and an open back that reveals her graceful figure including full natural bust and shapely curves. She walks barefoot along a pristine tropical beach at sunset with gentle waves lapping at her feet, the wet sand reflecting the vibrant pink and orange sky. Her expression is serene and peaceful, looking over her shoulder at the camera with a genuine warm smile as the ocean breeze catches her hair and dress. The composition captures the romantic tropical paradise setting with palm trees silhouetted against the colorful sunset sky, crystal-clear turquoise water, and soft white sand. Professional beach lifestyle photography, shot with a full-frame camera and 35mm prime lens at f/2.2. Natural golden hour lighting, dreamy color grading, 8K resolution.
+    negative: |
+      bad quality, blurry, low resolution, watermark, text, signatures, multiple people, crowds, children, urban setting, buildings, cartoon, anime, CGI, 3D render, distorted anatomy, unrealistic proportions, deformed body, mutated, disfigured, harsh lighting, overexposed, underexposed, grainy, pixelated, jpeg artifacts, ugly, old, wrinkled, masculine features, cloudy sky, stormy weather, winter
+    recommended_settings:
+      steps: 150
+      cfg: 11.0
+      sampler: dpmpp_sde
+      scheduler: karras
+    recommended_loras:
+      - "more_details.safetensors:0.5"
+      - "scenery_lora.safetensors:0.4"
+
