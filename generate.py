@@ -1727,6 +1727,8 @@ def main():
     parser.add_argument("--no-metadata", action="store_true", help="Disable JSON metadata sidecar upload")
     parser.add_argument("--no-embed-metadata", action="store_true", help="Disable embedding metadata in PNG files (default: enabled)")
     parser.add_argument("--quality-score", action="store_true", help="Run multi-dimensional quality scoring after generation")
+    parser.add_argument("--enhance-prompt", action="store_true", help="Enhance prompt using small LLM before generation")
+    parser.add_argument("--enhance-style", metavar="STYLE", help="Style hint for prompt enhancement (photorealistic, artistic, game-asset, etc.)")
     
     # Advanced generation parameters
     parser.add_argument("--steps", type=int, help="Number of sampling steps (1-150, default: 20)")
@@ -1878,6 +1880,36 @@ def main():
     # Set up Ctrl+C handler
     signal.signal(signal.SIGINT, signal_handler)
     current_output_path = args.output
+
+    # Enhance prompt if requested
+    original_prompt = args.prompt
+    if args.enhance_prompt:
+        try:
+            from comfy_gen.prompt_enhancer import enhance_prompt, is_available
+            
+            if not is_available():
+                print("[ERROR] Prompt enhancement requires transformers library")
+                print("[ERROR] Install with: pip install transformers torch")
+                sys.exit(EXIT_CONFIG_ERROR)
+            
+            if not args.quiet:
+                print(f"[INFO] Enhancing prompt...")
+                print(f"[INFO] Original: {original_prompt}")
+            
+            enhanced = enhance_prompt(
+                original_prompt,
+                style=args.enhance_style
+            )
+            
+            args.prompt = enhanced
+            
+            if not args.quiet:
+                print(f"[OK] Enhanced: {enhanced}")
+                
+        except Exception as e:
+            print(f"[ERROR] Prompt enhancement failed: {e}")
+            print(f"[INFO] Using original prompt")
+            # Continue with original prompt
 
     # Apply default negative prompt from config if not provided
     effective_negative_prompt = args.negative_prompt

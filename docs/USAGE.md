@@ -200,6 +200,95 @@ python3 generate.py \
     --output robot.png
 ```
 
+### Prompt Enhancement
+
+ComfyGen can automatically enhance prompts using a small language model (LLM) to improve image quality. The enhancer adds quality boosters, style modifiers, and technical details while maintaining your original subject and intent.
+
+**Installation:**
+```bash
+pip install transformers torch
+```
+
+**Basic Usage:**
+```bash
+# Simple enhancement
+python3 generate.py \
+    --workflow workflows/flux-dev.json \
+    --prompt "a cat" \
+    --enhance-prompt \
+    --output /tmp/cat.png
+
+# Enhanced output example: 
+# "A highly detailed photograph of a cat, professional pet photography, 
+#  soft natural lighting, shallow depth of field, 8K resolution, sharp focus"
+```
+
+**Style-Targeted Enhancement:**
+```bash
+# Photorealistic style
+python3 generate.py \
+    --workflow workflows/flux-dev.json \
+    --prompt "a sunset over mountains" \
+    --enhance-prompt \
+    --enhance-style photorealistic \
+    --output /tmp/sunset.png
+
+# Artistic style
+python3 generate.py \
+    --workflow workflows/flux-dev.json \
+    --prompt "a dragon" \
+    --enhance-prompt \
+    --enhance-style artistic \
+    --output /tmp/dragon.png
+
+# Game asset style
+python3 generate.py \
+    --workflow workflows/flux-dev.json \
+    --prompt "a battleship" \
+    --enhance-prompt \
+    --enhance-style game-asset \
+    --output /tmp/ship.png
+```
+
+**How It Works:**
+1. Uses a small LLM (Qwen2.5-0.5B by default) running on CPU
+2. Analyzes your prompt and adds:
+   - Quality boosters (8K, sharp focus, ultra detailed)
+   - Lighting keywords (cinematic, volumetric, golden hour)
+   - Composition terms (professional photography, centered)
+   - Camera settings (lens type, aperture, focal length)
+3. Maintains original subject and creative intent
+4. Target latency: <2 seconds per enhancement
+
+**Supported Styles:**
+- `photorealistic` - Adds photography-specific keywords
+- `artistic` - Focuses on artistic/illustrative elements
+- `game-asset` - Optimizes for game icons and assets
+- Leave blank for general enhancement
+
+**Model Configuration:**
+
+The enhancer uses Qwen/Qwen2.5-0.5B-Instruct by default (small, fast, CPU-friendly).
+
+Model is downloaded and cached on first use at: `~/.cache/comfy-gen/prompt-enhancer/`
+
+**Graceful Fallback:**
+
+If the model is unavailable or enhancement fails, the original prompt is used automatically.
+
+**Performance:**
+- Model size: ~500MB download on first use
+- Enhancement time: 1-3 seconds on CPU
+- Memory usage: ~2GB RAM
+
+**Tips:**
+- Works best with short, simple prompts (1-5 words)
+- Enhancement respects `prompt_catalog.yaml` quality boosters
+- Can be combined with `--validate` and `--auto-retry`
+- Enhanced prompts are shown in output for transparency
+
+---
+
 ### Validation
 
 ComfyGen includes CLIP-based validation to detect quality issues and auto-retry with adjusted prompts.
