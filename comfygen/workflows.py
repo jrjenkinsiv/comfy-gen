@@ -375,7 +375,13 @@ class WorkflowManager:
             sam_model: SAM model filename (default: sam_vit_b_01ec64.pth)
         
         Returns:
-            Modified workflow with transparency nodes
+            Modified workflow with transparency nodes, or original workflow
+            if required nodes (VAEDecode, SaveImage) are not found.
+            
+        Note:
+            This is a library function that silently fails (returns original workflow)
+            if prerequisites are not met. For verbose error messages, use the
+            enable_transparency() function in generate.py instead.
         """
         # Find the highest node ID
         numeric_keys = [int(k) for k in workflow.keys() if k.isdigit()]

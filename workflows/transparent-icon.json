@@ -23,7 +23,7 @@
   },
   "3": {
     "inputs": {
-      "text": "transparent background, no background, black background, complex background, multiple objects, cluttered, bad quality, blurry, low resolution, watermark, text",
+      "text": "complex background, cluttered background, multiple objects, duplicate, bad quality, blurry, low resolution, watermark, text, perspective view, angled",
       "clip": [
         "1",
         1
