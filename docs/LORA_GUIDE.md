@@ -1,5 +1,7 @@
 # LoRA Selection Guide
 
+**Last verified:** 2026-01-05
+
 ## CRITICAL: Video vs Image LoRAs
 
 **NEVER use video LoRAs for image generation.** This causes:
@@ -179,3 +181,7 @@ Trigger word: `pixarfk` or `pixel art style`
 ### GothicPixelArtV1.1 (Gothic Pixel)
 
 Trigger word: `gothic pixel art`
+
+---
+
+**Documentation Policy:** This is an authoritative reference document. Do NOT create new documentation files without explicit approval. Add new infrastructure information to existing docs only.

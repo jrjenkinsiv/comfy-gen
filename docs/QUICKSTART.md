@@ -1,5 +1,7 @@
 # Quick Start Guide
 
+**Last verified:** 2026-01-05
+
 Get your first image generated in 5 minutes.
 
 ## Prerequisites
@@ -194,3 +196,7 @@ python3 scripts/cancel_generation.py
 ```bash
 python3 generate.py --help
 ```
+
+---
+
+**Documentation Policy:** This is an authoritative reference document. Do NOT create new documentation files without explicit approval. Add new infrastructure information to existing docs only.

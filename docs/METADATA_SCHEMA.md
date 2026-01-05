@@ -1,5 +1,7 @@
 # Enhanced Metadata JSON Schema
 
+**Last verified:** 2026-01-05
+
 ## Overview
 
 This document describes the enhanced metadata JSON schema implemented to support comprehensive experiment tracking and reproducibility for image generation.
@@ -329,3 +331,7 @@ The embedding happens automatically when `generate.py` saves images, using PIL's
 3. **Tool Compatibility**: Works with ExifTool, ImageMagick, and image viewers
 4. **CivitAI Upload**: Images can be uploaded to CivitAI with full generation info
 5. **Searchability**: Desktop tools can index and search by metadata
+
+---
+
+**Documentation Policy:** This is an authoritative reference document. Do NOT create new documentation files without explicit approval. Add new infrastructure information to existing docs only.

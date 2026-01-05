@@ -1,5 +1,7 @@
 # NSFW Generation Guide
 
+**Last verified:** 2026-01-05
+
 Complete reference for generating explicit adult content with ComfyGen. Covers model selection, prompting techniques, LoRA usage, and quality optimization.
 
 ---
@@ -412,3 +414,7 @@ See GitHub issues:
 - [QUALITY_SYSTEM.md](QUALITY_SYSTEM.md) - Quality scoring and validation
 - [USAGE.md](USAGE.md) - General CLI usage
 - [MODEL_REGISTRY.md](MODEL_REGISTRY.md) - Installed models inventory
+
+---
+
+**Documentation Policy:** This is an authoritative reference document. Do NOT create new documentation files without explicit approval. Add new infrastructure information to existing docs only.

@@ -1,5 +1,7 @@
 # ComfyGen Documentation
 
+**Last verified:** 2026-01-05
+
 Comprehensive documentation for ComfyGen - a programmatic image/video generation pipeline using ComfyUI.
 
 ## Documentation Structure
@@ -325,3 +327,7 @@ When adding or updating documentation:
 ---
 
 **Last Updated:** 2026-01-05
+
+---
+
+**Documentation Policy:** This is the authoritative documentation index. Do NOT create new documentation files without explicit approval. Add new infrastructure information to existing docs only.

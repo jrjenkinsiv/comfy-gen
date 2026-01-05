@@ -1,5 +1,7 @@
 # API Reference
 
+**Last verified:** 2026-01-05
+
 This document provides technical documentation for ComfyGen's internal modules and functions.
 
 ## Table of Contents
@@ -890,6 +892,10 @@ while True:
 
 ## See Also
 
-- [USAGE.md](USAGE.md) - Usage guide for CLI and MCP server
-- [USAGE.md](USAGE.md) - Error handling patterns
+- [USAGE.md](USAGE.md) - Complete usage guide for CLI and MCP
+- [ARCHITECTURE.md](ARCHITECTURE.md) - System design and workflows
 - [MODEL_REGISTRY.md](MODEL_REGISTRY.md) - Available models
+
+---
+
+**Documentation Policy:** This is an authoritative reference document. Do NOT create new documentation files without explicit approval. Add new infrastructure information to existing docs only.

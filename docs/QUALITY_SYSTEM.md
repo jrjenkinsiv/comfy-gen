@@ -1,5 +1,7 @@
 # Quality System Design
 
+**Last verified:** 2026-01-05
+
 > Design document for ComfyGen's image quality assessment and iterative refinement system.
 > Based on academic research: AGIQA-3K, ImageReward, pyiqa benchmarks.
 
@@ -543,3 +545,7 @@ python3 -m comfy_gen.quality /tmp/image.png "original prompt"
 - [IQA-PyTorch](https://github.com/chaofengc/IQA-PyTorch) - Comprehensive IQA toolbox
 - [LAION Aesthetic](https://github.com/christophschuhmann/improved-aesthetic-predictor) - Aesthetic scoring
 - [CLIP](https://openai.com/research/clip) - Text-image similarity
+
+---
+
+**Documentation Policy:** This is an authoritative reference document. Do NOT create new documentation files without explicit approval. Add new infrastructure information to existing docs only.
