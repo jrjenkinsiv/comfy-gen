@@ -232,10 +232,33 @@ C:\Users\jrjen\comfy\models\
    - Include: subject, perspective, style, specific elements, what to avoid
 3. **Choose workflow** - SD 1.5 for images, Wan 2.2 for video
 4. **Set parameters appropriately:**
-   - Steps: 30 for drafts, 80+ for final/complex prompts
-   - CFG: 7.0 default, 8-10 for stricter prompt adherence
-5. **Generate** - `python3 generate.py --workflow <file> --prompt "<detailed_prompt>" --negative-prompt "<detailed_negative>" --steps 80 --output /tmp/output.png`
+   - Steps: 50-70 for quality, 30 for quick drafts
+   - CFG: 8.5-9.5 for NSFW/explicit (stricter adherence), 7.0-8.0 for general
+5. **Generate** - `python3 generate.py --workflow <file> --prompt "<detailed_prompt>" --negative-prompt "<detailed_negative>" --steps 70 --cfg 9.0 --output /tmp/output.png`
 6. **Return URL** - Image will be at `http://192.168.1.215:9000/comfy-gen/<timestamp>_<filename>`
+
+### CRITICAL: Video vs Image LoRAs
+
+**NEVER use Wan 2.2 video LoRAs (~307MB) for SD 1.5 image generation.**
+
+**How to tell the difference:**
+| Type | File Size | Use For |
+|------|-----------|---------|
+| SD 1.5 Image LoRAs | 10-170 MB | Image generation (majicmix, realistic vision) |
+| Wan 2.2 Video LoRAs | 300+ MB | Video generation only |
+
+**Common WRONG LoRAs for images:**
+- `erect_penis_epoch_80.safetensors` (307MB) - VIDEO LORA, causes distorted anatomy!
+- `deepthroat_epoch_80.safetensors` (307MB) - VIDEO LORA
+- `dicks_epoch_100.safetensors` (307MB) - VIDEO LORA
+- Any file with `wan`, `WAN`, `i2v`, `t2v` in name - VIDEO LORA
+
+**CORRECT LoRAs for images:**
+- `airoticart_penis.safetensors` (151MB) - Trigger: `penerec` (erect), `penflac` (flaccid)
+- `polyhedron_skin.safetensors` (151MB) - Realistic skin texture
+- `realora_skin.safetensors` (151MB) - Subtle skin enhancement
+
+**See `docs/LORA_GUIDE.md` for complete LoRA selection guide.**
 
 See `docs/USAGE.md` for:
 - LoRA selection and strength guidelines
