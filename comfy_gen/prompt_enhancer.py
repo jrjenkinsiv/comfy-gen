@@ -188,11 +188,17 @@ Output ONLY the enhanced prompt, nothing else."""
         
         try:
             # Generate enhanced prompt
+            # Use dedicated pad_token_id if available, fallback to eos_token_id
+            pad_token = (
+                self.tokenizer.pad_token_id 
+                if self.tokenizer.pad_token_id is not None 
+                else self.tokenizer.eos_token_id
+            )
             result = self.pipeline(
                 formatted_prompt,
                 max_new_tokens=256,
                 num_return_sequences=1,
-                pad_token_id=self.tokenizer.pad_token_id if self.tokenizer.pad_token_id is not None else self.tokenizer.eos_token_id,
+                pad_token_id=pad_token,
             )
             
             # Extract the generated text

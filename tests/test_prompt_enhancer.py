@@ -207,11 +207,11 @@ class TestPromptEnhancerAPI:
             # Reset to clean state
             reset_enhancer()
             
-            result = enhance_prompt("a cat", style="photorealistic")
+            result = enhancer.enhance("a cat", style="photorealistic")
             
             # Should create enhancer and call enhance
-            assert mock_enhancer_class.called
-            assert mock_enhancer.enhance.called
+            mock_enhancer_class.assert_called()
+            mock_enhancer.enhance.assert_called()
             assert result == "enhanced prompt"
     
     @patch('comfy_gen.prompt_enhancer.PromptEnhancer')
