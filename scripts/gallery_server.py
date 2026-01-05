@@ -403,31 +403,57 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         
         async function loadGallery() {
             const gallery = document.getElementById('gallery');
-            gallery.innerHTML = '<div class="loading">Loading...</div>';
+            gallery.innerHTML = '<div class="loading">Loading images...</div>';
             
             try {
-                // Fetch bucket listing
-                const resp = await fetch(`${MINIO}/${BUCKET}/?list-type=2&max-keys=500`);
-                const xml = await resp.text();
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(xml, 'text/xml');
+                // Fetch ALL bucket objects using S3 continuation token pagination
+                let keys = [];
+                let continuationToken = null;
+                let pageCount = 0;
                 
-                // Get all keys
-                const keys = Array.from(doc.querySelectorAll('Key')).map(k => k.textContent);
+                do {
+                    let url = `${MINIO}/${BUCKET}/?list-type=2&max-keys=1000`;
+                    if (continuationToken) {
+                        url += `&continuation-token=${encodeURIComponent(continuationToken)}`;
+                    }
+                    
+                    const resp = await fetch(url);
+                    const xml = await resp.text();
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(xml, 'text/xml');
+                    
+                    // Get keys from this page
+                    const pageKeys = Array.from(doc.querySelectorAll('Key')).map(k => k.textContent);
+                    keys = keys.concat(pageKeys);
+                    
+                    // Check for more pages
+                    const isTruncated = doc.querySelector('IsTruncated')?.textContent === 'true';
+                    continuationToken = isTruncated ? doc.querySelector('NextContinuationToken')?.textContent : null;
+                    pageCount++;
+                    
+                    gallery.innerHTML = `<div class="loading">Loading images... (${keys.length} objects found)</div>`;
+                } while (continuationToken);
+                
                 const pngFiles = keys.filter(k => k.endsWith('.png') && !k.endsWith('.png.json'));
+                const jsonKeys = new Set(keys.filter(k => k.endsWith('.json')));
                 
                 document.getElementById('stats').textContent = `${pngFiles.length} images in gallery`;
+                gallery.innerHTML = `<div class="loading">Loading metadata... (0/${pngFiles.length})</div>`;
                 
-                // Load metadata for each image
+                // Load metadata in parallel batches for speed
                 allImages = [];
-                for (const png of pngFiles) {
-                    const jsonKey = png + '.json';
-                    let meta = { prompt: 'No metadata', loras: [], validation_score: null, quality_grade: null, quality_score: null };
-                    
-                    if (keys.includes(jsonKey)) {
-                        try {
-                            const metaResp = await fetch(`${MINIO}/${BUCKET}/${jsonKey}`);
-                            const rawMeta = await metaResp.json();
+                const batchSize = 20;
+                
+                for (let i = 0; i < pngFiles.length; i += batchSize) {
+                    const batch = pngFiles.slice(i, i + batchSize);
+                    const batchPromises = batch.map(async (png) => {
+                        const jsonKey = png + '.json';
+                        let meta = { prompt: 'No metadata', loras: [], validation_score: null, quality_grade: null, quality_score: null };
+                        
+                        if (jsonKeys.has(jsonKey)) {
+                            try {
+                                const metaResp = await fetch(`${MINIO}/${BUCKET}/${jsonKey}`);
+                                const rawMeta = await metaResp.json();
                             
                             // Handle both old flat format and new nested format
                             if (rawMeta.input) {
@@ -467,13 +493,20 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                         } catch (e) {
                             console.error(`Failed to load metadata for ${png}:`, e);
                         }
-                    }
-                    
-                    allImages.push({
-                        key: png,
-                        url: `${MINIO}/${BUCKET}/${png}`,
-                        ...meta
+                        }
+                        
+                        return {
+                            key: png,
+                            url: `${MINIO}/${BUCKET}/${png}`,
+                            ...meta
+                        };
                     });
+                    
+                    const batchResults = await Promise.all(batchPromises);
+                    allImages = allImages.concat(batchResults);
+                    
+                    // Update progress
+                    gallery.innerHTML = `<div class="loading">Loading metadata... (${Math.min(i + batchSize, pngFiles.length)}/${pngFiles.length})</div>`;
                 }
                 
                 // Sort newest first by default
@@ -546,6 +579,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             gallery.innerHTML = pageImages.map(img => {
                 const isFavorite = favorites.has(img.key);
                 const isSelected = selectedImages.has(img.key);
+                const qualityScore = typeof img.quality_score === 'number' ? img.quality_score.toFixed(1) : null;
+                const clipScore = typeof img.validation_score === 'number' ? img.validation_score.toFixed(2) : null;
                 return `
                 <div class="card ${isSelected ? 'selected' : ''} ${isFavorite ? 'favorited' : ''}" 
                      data-key="${img.key}"
@@ -556,13 +591,13 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                         <div class="card-title">${img.key}</div>
                         <div class="prompt">${escapeHtml(img.prompt || 'No prompt')}</div>
                         <div class="meta">
-                            ${img.quality_score ? `<span class="tag score" title="Composite Score">Score: ${img.quality_score.toFixed(1)}/10</span>` : ''}
+                            ${qualityScore ? `<span class="tag score" title="Composite Score">Score: ${qualityScore}/10</span>` : ''}
                             ${isFavorite ? `<span class="tag favorite" onclick="toggleFavorite(event, '${img.key}')">Favorite</span>` : ''}
                             ${img.seed ? `<span class="tag">seed: ${img.seed}</span>` : ''}
                             ${img.steps ? `<span class="tag">steps: ${img.steps}</span>` : ''}
                             ${img.cfg ? `<span class="tag">cfg: ${img.cfg}</span>` : ''}
                             ${img.loras?.map(l => `<span class="tag lora">${l.name.split('.')[0]}:${l.strength}</span>`).join('') || ''}
-                            ${img.validation_score !== null ? `<span class="tag score">CLIP: ${img.validation_score.toFixed(2)}</span>` : ''}
+                            ${clipScore ? `<span class="tag score">CLIP: ${clipScore}</span>` : ''}
                         </div>
                     </div>
                 </div>
