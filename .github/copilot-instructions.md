@@ -24,6 +24,16 @@ Even documentation changes by the Orchestrator must be tracked:
 - Commit messages must reference issue numbers (`Closes #N`)
 - No "drive-by" commits without issue tracking
 
+**CRITICAL: Proactive Workflow Improvement.**
+When you encounter a workflow gap, ambiguity, or pattern that causes repeated confusion:
+1. **Create a meta-issue immediately** - Don't wait for the user to tell you
+2. **Reference the triggering context** - What issue/PR/conversation exposed this gap?
+3. **Propose the fix** - Include specific text to add or modify in the issue body
+4. **Self-assign OR assign to Copilot** - Simple additions → Copilot; complex redesigns → self
+5. **Implement the fix** - Update `copilot-instructions.md` with tracked commits
+
+This ensures the workflow improves iteratively without repeated user intervention. If the same confusion occurs twice, create an issue to prevent a third occurrence.
+
 ### Copilot Coding Agent - The Worker
 **Role:** Autonomous code implementer. You do not plan or manage issues. You write code to satisfy Acceptance Criteria.
 **Trigger:** Assignment to a GitHub issue.
