@@ -893,7 +893,7 @@ while True:
 ## See Also
 
 - [USAGE.md](USAGE.md) - Usage guide for CLI and MCP server
-- [USAGE.md](USAGE.md) - Error handling patterns
+- [ARCHITECTURE.md](ARCHITECTURE.md) - System design and workflows
 - [MODEL_REGISTRY.md](MODEL_REGISTRY.md) - Available models
 
 ---
