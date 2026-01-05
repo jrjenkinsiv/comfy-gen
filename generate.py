@@ -939,6 +939,109 @@ def modify_dimensions(workflow, width=None, height=None):
                     print(f"[OK] Updated height in node {node_id}: {height}")
     return workflow
 
+def enable_transparency(workflow, sam_model="sam_vit_b_01ec64.pth"):
+    """Enable transparent background by injecting SAM nodes into workflow.
+    
+    This function modifies the workflow to:
+    1. Load SAM model for segmentation
+    2. Detect and segment the main subject
+    3. Apply alpha mask to create transparent background
+    4. Redirect SaveImage to save the transparent output
+    
+    Args:
+        workflow: The workflow dictionary
+        sam_model: SAM model filename (default: sam_vit_b_01ec64.pth)
+    
+    Returns:
+        dict: Modified workflow with transparency nodes
+    """
+    # Find the highest node ID
+    numeric_keys = [int(k) for k in workflow.keys() if k.isdigit()]
+    if not numeric_keys:
+        print("[ERROR] Cannot enable transparency: No numeric node IDs found in workflow")
+        return workflow
+    
+    max_id = max(numeric_keys)
+    
+    # Find VAEDecode node (source of the image)
+    vae_decode_id = None
+    for node_id, node in workflow.items():
+        if node.get("class_type") == "VAEDecode":
+            vae_decode_id = node_id
+            break
+    
+    if not vae_decode_id:
+        print("[ERROR] Cannot enable transparency: No VAEDecode node found in workflow")
+        return workflow
+    
+    # Find SaveImage node (will be redirected to save transparent output)
+    save_image_id = None
+    for node_id, node in workflow.items():
+        if node.get("class_type") == "SaveImage":
+            save_image_id = node_id
+            break
+    
+    if not save_image_id:
+        print("[ERROR] Cannot enable transparency: No SaveImage node found in workflow")
+        return workflow
+    
+    # Create new node IDs
+    sam_loader_id = str(max_id + 1)
+    sam_detector_id = str(max_id + 2)
+    composite_id = str(max_id + 3)
+    
+    # Add SAM model loader node
+    workflow[sam_loader_id] = {
+        "class_type": "SAMModelLoader (segment anything)",
+        "inputs": {
+            "model_name": sam_model
+        },
+        "_meta": {
+            "title": "Load SAM Model"
+        }
+    }
+    
+    # Add SAM detector node
+    workflow[sam_detector_id] = {
+        "class_type": "SAMDetector (segment anything)",
+        "inputs": {
+            "device_mode": "AUTO",
+            "sam_model": [sam_loader_id, 0],
+            "image": [vae_decode_id, 0]
+        },
+        "_meta": {
+            "title": "SAM Detector"
+        }
+    }
+    
+    # Add ImageCompositeMasked node to apply alpha channel
+    workflow[composite_id] = {
+        "class_type": "ImageCompositeMasked",
+        "inputs": {
+            "channel": "alpha",
+            "invert": False,
+            "image": [vae_decode_id, 0],
+            "mask": [sam_detector_id, 0]
+        },
+        "_meta": {
+            "title": "Apply Alpha Mask"
+        }
+    }
+    
+    # Redirect SaveImage node to use the transparent output
+    workflow[save_image_id]["inputs"]["images"] = [composite_id, 0]
+    
+    # Update SaveImage filename prefix to indicate transparency
+    if "filename_prefix" in workflow[save_image_id]["inputs"]:
+        prefix = workflow[save_image_id]["inputs"]["filename_prefix"]
+        if not prefix.endswith("_transparent"):
+            workflow[save_image_id]["inputs"]["filename_prefix"] = f"{prefix}_transparent"
+    
+    print(f"[OK] Enabled transparency with SAM model '{sam_model}'")
+    print(f"[OK] Added nodes: SAMLoader({sam_loader_id}), SAMDetector({sam_detector_id}), Composite({composite_id})")
+    
+    return workflow
+
 def validate_generation_params(steps=None, cfg=None, denoise=None, width=None, height=None):
     """Validate generation parameters are within acceptable ranges.
     
@@ -1821,6 +1924,7 @@ def main():
     parser.add_argument("--resize", help="Resize input image to WxH (e.g., 512x512)")
     parser.add_argument("--crop", choices=['center', 'cover', 'contain'], help="Crop mode for resize")
     parser.add_argument("--denoise", type=float, help="Denoise strength (0.0-1.0) for img2img")
+    parser.add_argument("--transparent", action="store_true", help="Generate image with transparent background (requires SAM model)")
     parser.add_argument("--lora", action="append", metavar="NAME:STRENGTH", 
                         help="Add LoRA with strength (e.g., 'style.safetensors:0.8'). Can be repeated for multiple LoRAs.")
     parser.add_argument("--lora-preset", metavar="PRESET_NAME",
@@ -2306,6 +2410,10 @@ def main():
     # Apply dimension parameters to workflow
     if width is not None or height is not None:
         workflow = modify_dimensions(workflow, width=width, height=height)
+    
+    # Apply transparency if requested
+    if args.transparent:
+        workflow = enable_transparency(workflow)
 
     # Extract workflow parameters and LoRAs for metadata
     workflow_params = extract_workflow_params(workflow)

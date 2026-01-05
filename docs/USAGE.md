@@ -115,6 +115,51 @@ python3 generate.py \
 - **0.7**: Significant transformation
 - **0.9**: Heavy transformation
 
+### Transparent Background Generation
+
+Generate images with transparent backgrounds for game assets, icons, and compositing:
+
+```bash
+# Using dedicated transparent workflow
+python3 generate.py \
+    --workflow workflows/transparent-icon.json \
+    --prompt "a battleship, top-down view, game icon style, centered" \
+    --output /tmp/ship_icon.png
+
+# Adding transparency to any workflow
+python3 generate.py \
+    --workflow workflows/flux-dev.json \
+    --prompt "a fantasy sword, isometric view, clean object" \
+    --transparent \
+    --output /tmp/sword_transparent.png
+
+# High-quality icon with specific parameters
+python3 generate.py \
+    --workflow workflows/transparent-icon.json \
+    --prompt "detailed spaceship, top-down orthographic view, game asset style" \
+    --negative-prompt "perspective, background, multiple objects, angled view" \
+    --steps 50 \
+    --cfg 8.0 \
+    --width 512 \
+    --height 512 \
+    --output /tmp/spaceship.png
+```
+
+**How It Works:**
+1. Generates image with solid white background
+2. Uses SAM (Segment Anything Model) to detect the main subject
+3. Removes background and creates PNG with alpha channel
+4. Works best with centered, single-object compositions
+
+**Prompt Tips for Icons:**
+- **Include:** "centered", "isolated", "clean", "product shot", "top-down view"
+- **Negative:** "background", "multiple objects", "cluttered", "perspective"
+- **Best for:** Game icons, UI elements, product images, character sprites
+
+**Requirements:**
+- SAM model: `sam_vit_b_01ec64.pth` (already available in `models/sams/`)
+- PNG output format (default)
+
 ### Video Generation
 
 ```bash
@@ -876,6 +921,28 @@ print(f"Prompt: {info['generation_params']['positive_prompt']}")
 await delete_image("old_image.png")
 ```
 
+**Transparent Background Generation:**
+```python
+# Generate game icon with transparent background
+result = await generate_image(
+    prompt="a battleship, top-down view, game icon style, centered",
+    negative_prompt="background, perspective, multiple objects",
+    transparent=True,
+    width=512,
+    height=512,
+    steps=50,
+    cfg=8.0
+)
+# Returns PNG with alpha channel at result["url"]
+
+# Verify alpha channel
+from PIL import Image
+import requests
+img_data = requests.get(result["url"]).content
+img = Image.open(BytesIO(img_data))
+print(f"Has transparency: {'A' in img.mode}")  # True for RGBA
+```
+
 ---
 
 ## Workflows
@@ -885,6 +952,7 @@ ComfyGen includes several pre-built workflows for different tasks:
 | Workflow | Type | Input | Output | Time | Use Case |
 |----------|------|-------|--------|------|----------|
 | `flux-dev.json` | T2I | None | 512x512 PNG | 10-15s | Quick image generation |
+| `transparent-icon.json` | T2I | None | 512x512 PNG (alpha) | 15-20s | Icons, game assets, UI elements |
 | `sd15-img2img.json` | I2I | Image | Variable PNG | 10-20s | Image transformation |
 | `wan22-t2v.json` | T2V | None | 848x480 MP4 | 2-5min | Video from text |
 | `wan22-i2v.json` | I2V | Image | 848x480 MP4 | 2-5min | Animate images |
@@ -897,9 +965,11 @@ Need video/animation?
 │         ├─ YES → wan22-i2v.json (Image-to-Video)
 │         └─ NO  → wan22-t2v.json (Text-to-Video)
 │
-└─ NO  → Transform existing image?
-          ├─ YES → sd15-img2img.json
-          └─ NO  → flux-dev.json (SD 1.5)
+└─ NO  → Need transparent background?
+          ├─ YES → transparent-icon.json (Icons/Assets)
+          └─ NO  → Transform existing image?
+                    ├─ YES → sd15-img2img.json
+                    └─ NO  → flux-dev.json (SD 1.5)
 ```
 
 ---

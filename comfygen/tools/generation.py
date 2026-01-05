@@ -169,6 +169,7 @@ async def generate_image(
     scheduler: str = "normal",
     seed: int = -1,
     loras: Optional[List[Dict[str, Any]]] = None,
+    transparent: bool = False,
     filename: Optional[str] = None,
     output_path: Optional[str] = None,
     validate: bool = True,
@@ -191,6 +192,7 @@ async def generate_image(
         scheduler: Scheduler type
         seed: Random seed (-1 for random)
         loras: List of LoRAs with name and strength
+        transparent: Generate image with transparent background (requires SAM model)
         filename: Output filename (auto-generated if None)
         output_path: Optional local file path to save output image
         validate: Run CLIP validation after generation (default: True)
@@ -272,6 +274,10 @@ async def generate_image(
                     strength = lora_spec.get("strength", 1.0)
                     if lora_name:
                         workflow = workflow_mgr.inject_lora(workflow, lora_name, strength, strength)
+            
+            # Apply transparency if requested
+            if transparent:
+                workflow = workflow_mgr.enable_transparency(workflow)
             
             # Queue workflow
             prompt_id = comfyui.queue_prompt(workflow)
