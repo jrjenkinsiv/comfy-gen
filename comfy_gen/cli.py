@@ -8,6 +8,13 @@ import os
 import sys
 from pathlib import Path
 
+# Add project root to path so we can import generate.py
+# This is needed when running as installed package (comfy command)
+# since generate.py is at project root, not in the package
+_PROJECT_ROOT = Path(__file__).parent.parent
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+
 import click
 
 
