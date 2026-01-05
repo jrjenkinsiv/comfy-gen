@@ -139,6 +139,41 @@ class CivitAIClient:
         except Exception:
             return None
     
+    def get_model_by_hash(self, file_hash: str) -> Optional[Dict[str, Any]]:
+        """Look up model version by file hash (SHA256, AutoV2, etc).
+        
+        This is the AUTHORITATIVE way to identify what base model a LoRA
+        or checkpoint is designed for. Use this instead of guessing by file size.
+        
+        Args:
+            file_hash: SHA256 hash of the .safetensors file
+            
+        Returns:
+            Model version info including baseModel, trainedWords, modelId
+        """
+        try:
+            response = self.session.get(
+                f"{self.BASE_URL}/model-versions/by-hash/{file_hash}",
+                timeout=30
+            )
+            if response.status_code == 200:
+                data = response.json()
+                return {
+                    "model_name": data.get("model", {}).get("name"),
+                    "model_id": data.get("modelId"),
+                    "version_id": data.get("id"),
+                    "version_name": data.get("name"),
+                    "base_model": data.get("baseModel"),
+                    "trained_words": data.get("trainedWords", []),
+                    "download_url": data.get("downloadUrl"),
+                    "files": data.get("files", []),
+                }
+            elif response.status_code == 404:
+                return {"error": "Not found on CivitAI"}
+            return None
+        except Exception as e:
+            return {"error": str(e)}
+    
     def get_download_url(
         self,
         model_id: int,
