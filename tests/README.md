@@ -70,7 +70,7 @@ python3 tests/manual_test_transparent.py
 ### Manual Tests
 - **Scope:** Full end-to-end workflows requiring human verification
 - **Mocking:** None - uses real ComfyUI API and generates actual images
-- **Network:** Requires local network access to ComfyUI server (192.168.1.215:8188)
+- **Network:** Requires local network access to ComfyUI server (default: 192.168.1.215:8188, configurable via `COMFY_SERVER_ADDRESS` environment variable)
 - **CI:** Not suitable for automated CI
 
 ### External API Tests
@@ -132,20 +132,26 @@ python3 tests/manual_test_transparent.py
 Currently, CI focuses on generation workflows rather than running pytest. Future CI improvements could include:
 
 ```yaml
-# Future CI test job
-- name: Run Unit Tests
-  run: |
-    pytest tests/ -v -m "not network_required"
-    
-- name: Run Integration Tests (Local Network)
-  run: |
-    pytest tests/ -v -m "network_required"
-  if: runner.name == 'ant-man'  # Self-hosted runner only
+# Future CI test job (proposed)
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run Unit Tests
+        run: |
+          pytest tests/ -v -m "not network_required"
+      
+      - name: Run Integration Tests (Local Network)
+        if: runner.name == 'ant-man'  # Self-hosted runner only
+        run: |
+          pytest tests/ -v -m "network_required"
 ```
 
 ### Test Markers (Proposed)
+To enable selective test execution, tests could be marked with pytest markers:
+
 ```python
-# In test files, add markers:
+# Example marker usage (not currently implemented):
 import pytest
 
 @pytest.mark.network_required
@@ -162,7 +168,8 @@ def test_civitai_api():
 ### Pre-commit Checks
 ```bash
 # Run before committing (no network required)
-pytest tests/ -v -m "not network_required and not internet_required"
+# Note: Marker-based filtering not yet implemented, run all tests or specific files
+pytest tests/test_validation.py tests/test_quality.py tests/test_generate.py -v
 ruff check . --fix
 mypy comfygen/ --config-file pyproject.toml
 ```
