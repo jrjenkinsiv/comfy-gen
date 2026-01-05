@@ -50,7 +50,7 @@ python3 generate.py --workflow workflows/wan22-t2v.json \
     --prompt "camera slowly pans across mountains" \
     --output /tmp/video.mp4
 ```
-See [USAGE.md - Video Generation](USAGE.md#video-to-image) for details.
+See [USAGE.md - Video Generation](USAGE.md#video-generation) for details.
 
 ### Work with Models and LoRAs
 
@@ -70,7 +70,7 @@ See [MODEL_REGISTRY.md - Quick Download](MODEL_REGISTRY.md#quick-download) for a
 --lora "polyhedron_skin.safetensors:0.4" \
 --lora "add_detail.safetensors:0.5"
 ```
-See [LORA_GUIDE.md - Stacking Strategy](LORA_GUIDE.md#stacking-strategy) for strength guidelines.
+See [LORA_GUIDE.md - LoRA Stacking Best Practices](LORA_GUIDE.md#lora-stacking-best-practices) for strength guidelines.
 
 ### Use MCP Servers (AI Assistant Integration)
 
@@ -112,7 +112,7 @@ See [USAGE.md - Validation](USAGE.md#validation) for how validation works.
 
 **Quick example:**
 ```bash
-python3 generate.py --workflow workflows/sd15-nsfw.json \
+python3 generate.py --workflow workflows/majicmix-realistic.json \
     --prompt "detailed explicit prompt here" \
     --lora "airoticart_penis.safetensors:0.85" \
     --steps 70 --cfg 9.0
