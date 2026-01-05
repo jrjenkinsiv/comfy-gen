@@ -147,6 +147,56 @@ def print_audit_results(results: list[dict]) -> None:
         print(f"  {safe}{cat}: {count} LoRAs")
 
 
+def update_catalog(results: list[dict], catalog_path: str = "lora_catalog.yaml") -> None:
+    """Update lora_catalog.yaml with CivitAI verification data."""
+    # Read existing catalog
+    with open(catalog_path, "r") as f:
+        catalog = yaml.safe_load(f)
+    
+    if "loras" not in catalog:
+        print("[ERROR] No 'loras' key found in catalog")
+        return
+    
+    # Build lookup from audit results
+    audit_map = {r["filename"]: r for r in results}
+    
+    updated = 0
+    added = 0
+    
+    # Update existing entries
+    for lora in catalog["loras"]:
+        filename = lora.get("filename")
+        if filename in audit_map:
+            audit = audit_map[filename]
+            if audit.get("base_model") and audit["base_model"] not in ("not_found", "hash_error"):
+                lora["civitai_verified"] = True
+                lora["civitai_base_model"] = audit["base_model"]
+                if audit.get("civitai_model_id"):
+                    lora["civitai_model_id"] = audit["civitai_model_id"]
+                if audit.get("trained_words"):
+                    lora["civitai_triggers"] = audit["trained_words"]
+                updated += 1
+            else:
+                lora["civitai_verified"] = False
+                lora["civitai_base_model"] = "unknown (not on CivitAI)"
+    
+    # Find LoRAs on moira not in catalog
+    catalog_filenames = {l.get("filename") for l in catalog["loras"]}
+    missing = [r for r in results if r["filename"] not in catalog_filenames]
+    
+    if missing:
+        print(f"\n[WARN] {len(missing)} LoRAs on moira not in catalog:")
+        for m in missing:
+            print(f"  - {m['filename']} ({m.get('base_model', 'unknown')})")
+    
+    # Write updated catalog
+    with open(catalog_path, "w") as f:
+        yaml.dump(catalog, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
+    
+    print(f"\n[OK] Updated {updated} entries in {catalog_path}")
+    print(f"[INFO] {len(missing)} LoRAs not in catalog (add manually if needed)")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Audit LoRAs via CivitAI hash lookup")
     parser.add_argument("--file", "-f", help="Audit a specific file only")
@@ -173,6 +223,9 @@ def main():
         print(status)
     
     print_audit_results(results)
+    
+    if args.update_catalog:
+        update_catalog(results)
     
     if args.output:
         with open(args.output, "w") as f:

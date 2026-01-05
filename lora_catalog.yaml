@@ -29,6 +29,8 @@ loras:
     recommended_strength: 1.0  # Must be 1.0 for acceleration
     description: "Reduces Wan 2.2 T2V high noise generation to 4 steps for faster video creation"
     use_cases: ["fast video generation", "text-to-video with high noise model"]
+    source: "HuggingFace lightx2v/Wan2.2-Distill-Loras"
+    civitai_verified: false  # Not on CivitAI - from HuggingFace
     
   - filename: "wan2.2_t2v_lightx2v_4steps_lora_v1.1_low_noise.safetensors"
     tags: ["acceleration", "speed", "4-step", "wan2.2", "text-to-video", "low-noise"]
@@ -36,6 +38,8 @@ loras:
     recommended_strength: 1.0
     description: "Reduces Wan 2.2 T2V low noise generation to 4 steps for faster video creation"
     use_cases: ["fast video generation", "text-to-video with low noise model"]
+    source: "HuggingFace lightx2v/Wan2.2-Distill-Loras"
+    civitai_verified: false  # Not on CivitAI - from HuggingFace
     
   - filename: "wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise.safetensors"
     tags: ["acceleration", "speed", "4-step", "wan2.2", "image-to-video", "high-noise"]
@@ -43,6 +47,8 @@ loras:
     recommended_strength: 1.0
     description: "Reduces Wan 2.2 I2V high noise generation to 4 steps for faster image animation"
     use_cases: ["fast video generation", "image-to-video with high noise model", "animation"]
+    source: "HuggingFace lightx2v/Wan2.2-Distill-Loras"
+    civitai_verified: false  # Not on CivitAI - from HuggingFace
     
   - filename: "wan2.2_i2v_lightx2v_4steps_lora_v1_low_noise.safetensors"
     tags: ["acceleration", "speed", "4-step", "wan2.2", "image-to-video", "low-noise"]
@@ -50,6 +56,8 @@ loras:
     recommended_strength: 1.0
     description: "Reduces Wan 2.2 I2V low noise generation to 4 steps for faster image animation"
     use_cases: ["fast video generation", "image-to-video with low noise model", "animation"]
+    source: "HuggingFace lightx2v/Wan2.2-Distill-Loras"
+    civitai_verified: false  # Not on CivitAI - from HuggingFace
     
   - filename: "Wan2.2-I2V-A14B-4steps-lora-rank64-Seko-V1_high_noise_model.safetensors"
     tags: ["acceleration", "speed", "4-step", "wan2.2", "image-to-video", "seko", "high-noise"]
@@ -57,6 +65,8 @@ loras:
     recommended_strength: 1.0  # Must be 1.0 for acceleration
     description: "Seko's 4-step acceleration LoRA for Wan 2.2 I2V high noise model"
     use_cases: ["fast video generation", "image-to-video", "animation", "alternative acceleration"]
+    source: "HuggingFace Kijai/WanVideo_comfy"
+    civitai_verified: false  # Community LoRA - not on CivitAI
     
   # ========================================
   # PHYSICS and MOTION LoRAs
@@ -120,6 +130,8 @@ loras:
     recommended_strength: 0.7  # Range: 0.5-0.9
     description: "Improves landscape and scenery generation quality"
     use_cases: ["landscapes", "nature scenes", "environments", "scenery"]
+    source: "HuggingFace XLabs-AI/flux-lora-collection"
+    civitai_verified: false  # Not on CivitAI - from HuggingFace
     
   - filename: "mjv6_lora.safetensors"
     tags: ["midjourney", "style", "artistic", "flux", "mjv6"]
@@ -127,6 +139,8 @@ loras:
     recommended_strength: 0.8  # Range: 0.6-1.0
     description: "Midjourney v6 aesthetic style for artistic images"
     use_cases: ["artistic images", "midjourney style", "stylized rendering"]
+    source: "HuggingFace XLabs-AI/flux-lora-collection"
+    civitai_verified: false  # Not on CivitAI - from HuggingFace
     
   - filename: "art_lora.safetensors"
     tags: ["art", "artistic", "painting", "flux", "creative"]
@@ -134,6 +148,8 @@ loras:
     recommended_strength: 0.7  # Range: 0.5-0.9
     description: "Artistic and painterly style enhancement"
     use_cases: ["digital art", "paintings", "artistic style"]
+    source: "HuggingFace XLabs-AI/flux-lora-collection"
+    civitai_verified: false  # Not on CivitAI - from HuggingFace
     
   - filename: "anime_lora.safetensors"
     tags: ["anime", "manga", "japanese", "flux", "cartoon"]
@@ -141,6 +157,8 @@ loras:
     recommended_strength: 0.8  # Range: 0.6-1.0
     description: "Anime and manga art style"
     use_cases: ["anime characters", "manga style", "japanese animation"]
+    source: "HuggingFace XLabs-AI/flux-lora-collection"
+    civitai_verified: false  # Not on CivitAI - from HuggingFace
     
   - filename: "disney_lora.safetensors"
     tags: ["disney", "cartoon", "animation", "flux", "pixar"]
@@ -148,6 +166,8 @@ loras:
     recommended_strength: 0.8  # Range: 0.6-1.0
     description: "Disney/Pixar animation style"
     use_cases: ["cartoon characters", "disney style", "animated look"]
+    source: "HuggingFace XLabs-AI/flux-lora-collection"
+    civitai_verified: false  # Not on CivitAI - from HuggingFace
 
   # ========================================
   # DETAIL ENHANCEMENT LoRAs - Improve quality and sharpness
@@ -335,6 +355,8 @@ loras:
     recommended_strength: 0.7
     description: "Adult deepthroat for Wan 2.2 I2V low noise"
     category: "nsfw"
+    source: "Community-trained (discord/civitai)"
+    civitai_verified: false  # Not found on CivitAI
 
   - filename: "wan_cumshot.safetensors"
     tags: ["nsfw", "adult", "wan2.2", "cumshot"]
@@ -342,6 +364,8 @@ loras:
     recommended_strength: 0.7
     description: "Adult cumshot for Wan 2.2"
     category: "nsfw"
+    source: "Community-trained (discord/civitai)"
+    civitai_verified: false  # Not found on CivitAI
 
   - filename: "WAN_dr34mj0b.safetensors"
     tags: ["nsfw", "adult", "wan2.2", "blowjob"]
@@ -349,6 +373,8 @@ loras:
     recommended_strength: 0.7
     description: "Adult dreamjob for Wan 2.2"
     category: "nsfw"
+    source: "Community-trained (discord/civitai)"
+    civitai_verified: false  # Not found on CivitAI
 
   - filename: "wan2.2-rapid-mega-aio-v1.safetensors"
     tags: ["nsfw", "adult", "wan2.2", "multi-purpose"]
@@ -356,6 +382,8 @@ loras:
     recommended_strength: 0.7
     description: "All-in-one adult LoRA for Wan 2.2"
     category: "nsfw"
+    source: "Community-trained (discord/civitai)"
+    civitai_verified: false  # Not found on CivitAI
 
   - filename: "doggyPOV_v1_1.safetensors"
     tags: ["nsfw", "adult", "wan2.2", "pov", "doggy"]
@@ -363,6 +391,8 @@ loras:
     recommended_strength: 0.7
     description: "Adult doggy POV for Wan 2.2"
     category: "nsfw"
+    source: "Community-trained (discord/civitai)"
+    civitai_verified: false  # Not found on CivitAI
 
   - filename: "BetterTitfuck_v4_July2025.safetensors"
     tags: ["nsfw", "adult", "wan2.2", "titfuck"]
@@ -370,6 +400,8 @@ loras:
     recommended_strength: 0.7
     description: "Adult titfuck for Wan 2.2"
     category: "nsfw"
+    source: "Community-trained (discord/civitai)"
+    civitai_verified: false  # Not found on CivitAI
 
   # --- Wan 2.2 Video NSFW LoRAs ---
   # WARNING: These are VIDEO LoRAs - DO NOT use for image generation!
