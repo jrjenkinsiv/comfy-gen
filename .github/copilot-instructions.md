@@ -593,7 +593,7 @@ When building new services, be intentional about placement to avoid later migrat
 | Machine | IP | Currently Running Services |
 |---------|-----|---------------------------|
 | **magneto** | 192.168.1.124 | Development workstation (VS Code, git, local testing) |
-| **cerebro** | *(not in infra table)* | Gallery server, PostgreSQL, MLflow, monitoring dashboards |
+| **cerebro** | *(TBD - new addition)* | Gallery server, PostgreSQL, MLflow, monitoring dashboards |
 | **moira** | 192.168.1.215 | ComfyUI server (`:8188`), MinIO (`:9000`), GPU tasks (RTX 5090) |
 | **ant-man** | 192.168.1.253 | GitHub Actions runner (ARM64) |
 
@@ -607,7 +607,7 @@ Before implementing a new service, answer these questions:
 4. **Is it temporary development tooling?** → magneto (but consider if it should be elsewhere)
 
 **Example Migration Pattern (Anti-Pattern):**
-- Issue jrjenkinsiv/comfy-gen#96: Gallery server was initially placed on magneto (dev workstation) but belonged on cerebro (persistent services). This required manual migration.
+- **Issue #96 context:** Gallery server was initially placed on magneto (dev workstation) but required manual migration to cerebro because it's a long-running web service with persistent state, not a development tool.
 - **Lesson:** Long-running web services with persistent state → cerebro, NOT magneto.
 
 **When in doubt:** Default to cerebro for web services, moira for GPU/storage tasks.
