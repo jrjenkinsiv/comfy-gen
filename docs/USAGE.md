@@ -505,6 +505,132 @@ Visit `http://localhost:8080` after running `python3 scripts/gallery_server.py`
 
 ---
 
+### Iterative Refinement
+
+ComfyGen can automatically retry generation with adjusted parameters until a quality threshold is met, mimicking how ChatGPT/DALL-E achieves consistent quality.
+
+#### Basic Usage
+
+```bash
+# Generate with quality refinement
+python3 generate.py \
+    --workflow workflows/flux-dev.json \
+    --prompt "a cyberpunk cityscape at night" \
+    --output /tmp/city.png \
+    --quality-score \
+    --quality-threshold 7.5 \
+    --max-attempts 3 \
+    --retry-strategy progressive
+
+# Output:
+# [INFO] Running quality assessment...
+# [OK] Quality Grade: C (Score: 6.2/10)
+# [INFO] Refinement attempt 2/3
+# [INFO] Strategy 'progressive': steps=50, cfg=7.5, seed=42187
+# [OK] Quality Grade: B (Score: 7.8/10)
+# [OK] Quality threshold 7.5 met! Score: 7.8/10
+```
+
+#### Retry Strategies
+
+**Progressive Enhancement** (default)
+Gradually increases generation quality parameters:
+```bash
+python3 generate.py --workflow flux-dev.json \
+    --prompt "..." \
+    --quality-threshold 7.5 \
+    --retry-strategy progressive
+
+# Attempt 1: steps=30, cfg=7.0
+# Attempt 2: steps=50, cfg=7.5  
+# Attempt 3: steps=80, cfg=8.0
+```
+
+**Seed Search**
+Tries different random seeds while keeping parameters constant:
+```bash
+python3 generate.py --workflow flux-dev.json \
+    --prompt "..." \
+    --quality-threshold 7.5 \
+    --retry-strategy seed_search
+
+# Attempt 1: seed=1000
+# Attempt 2: seed=2000
+# Attempt 3: seed=6000
+# (Keeps best scoring result)
+```
+
+**Prompt Enhancement**
+Progressively adds quality boosters to the prompt:
+```bash
+python3 generate.py --workflow flux-dev.json \
+    --prompt "a sunset over mountains" \
+    --quality-threshold 7.5 \
+    --retry-strategy prompt_enhance
+
+# Attempt 1: "a sunset over mountains"
+# Attempt 2: "a sunset over mountains, highly detailed, sharp focus"
+# Attempt 3: "a sunset over mountains, masterpiece, best quality, 8K, ultra detailed"
+```
+
+#### Refinement Metadata
+
+Refinement history is tracked in metadata JSON:
+
+```json
+{
+  "refinement": {
+    "attempt": 2,
+    "max_attempts": 3,
+    "strategy": "progressive",
+    "previous_scores": [6.2, 7.8],
+    "final_status": "success"
+  }
+}
+```
+
+**Status Values:**
+- `success` - Quality threshold met
+- `best_effort` - Threshold not met, returning best attempt
+- `failed` - All attempts failed
+
+#### Configuration
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| `--quality-threshold` | Minimum quality score to accept (0-10) | 7.0 |
+| `--max-attempts` | Maximum generation attempts | 3 |
+| `--retry-strategy` | progressive, seed_search, or prompt_enhance | progressive |
+
+#### Example Workflows
+
+**High-Quality Automotive Photography**
+```bash
+python3 generate.py \
+    --workflow workflows/flux-dev.json \
+    --prompt "Porsche 911 GT3 RS, studio lighting, 8K, highly detailed" \
+    --preset high-quality \
+    --quality-score \
+    --quality-threshold 8.0 \
+    --max-attempts 5 \
+    --retry-strategy progressive \
+    --output /tmp/porsche.png
+```
+
+**Character Art with Seed Search**
+```bash
+python3 generate.py \
+    --workflow workflows/flux-dev.json \
+    --prompt "fantasy warrior character, detailed armor" \
+    --quality-score \
+    --quality-threshold 7.5 \
+    --retry-strategy seed_search \
+    --max-attempts 4 \
+    --output /tmp/warrior.png
+```
+
+---
+
 ## MCP Server
 
 The MCP (Model Context Protocol) server provides 25 AI-ready tools for image and video generation, allowing AI assistants like Claude to control ComfyGen.

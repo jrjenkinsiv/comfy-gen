@@ -274,6 +274,72 @@ Adjust prompts for retry attempt to improve generation quality.
 
 ---
 
+#### `get_retry_params(attempt: int, strategy: str, base_steps: int = None, base_cfg: float = None, base_seed: int = None, base_prompt: str = "", base_negative: str = "") -> dict`
+
+Get adjusted parameters for retry attempt based on refinement strategy.
+
+**Parameters:**
+- `attempt`: Current attempt number (1-based, where 1 is initial attempt)
+- `strategy`: Retry strategy - `'progressive'`, `'seed_search'`, or `'prompt_enhance'`
+- `base_steps`: Base number of steps (default: 30 if None)
+- `base_cfg`: Base CFG scale (default: 7.0 if None)
+- `base_seed`: Base random seed (default: random if None)
+- `base_prompt`: Original positive prompt
+- `base_negative`: Original negative prompt
+
+**Returns:** Dictionary with keys:
+- `steps` (int): Adjusted step count
+- `cfg` (float): Adjusted CFG scale (capped at 20.0)
+- `seed` (int): Seed for this attempt
+- `positive_prompt` (str): Adjusted positive prompt
+- `negative_prompt` (str): Adjusted negative prompt
+
+**Strategy Behaviors:**
+
+*Progressive Enhancement:*
+```python
+# Attempt 1: steps=30, cfg=7.0, seed=random
+# Attempt 2: steps=50, cfg=7.5, seed=random
+# Attempt 3: steps=80, cfg=8.0, seed=random
+```
+
+*Seed Search:*
+```python
+# Attempt 1: seed=base+0
+# Attempt 2: seed=base+1000
+# Attempt 3: seed=base+5000
+# (Steps/CFG unchanged, prompts unchanged)
+```
+
+*Prompt Enhancement:*
+```python
+# Attempt 1: original prompt
+# Attempt 2: prompt + ", highly detailed, sharp focus"
+# Attempt 3: prompt + ", masterpiece, best quality, 8K, ultra detailed"
+# (New seed each attempt)
+```
+
+**Example:**
+```python
+# Get parameters for second attempt using progressive strategy
+params = get_retry_params(
+    attempt=2,
+    strategy='progressive',
+    base_steps=30,
+    base_cfg=7.0,
+    base_seed=42,
+    base_prompt="a sunset",
+    base_negative="blurry"
+)
+# Returns: {'steps': 50, 'cfg': 7.5, 'seed': <random>, 'positive_prompt': "a sunset", 'negative_prompt': "blurry"}
+
+# Apply to workflow
+workflow = modify_sampler_params(workflow, steps=params['steps'], cfg=params['cfg'], seed=params['seed'])
+workflow = modify_prompt(workflow, params['positive_prompt'], params['negative_prompt'])
+```
+
+---
+
 #### `cancel_prompt(prompt_id: str) -> bool`
 
 Cancel a specific queued or running prompt.

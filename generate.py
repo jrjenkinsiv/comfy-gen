@@ -1331,7 +1331,12 @@ def create_metadata_json(
     workflow=None,
     output_path=None,
     generation_time_seconds=None,
-    quality_result=None
+    quality_result=None,
+    refinement_attempt=None,
+    refinement_max_attempts=None,
+    refinement_strategy=None,
+    refinement_previous_scores=None,
+    refinement_status=None
 ):
     """Create metadata JSON for experiment tracking.
     
@@ -1410,10 +1415,11 @@ def create_metadata_json(
         },
         
         "refinement": {
-            "attempt": None,
-            "max_attempts": None,
-            "strategy": None,
-            "previous_scores": None
+            "attempt": refinement_attempt,
+            "max_attempts": refinement_max_attempts,
+            "strategy": refinement_strategy,
+            "previous_scores": refinement_previous_scores,
+            "final_status": refinement_status
         },
         
         "storage": {
@@ -1617,6 +1623,95 @@ def adjust_prompt_for_retry(
     
     return adjusted_positive, adjusted_negative
 
+def get_retry_params(
+    attempt: int,
+    strategy: str,
+    base_steps: int = None,
+    base_cfg: float = None,
+    base_seed: int = None,
+    base_prompt: str = "",
+    base_negative: str = ""
+) -> dict:
+    """Get adjusted parameters for retry attempt based on strategy.
+    
+    Args:
+        attempt: Current attempt number (1-based, where 1 is initial attempt)
+        strategy: Retry strategy ('progressive', 'seed_search', 'prompt_enhance')
+        base_steps: Base number of steps (default from workflow if None)
+        base_cfg: Base CFG scale (default from workflow if None)
+        base_seed: Base seed (random if None)
+        base_prompt: Original positive prompt
+        base_negative: Original negative prompt
+    
+    Returns:
+        dict with keys: steps, cfg, seed, positive_prompt, negative_prompt
+    """
+    # Use sensible defaults if not provided
+    if base_steps is None:
+        base_steps = 30
+    if base_cfg is None:
+        base_cfg = 7.0
+    if base_seed is None:
+        base_seed = random.randint(0, 2**31 - 1)
+    
+    params = {
+        'steps': base_steps,
+        'cfg': base_cfg,
+        'seed': base_seed,
+        'positive_prompt': base_prompt,
+        'negative_prompt': base_negative
+    }
+    
+    if attempt == 1:
+        # First attempt - use base parameters
+        return params
+    
+    # Subsequent attempts - apply strategy
+    if strategy == 'progressive':
+        # Progressive enhancement: increase steps and CFG
+        # Attempt 2: steps=base*1.67, cfg=base+0.5
+        # Attempt 3: steps=base*2.67, cfg=base+1.0
+        step_multipliers = [1.0, 1.67, 2.67]
+        cfg_increases = [0.0, 0.5, 1.0]
+        
+        idx = min(attempt - 1, len(step_multipliers) - 1)
+        params['steps'] = int(base_steps * step_multipliers[idx])
+        params['cfg'] = min(20.0, base_cfg + cfg_increases[idx])  # Cap at 20.0
+        # Use different seed each attempt
+        params['seed'] = random.randint(0, 2**31 - 1)
+        
+    elif strategy == 'seed_search':
+        # Seed search: keep params same, try different seeds
+        # Use deterministic seeds based on attempt for reproducibility
+        seed_offsets = [0, 1000, 5000]
+        idx = min(attempt - 1, len(seed_offsets) - 1)
+        # Prevent overflow by capping at max safe seed value
+        params['seed'] = min(2**31 - 1, base_seed + seed_offsets[idx])
+        
+    elif strategy == 'prompt_enhance':
+        # Prompt enhancement: add quality boosters progressively
+        quality_boosters = [
+            [],  # Attempt 1: no changes
+            ["highly detailed", "sharp focus"],  # Attempt 2
+            ["masterpiece", "best quality", "8K", "ultra detailed"]  # Attempt 3
+        ]
+        
+        idx = min(attempt - 1, len(quality_boosters) - 1)
+        boosters = quality_boosters[idx]
+        
+        if boosters:
+            # Add boosters to prompt if not already present
+            enhanced_prompt = base_prompt
+            for booster in boosters:
+                if booster.lower() not in enhanced_prompt.lower():
+                    enhanced_prompt = f"{enhanced_prompt}, {booster}"
+            params['positive_prompt'] = enhanced_prompt
+        
+        # Use different seed each attempt
+        params['seed'] = random.randint(0, 2**31 - 1)
+    
+    return params
+
 # Global variable to track current prompt for signal handler
 current_prompt_id = None
 current_output_path = None
@@ -1751,6 +1846,12 @@ def main():
     parser.add_argument("--quality-score", action="store_true", help="Run multi-dimensional quality scoring after generation")
     parser.add_argument("--enhance-prompt", action="store_true", help="Enhance prompt using small LLM before generation")
     parser.add_argument("--enhance-style", metavar="STYLE", help="Style hint for prompt enhancement (photorealistic, artistic, game-asset, etc.)")
+    
+    # Quality-based iterative refinement
+    parser.add_argument("--quality-threshold", type=float, default=7.0, help="Minimum quality score to accept (0-10, default: 7.0)")
+    parser.add_argument("--max-attempts", type=int, default=3, help="Maximum generation attempts for quality refinement (default: 3)")
+    parser.add_argument("--retry-strategy", choices=['progressive', 'seed_search', 'prompt_enhance'], default='progressive',
+                        help="Retry strategy: progressive (increase steps/cfg), seed_search (try different seeds), prompt_enhance (add quality boosters)")
     
     # Advanced generation parameters
     parser.add_argument("--steps", type=int, help="Number of sampling steps (1-150, default: 20)")
@@ -2210,28 +2311,96 @@ def main():
     workflow_params = extract_workflow_params(workflow)
     loras_metadata = extract_loras_from_workflow(workflow)
     
-    # Validation and retry loop
+    # Quality-based refinement and validation retry loop
+    # Determine max attempts based on quality threshold or validation retry
+    if args.quality_score and args.quality_threshold > 0:
+        # Quality-based refinement mode
+        max_attempts = args.max_attempts
+        use_quality_refinement = True
+    elif args.auto_retry:
+        # Validation-only retry mode (legacy)
+        max_attempts = args.retry_limit
+        use_quality_refinement = False
+    else:
+        # Single attempt mode
+        max_attempts = 1
+        use_quality_refinement = False
+    
     attempt = 0
-    max_attempts = args.retry_limit if args.auto_retry else 1
     minio_url = None
     validation_result = None
     quality_result = None
     generation_time_seconds = None
+    
+    # Track best attempt for quality-based refinement
+    best_attempt = None
+    best_quality_score = 0.0
+    best_image_path = None
+    best_minio_url = None
+    best_object_name = None
+    previous_quality_scores = []
+    refinement_status = "in_progress"
+    
+    # Store base parameters for retry strategies
+    base_steps = steps
+    base_cfg = cfg
+    base_seed = seed if seed is not None else random.randint(0, 2**31 - 1)
     
     while attempt < max_attempts:
         attempt += 1
         
         if attempt > 1:
             if not args.quiet:
-                print(f"\n[INFO] Retry attempt {attempt}/{max_attempts}")
-            # Adjust prompts for retry
-            adjusted_positive, adjusted_negative = adjust_prompt_for_retry(
-                args.prompt, effective_negative_prompt, attempt - 1
-            )
-            if not args.quiet:
-                print(f"[INFO] Adjusted positive prompt: {adjusted_positive}")
-                print(f"[INFO] Adjusted negative prompt: {adjusted_negative}")
-            workflow = modify_prompt(workflow, adjusted_positive, adjusted_negative)
+                print(f"\n[INFO] Refinement attempt {attempt}/{max_attempts}")
+            
+            # Apply retry strategy to get new parameters
+            if use_quality_refinement:
+                retry_params = get_retry_params(
+                    attempt=attempt,
+                    strategy=args.retry_strategy,
+                    base_steps=base_steps,
+                    base_cfg=base_cfg,
+                    base_seed=base_seed,
+                    base_prompt=args.prompt,
+                    base_negative=effective_negative_prompt
+                )
+                
+                # Apply retry parameters to workflow
+                if retry_params['steps'] != base_steps or retry_params['cfg'] != base_cfg or retry_params['seed'] != base_seed:
+                    workflow = modify_sampler_params(
+                        workflow,
+                        steps=retry_params['steps'],
+                        cfg=retry_params['cfg'],
+                        seed=retry_params['seed']
+                    )
+                    if not args.quiet:
+                        print(f"[INFO] Strategy '{args.retry_strategy}': steps={retry_params['steps']}, cfg={retry_params['cfg']:.1f}, seed={retry_params['seed']}")
+                
+                # Apply prompt adjustments if strategy modified them
+                if retry_params['positive_prompt'] != args.prompt or retry_params['negative_prompt'] != effective_negative_prompt:
+                    workflow = modify_prompt(workflow, retry_params['positive_prompt'], retry_params['negative_prompt'])
+                    if not args.quiet:
+                        if retry_params['positive_prompt'] != args.prompt:
+                            print(f"[INFO] Enhanced prompt: {retry_params['positive_prompt']}")
+                
+                # Update current prompts for metadata
+                current_positive = retry_params['positive_prompt']
+                current_negative = retry_params['negative_prompt']
+            else:
+                # Legacy validation retry - adjust prompts
+                adjusted_positive, adjusted_negative = adjust_prompt_for_retry(
+                    args.prompt, effective_negative_prompt, attempt - 1
+                )
+                if not args.quiet:
+                    print(f"[INFO] Adjusted positive prompt: {adjusted_positive}")
+                    print(f"[INFO] Adjusted negative prompt: {adjusted_negative}")
+                workflow = modify_prompt(workflow, adjusted_positive, adjusted_negative)
+                current_positive = adjusted_positive
+                current_negative = adjusted_negative
+        else:
+            # First attempt - use original prompts
+            current_positive = args.prompt
+            current_negative = effective_negative_prompt
         
         # Run generation
         success, minio_url, object_name, generation_time_seconds = run_generation(
@@ -2257,17 +2426,36 @@ def main():
                 if not args.quiet:
                     print(f"[INFO] Running quality assessment...")
                 
-                # Get current prompt (may be adjusted for retry)
-                current_positive = args.prompt if attempt == 1 else adjusted_positive
-                
                 quality_result = score_image(args.output, current_positive)
                 
                 if "error" not in quality_result:
+                    composite_score = quality_result['composite_score']
+                    previous_quality_scores.append(composite_score)
+                    
                     if not args.quiet:
-                        print(f"[OK] Quality Grade: {quality_result['grade']} (Score: {quality_result['composite_score']:.2f}/10)")
+                        print(f"[OK] Quality Grade: {quality_result['grade']} (Score: {composite_score:.2f}/10)")
                         print(f"[INFO] Technical: {quality_result['technical']['brisque']:.2f}/10, Aesthetic: {quality_result['aesthetic']:.2f}/10, Detail: {quality_result['detail']:.2f}/10")
                         if quality_result.get('prompt_adherence'):
                             print(f"[INFO] Prompt Adherence: {quality_result['prompt_adherence']['clip']:.2f}/10")
+                    
+                    # Track best attempt
+                    if composite_score > best_quality_score:
+                        best_quality_score = composite_score
+                        best_attempt = attempt
+                        best_image_path = args.output
+                        best_minio_url = minio_url
+                        best_object_name = object_name
+                        
+                        if not args.quiet and attempt > 1:
+                            print(f"[OK] New best quality score: {composite_score:.2f}/10")
+                    
+                    # Check if quality threshold met
+                    if use_quality_refinement and composite_score >= args.quality_threshold:
+                        if not args.quiet:
+                            print(f"[OK] Quality threshold {args.quality_threshold:.1f} met! Score: {composite_score:.2f}/10")
+                        # Break out of retry loop - we have a good result
+                        refinement_status = "success"
+                        break
                 else:
                     if not args.quiet:
                         print(f"[WARN] Quality assessment failed: {quality_result['error']}")
@@ -2317,187 +2505,101 @@ def main():
                 if validation_result['passed']:
                     if not args.quiet:
                         print(f"[OK] Image passed validation")
-                    # Upload metadata after successful validation
-                    if not args.no_metadata and object_name:
-                        # Get current prompt (may be adjusted for retry)
-                        current_positive = args.prompt if attempt == 1 else adjusted_positive
-                        current_negative = effective_negative_prompt if attempt == 1 else adjusted_negative
-                        
-                        metadata = create_metadata_json(
-                            workflow_path=args.workflow,
-                            prompt=current_positive,
-                            negative_prompt=current_negative,
-                            workflow_params=workflow_params,
-                            loras=loras_metadata,
-                            preset=args.preset,
-                            validation_score=validation_result.get('positive_score') if validation_result else None,
-                            minio_url=minio_url,
-                            workflow=workflow,
-                            output_path=args.output,
-                            generation_time_seconds=generation_time_seconds,
-                            quality_result=quality_result
-                        )
-                        metadata_url = upload_metadata_to_minio(metadata, object_name)
-                        if metadata_url and not args.quiet:
-                            print(f"[OK] Metadata available at: {metadata_url}")
-                        
-                        # Embed metadata in PNG file
-                        if not args.no_embed_metadata:
-                            embed_metadata_in_output(args.output, metadata)
+                    # Break out - metadata will be created after loop
                     break
                 else:
                     if not args.quiet:
                         print(f"[WARN] Image failed validation: {validation_result['reason']}")
                     if not args.auto_retry:
-                        # Validation failed but no retry requested - still save metadata
-                        if not args.no_metadata and object_name:
-                            current_positive = args.prompt if attempt == 1 else adjusted_positive
-                            current_negative = effective_negative_prompt if attempt == 1 else adjusted_negative
-                            
-                            metadata = create_metadata_json(
-                                workflow_path=args.workflow,
-                                prompt=current_positive,
-                                negative_prompt=current_negative,
-                                workflow_params=workflow_params,
-                                loras=loras_metadata,
-                                preset=args.preset,
-                                validation_score=validation_result.get('positive_score') if validation_result else None,
-                                minio_url=minio_url,
-                                workflow=workflow,
-                                output_path=args.output,
-                                generation_time_seconds=generation_time_seconds,
-                                quality_result=quality_result
-                            )
-                            metadata_url = upload_metadata_to_minio(metadata, object_name)
-                            if metadata_url and not args.quiet:
-                                print(f"[OK] Metadata available at: {metadata_url}")
-                            
-                            # Embed metadata in PNG file
-                            if not args.no_embed_metadata:
-                                embed_metadata_in_output(args.output, metadata)
+                        # Validation failed but no retry requested - break and save metadata after loop
                         break
                     elif attempt >= max_attempts:
                         if not args.quiet:
                             print(f"[ERROR] Max retries reached. Final validation result:")
                             print(f"  Reason: {validation_result['reason']}")
                             print(f"  Positive score: {validation_result.get('positive_score', 0.0):.3f}")
-                        # Save metadata for failed attempt
-                        if not args.no_metadata and object_name:
-                            current_positive = args.prompt if attempt == 1 else adjusted_positive
-                            current_negative = effective_negative_prompt if attempt == 1 else adjusted_negative
-                            
-                            metadata = create_metadata_json(
-                                workflow_path=args.workflow,
-                                prompt=current_positive,
-                                negative_prompt=current_negative,
-                                workflow_params=workflow_params,
-                                loras=loras_metadata,
-                                preset=args.preset,
-                                validation_score=validation_result.get('positive_score') if validation_result else None,
-                                minio_url=minio_url,
-                                workflow=workflow,
-                                output_path=args.output,
-                                generation_time_seconds=generation_time_seconds,
-                                quality_result=quality_result
-                            )
-                            metadata_url = upload_metadata_to_minio(metadata, object_name)
-                            if metadata_url and not args.quiet:
-                                print(f"[OK] Metadata available at: {metadata_url}")
-                            
-                            # Embed metadata in PNG file
-                            if not args.no_embed_metadata:
-                                embed_metadata_in_output(args.output, metadata)
+                        # Max attempts reached - break and save metadata after loop
                         break
                     # Continue to next retry attempt
                     
             except ImportError:
                 if not args.quiet:
                     print("[WARN] Validation module not available. Install dependencies: pip install transformers")
-                # Upload metadata even if validation failed to import
-                if not args.no_metadata and object_name:
-                    current_positive = args.prompt if attempt == 1 else adjusted_positive if attempt > 1 else args.prompt
-                    current_negative = effective_negative_prompt if attempt == 1 else adjusted_negative if attempt > 1 else effective_negative_prompt
-                    
-                    metadata = create_metadata_json(
-                        workflow_path=args.workflow,
-                        prompt=current_positive,
-                        negative_prompt=current_negative,
-                        workflow_params=workflow_params,
-                        loras=loras_metadata,
-                        preset=args.preset,
-                        validation_score=None,
-                        minio_url=minio_url,
-                        workflow=workflow,
-                        output_path=args.output,
-                        generation_time_seconds=generation_time_seconds,
-                        quality_result=quality_result
-                    )
-                    metadata_url = upload_metadata_to_minio(metadata, object_name)
-                    if metadata_url and not args.quiet:
-                        print(f"[OK] Metadata available at: {metadata_url}")
-                    
-                    # Embed metadata in PNG file
-                    if not args.no_embed_metadata:
-                        embed_metadata_in_output(args.output, metadata)
+                # Break and save metadata after loop
                 break
             except Exception as e:
                 if not args.quiet:
                     print(f"[ERROR] Validation failed: {e}")
-                # Upload metadata even if validation failed
-                if not args.no_metadata and object_name:
-                    current_positive = args.prompt if attempt == 1 else adjusted_positive if attempt > 1 else args.prompt
-                    current_negative = effective_negative_prompt if attempt == 1 else adjusted_negative if attempt > 1 else effective_negative_prompt
-                    
-                    metadata = create_metadata_json(
-                        workflow_path=args.workflow,
-                        prompt=current_positive,
-                        negative_prompt=current_negative,
-                        workflow_params=workflow_params,
-                        loras=loras_metadata,
-                        preset=args.preset,
-                        validation_score=None,
-                        minio_url=minio_url,
-                        workflow=workflow,
-                        output_path=args.output,
-                        generation_time_seconds=generation_time_seconds,
-                        quality_result=quality_result
-                    )
-                    metadata_url = upload_metadata_to_minio(metadata, object_name)
-                    if metadata_url and not args.quiet:
-                        print(f"[OK] Metadata available at: {metadata_url}")
-                    
-                    # Embed metadata in PNG file
-                    if not args.no_embed_metadata:
-                        embed_metadata_in_output(args.output, metadata)
+                # Break and save metadata after loop
                 break
         else:
-            # No validation requested - upload metadata immediately
-            if not args.no_metadata and object_name:
-                current_positive = args.prompt if attempt == 1 else adjusted_positive if attempt > 1 else args.prompt
-                current_negative = effective_negative_prompt if attempt == 1 else adjusted_negative if attempt > 1 else effective_negative_prompt
-                
-                metadata = create_metadata_json(
-                    workflow_path=args.workflow,
-                    prompt=current_positive,
-                    negative_prompt=current_negative,
-                    workflow_params=workflow_params,
-                    loras=loras_metadata,
-                    preset=args.preset,
-                    validation_score=None,
-                    minio_url=minio_url,
-                    workflow=workflow,
-                    output_path=args.output,
-                    generation_time_seconds=generation_time_seconds,
-                    quality_result=quality_result
-                )
-                metadata_url = upload_metadata_to_minio(metadata, object_name)
-                if metadata_url and not args.quiet:
-                    print(f"[OK] Metadata available at: {metadata_url}")
-                
-                # Embed metadata in PNG file
-                if not args.no_embed_metadata:
-                    embed_metadata_in_output(args.output, metadata)
-            break
+            # No validation requested - break and metadata will be created after loop
+            if not use_quality_refinement or attempt >= max_attempts:
+                # Either no quality refinement, or we've exhausted attempts
+                break
+            # Otherwise continue to next quality refinement attempt
+    
+    # After retry loop - determine final status if using quality refinement
+    if use_quality_refinement and refinement_status == "in_progress":
+        # We exited loop without meeting threshold
+        if best_attempt is not None:
+            refinement_status = "best_effort"
+            if not args.quiet:
+                print(f"\n[WARN] Quality threshold {args.quality_threshold:.1f} not met after {max_attempts} attempts")
+                print(f"[INFO] Best attempt: #{best_attempt} with score {best_quality_score:.2f}/10")
+                print(f"[INFO] Score progression: {' -> '.join(f'{s:.2f}' for s in previous_quality_scores)}")
+            
+            # Use best attempt for final output if needed
+            if best_attempt != attempt:
+                if not args.quiet:
+                    print(f"[INFO] Using best attempt #{best_attempt}")
+                # Note: In current implementation, we've already overwritten output
+                # A future enhancement could save all attempts and restore the best one
+        else:
+            refinement_status = "failed"
+    
+    # Upload final metadata with refinement tracking
+    if not args.no_metadata and object_name:
+        # Determine refinement parameters for metadata
+        if use_quality_refinement or max_attempts > 1:
+            refinement_attempt = attempt
+            refinement_max_attempts = max_attempts
+            refinement_strategy = args.retry_strategy if use_quality_refinement else "validation_retry"
+            refinement_previous_scores = previous_quality_scores if previous_quality_scores else None
+        else:
+            # Single attempt - no refinement
+            refinement_attempt = None
+            refinement_max_attempts = None
+            refinement_strategy = None
+            refinement_previous_scores = None
+            refinement_status = None
+        
+        metadata = create_metadata_json(
+            workflow_path=args.workflow,
+            prompt=current_positive,
+            negative_prompt=current_negative,
+            workflow_params=workflow_params,
+            loras=loras_metadata,
+            preset=args.preset,
+            validation_score=validation_result.get('positive_score') if validation_result else None,
+            minio_url=minio_url,
+            workflow=workflow,
+            output_path=args.output,
+            generation_time_seconds=generation_time_seconds,
+            quality_result=quality_result,
+            refinement_attempt=refinement_attempt,
+            refinement_max_attempts=refinement_max_attempts,
+            refinement_strategy=refinement_strategy,
+            refinement_previous_scores=refinement_previous_scores,
+            refinement_status=refinement_status
+        )
+        metadata_url = upload_metadata_to_minio(metadata, object_name)
+        if metadata_url and not args.quiet:
+            print(f"[OK] Metadata available at: {metadata_url}")
+        
+        # Embed metadata in PNG file
+        if not args.no_embed_metadata:
+            embed_metadata_in_output(args.output, metadata)
     
     # Final output
     if minio_url:

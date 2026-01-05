@@ -68,7 +68,8 @@ This document describes the enhanced metadata JSON schema implemented to support
     "attempt": 2,
     "max_attempts": 3,
     "strategy": "progressive",
-    "previous_scores": [5.2]
+    "previous_scores": [5.2, 7.8],
+    "final_status": "success"
   },
   
   "storage": {
@@ -109,11 +110,47 @@ This document describes the enhanced metadata JSON schema implemented to support
 - **`quality.prompt_adherence.clip`**: CLIP score (existing validation_score moved here)
 - **`quality.detail`**: TOPIQ score
 
-### 6. Refinement Placeholders (for future integration)
-- **`refinement.attempt`**: Which attempt this was (Issue #71)
-- **`refinement.max_attempts`**: How many attempts allowed
-- **`refinement.strategy`**: What strategy used
-- **`refinement.previous_scores`**: Scores from prior attempts
+### 6. Iterative Refinement Tracking
+
+The refinement section tracks quality-based retry attempts (Issue #71):
+
+- **`refinement.attempt`**: Which attempt produced this image (1-indexed)
+- **`refinement.max_attempts`**: Maximum attempts allowed
+- **`refinement.strategy`**: Retry strategy used (`progressive`, `seed_search`, `prompt_enhance`, or `validation_retry`)
+- **`refinement.previous_scores`**: Array of quality scores from all attempts
+- **`refinement.final_status`**: Outcome of refinement process
+
+**Status Values:**
+- `success` - Quality threshold met
+- `best_effort` - Threshold not met, but returning best attempt
+- `failed` - All attempts failed
+- `null` - Single attempt (no refinement)
+
+**Example with Successful Refinement:**
+```json
+{
+  "refinement": {
+    "attempt": 2,
+    "max_attempts": 3,
+    "strategy": "progressive",
+    "previous_scores": [6.2, 7.8],
+    "final_status": "success"
+  }
+}
+```
+
+**Example with No Refinement:**
+```json
+{
+  "refinement": {
+    "attempt": null,
+    "max_attempts": null,
+    "strategy": null,
+    "previous_scores": null,
+    "final_status": null
+  }
+}
+```
 
 ## Backward Compatibility
 
