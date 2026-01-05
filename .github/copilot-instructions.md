@@ -151,8 +151,22 @@ Issue #68 had a comment showing Phase 2 and 3 were complete, only `--prompt-pres
 |-------|---------|------|
 | `serial-assignment` | Code changes to high-conflict files (e.g., `generate.py`, core workflows) | **ONE AT A TIME.** Wait for PR merge before assigning next. |
 | `parallel-ok` | Isolated code changes (e.g., new workflows, scripts, docs) | **BATCH OK.** Can assign 3-5 simultaneously. |
+| `simple-task` | Simple/straightforward work (docs, config, file moves, simple refactors) | **LOCAL MODEL.** Orchestrator handles with free/cheap model (GPT-5 Mini) - saves Copilot tokens for complex work. |
 | `local-network` | Requires local network access - SSH, ComfyUI API, generation, model downloads, GPU tasks | **ORCHESTRATOR ONLY.** VS Code Agent handles directly - do NOT assign to Copilot (it runs on GitHub infra, no local network access). |
 | `human-required` | Requires true human intervention (physical access, subjective aesthetic decisions, external account setup) | **DO NOT ASSIGN.** Report to user. |
+
+### Complexity Assessment (Before Assignment)
+
+**Ask:** "Is this simple enough for a local free model?"
+
+| Complexity | Examples | Route To |
+|------------|----------|----------|
+| **Simple** | Doc updates, file moves, config changes, simple scripts | Local model (`simple-task`) |
+| **Medium** | New modules, refactors, API integrations | Copilot (`parallel-ok`) |
+| **Complex** | Core system changes, multi-file refactors | Copilot (`serial-assignment`) |
+| **Network** | SSH, generation, GPU tasks | Orchestrator (`local-network`) |
+
+**Cost-aware routing:** Use Copilot tokens for complex code generation, not documentation.
 
 **CRITICAL: Image/Video Generation is ALWAYS `local-network`**
 - Generation requires ComfyUI API at `192.168.1.215:8188` (moira)
