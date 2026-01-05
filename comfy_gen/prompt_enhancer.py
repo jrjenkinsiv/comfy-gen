@@ -26,6 +26,9 @@ except ImportError:
 
 # Default model to use (Qwen2.5-0.5B is small, fast, and good at following instructions)
 DEFAULT_MODEL = "Qwen/Qwen2.5-0.5B-Instruct"
+
+# Alternative models that can be used (for future flexibility)
+# Usage: enhance_prompt(prompt, model="microsoft/phi-2")
 ALTERNATIVE_MODELS = [
     "microsoft/phi-2",
     "TinyLlama/TinyLlama-1.1B-Chat-v1.0",

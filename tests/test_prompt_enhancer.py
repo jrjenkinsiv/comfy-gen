@@ -20,7 +20,7 @@ class TestPromptEnhancerAvailability:
             importlib.reload(prompt_enhancer)
             
             # Should return False when transformers not available
-            assert prompt_enhancer.is_available() == False
+            assert not prompt_enhancer.is_available()
     
     def test_is_available_with_transformers(self):
         """Test availability check when transformers is installed."""
@@ -40,7 +40,7 @@ class TestPromptEnhancerAvailability:
             importlib.reload(prompt_enhancer)
             
             # Should return True when transformers available
-            assert prompt_enhancer.is_available() == True
+            assert prompt_enhancer.is_available()
 
 
 class TestPromptEnhancerFallback:
