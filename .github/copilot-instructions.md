@@ -84,7 +84,9 @@ magneto (git push) --> GitHub --> ant-man (runner) --> moira (ComfyUI)
 
 **Assignment Rules for Meta-Issues:**
 - **Copilot can handle:** Updates to `.github/copilot-instructions.md` when the issue has clear, specific acceptance criteria
+  - Example: "Add section on X with template Y and example Z"
 - **Orchestrator self-assigns:** Complex workflow redesigns or when the gap is unclear and requires workflow context to diagnose
+  - Example: "Workflow feels unclear" (needs investigation to identify specific gap)
 - **Either can handle:** Documentation updates (`README.md`, `docs/`, `examples/`)
 - **Label as `parallel-ok`:** Instruction updates don't conflict with code changes
 
