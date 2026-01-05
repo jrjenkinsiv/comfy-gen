@@ -1,0 +1,535 @@
+# MCP Servers Documentation
+
+This document describes all MCP (Model Context Protocol) servers available in comfy-gen and their exposed tools.
+
+## Overview
+
+comfy-gen provides two MCP servers:
+
+1. **comfy-gen** (`mcp_server.py`) - Main server for ComfyUI image/video generation
+2. **civitai** (`mcp_servers/civitai_mcp.py`) - CivitAI model discovery and verification
+
+## Configuration
+
+MCP servers are configured in `mcp_config.json`. Each server requires specific environment variables:
+
+```json
+{
+  "mcpServers": {
+    "comfy-gen": {
+      "command": ".venv/bin/python3",
+      "args": ["mcp_server.py"],
+      "env": {
+        "COMFYUI_HOST": "http://192.168.1.215:8188",
+        "MINIO_ENDPOINT": "192.168.1.215:9000",
+        "MINIO_BUCKET": "comfy-gen"
+      }
+    },
+    "civitai": {
+      "command": ".venv/bin/python3",
+      "args": ["mcp_servers/civitai_mcp.py"],
+      "env": {
+        "CIVITAI_API_KEY": "${CIVITAI_API_KEY}"
+      }
+    }
+  }
+}
+```
+
+## Server 1: comfy-gen (Main Generation Server)
+
+**File:** `mcp_server.py`
+
+**Purpose:** Comprehensive image/video generation, model management, and ComfyUI service control.
+
+### Service Management Tools
+
+#### `start_comfyui_service()`
+Start the ComfyUI server on moira.
+
+**Returns:** Status message
+
+#### `stop_comfyui_service()`
+Stop the ComfyUI server on moira.
+
+**Returns:** Status message
+
+#### `restart_comfyui_service()`
+Restart the ComfyUI server (useful for applying config changes).
+
+**Returns:** Status message
+
+#### `check_comfyui_service_status()`
+Check if ComfyUI is running and responding.
+
+**Returns:** Status report with process state and API health
+
+### Image Generation Tools
+
+#### `generate_image(prompt, negative_prompt, model, width, height, steps, cfg, sampler, scheduler, seed, preset, lora_preset, output_path, json_progress, validate, auto_retry, retry_limit, positive_threshold)`
+Generate image from text prompt with CLIP validation.
+
+**Key Parameters:**
+- `prompt` (str): Positive text prompt
+- `negative_prompt` (str, optional): What to avoid (uses default from presets.yaml if None)
+- `model` (str): Model to use (sd15, flux, sdxl)
+- `width`, `height` (int): Output dimensions
+- `steps` (int): Sampling steps
+- `cfg` (float): CFG scale
+- `preset` (str): Generation preset (draft, balanced, high-quality, fast, ultra)
+- `lora_preset` (str): LoRA preset from lora_catalog.yaml
+- `validate` (bool): Run CLIP validation
+- `auto_retry` (bool): Retry if validation fails
+
+**Returns:** Dictionary with status, url, validation results
+
+#### `img2img(input_image, prompt, negative_prompt, denoise, model, steps, cfg, seed)`
+Transform existing image with prompt guidance.
+
+**Returns:** Dictionary with status and url
+
+### Video Generation Tools
+
+#### `generate_video(prompt, negative_prompt, width, height, frames, fps, steps, cfg, seed)`
+Generate video from text using Wan 2.2 T2V.
+
+**Returns:** Dictionary with status and url
+
+#### `image_to_video(input_image, prompt, negative_prompt, motion_strength, frames, fps, steps, seed)`
+Animate image to video using Wan 2.2 I2V.
+
+**Returns:** Dictionary with status and url
+
+### Model Management Tools
+
+#### `list_models()`
+List all installed checkpoint models.
+
+**Returns:** Dictionary with checkpoints, diffusion_models, vae arrays
+
+#### `list_loras()`
+List all installed LoRAs with compatibility info from catalog.
+
+**Returns:** Dictionary with enriched LoRA metadata
+
+#### `get_model_info(model_name)`
+Get detailed metadata about a specific model.
+
+**Returns:** Dictionary with model type and catalog info
+
+#### `suggest_model(task, style, subject)`
+Recommend best model for a task.
+
+**Parameters:**
+- `task`: portrait, landscape, anime, video, etc.
+- `style`: Optional style preference
+- `subject`: Optional subject matter
+
+#### `suggest_loras(prompt, model, max_suggestions)`
+Recommend LoRAs based on prompt content.
+
+**Returns:** Dictionary with LoRA suggestions
+
+#### `search_civitai(query, model_type, base_model, sort, nsfw, limit)`
+Search CivitAI for models (wrapper for civitai server).
+
+**Returns:** Dictionary with search results
+
+### Gallery & History Tools
+
+#### `list_images(limit, prefix, sort)`
+Browse generated images from MinIO storage.
+
+**Returns:** Dictionary with image list
+
+#### `get_image_info(image_name)`
+Get generation parameters and metadata for an image.
+
+**Returns:** Dictionary with metadata
+
+#### `delete_image(image_name)`
+Remove image from storage.
+
+**Returns:** Dictionary with deletion status
+
+#### `get_history(limit)`
+Get recent generations with full parameters.
+
+**Returns:** Dictionary with generation history
+
+### Prompt Engineering Tools
+
+#### `build_prompt(subject, style, setting)`
+Construct well-formed prompt from components.
+
+**Returns:** Dictionary with constructed prompt
+
+#### `suggest_negative(model_type)`
+Get recommended negative prompt for model type.
+
+**Returns:** Dictionary with negative prompt suggestions
+
+#### `analyze_prompt(prompt)`
+Analyze prompt and suggest improvements.
+
+**Returns:** Dictionary with analysis and suggestions
+
+### Progress & Control Tools
+
+#### `get_progress(prompt_id)`
+Get current generation progress.
+
+**Returns:** Dictionary with progress information
+
+#### `cancel(prompt_id)`
+Cancel current or specific generation job.
+
+**Returns:** Dictionary with cancellation status
+
+#### `get_queue()`
+View queued jobs.
+
+**Returns:** Dictionary with queue information
+
+#### `get_system_status()`
+Get GPU/VRAM/server health information.
+
+**Returns:** Dictionary with system status
+
+#### `validate_workflow(model, prompt, width, height)`
+Validate workflow without generating (dry run).
+
+**Returns:** Dictionary with validation results
+
+## Server 2: civitai (Model Discovery Server)
+
+**File:** `mcp_servers/civitai_mcp.py`
+
+**Purpose:** Agent-assisted model discovery, verification, and metadata lookup from CivitAI.
+
+**Authentication:** Requires `CIVITAI_API_KEY` environment variable for:
+- NSFW content access
+- Authenticated downloads
+- Higher rate limits
+
+### CivitAI Tools
+
+#### `civitai_search_models(query, model_type, base_model, sort, nsfw, limit)`
+Search CivitAI for models by query with filters.
+
+**Parameters:**
+- `query` (str): Search query (e.g., "battleship", "anime style")
+- `model_type` (str, optional): Filter by type - Checkpoint, LORA, VAE
+- `base_model` (str, optional): Filter by base model - "SD 1.5", "SDXL", "Flux.1 D"
+- `sort` (str): "Most Downloaded" (default), "Highest Rated", "Newest"
+- `nsfw` (bool): Include NSFW results (default: True)
+- `limit` (int): Max results (default: 10, max: 100)
+
+**Returns:**
+```python
+{
+  "status": "success",
+  "results": [
+    {
+      "id": 12345,
+      "name": "Model Name",
+      "type": "LORA",
+      "description": "Brief description...",
+      "creator": "username",
+      "downloads": 50000,
+      "rating": 4.8,
+      "base_model": "SD 1.5",
+      "version_id": 67890,
+      "version_name": "v1.0",
+      "preview_url": "https://...",
+      "download_url": "https://...",
+      "nsfw": false
+    }
+  ],
+  "count": 1,
+  "query": "battleship"
+}
+```
+
+#### `civitai_get_model(model_id)`
+Get detailed information about a specific CivitAI model.
+
+**Parameters:**
+- `model_id` (int): CivitAI model ID
+
+**Returns:** Full model details including all versions, tags, stats
+
+**Example:**
+```python
+result = await civitai_get_model(4384)
+model = result["model"]
+print(f"Model: {model['name']}")
+print(f"Type: {model['type']}")
+print(f"Versions: {len(model['modelVersions'])}")
+```
+
+#### `civitai_lookup_hash(file_hash)` ⭐ CRITICAL FEATURE
+Look up model version by SHA256 file hash - the AUTHORITATIVE way to verify LoRA compatibility.
+
+**Purpose:** Identify what base model a LoRA or checkpoint is designed for without guessing.
+
+**Parameters:**
+- `file_hash` (str): SHA256 hash of .safetensors file (64 hex characters)
+
+**Workflow:**
+```bash
+# 1. Get hash from moira
+ssh moira "powershell -Command \"(Get-FileHash -Algorithm SHA256 'C:\Users\jrjen\comfy\models\loras\some_lora.safetensors').Hash\""
+
+# 2. Look up on CivitAI via MCP tool
+result = await civitai_lookup_hash("abc123...")
+
+# 3. Check base model
+if result["status"] == "success":
+    base_model = result["base_model"]
+    # "SD 1.5" = Use for image generation
+    # "Wan Video 14B t2v" = Video only, DO NOT use for images
+    # "SDXL" = Use with SDXL model
+```
+
+**Returns:**
+```python
+{
+  "status": "success",
+  "model_name": "Erect Penis LoRA",
+  "model_id": 123456,
+  "version_id": 789012,
+  "version_name": "epoch_80",
+  "base_model": "Wan Video 14B t2v",  # CRITICAL - tells you compatibility
+  "trained_words": ["erect_penis", "close_up"],
+  "download_url": "https://...",
+  "files": [...]
+}
+```
+
+**Use Cases:**
+- Verify LoRA compatibility before use (SD 1.5 vs Wan Video vs SDXL)
+- Update `lora_catalog.yaml` with CivitAI-verified metadata
+- Audit existing LoRA collection for misclassified files
+- Prevent mixing incompatible LoRAs (e.g., video LoRA on image model)
+
+**Error Handling:**
+```python
+result = await civitai_lookup_hash(hash_value)
+if result["status"] == "error":
+    if "Not found" in result["error"]:
+        # LoRA not on CivitAI (custom or private)
+        print("LoRA not in CivitAI database")
+    else:
+        # Network or API error
+        print(f"Lookup failed: {result['error']}")
+```
+
+#### `civitai_get_download_url(model_id, version_id)`
+Get authenticated download URL for a CivitAI model.
+
+**Parameters:**
+- `model_id` (int): CivitAI model ID
+- `version_id` (int, optional): Specific version (uses latest if not provided)
+
+**Returns:**
+```python
+{
+  "status": "success",
+  "download_url": "https://civitai.com/api/download/models/123?token=...",
+  "model_id": 12345,
+  "version_id": 67890,
+  "requires_auth": true  # Whether CIVITAI_API_KEY is needed
+}
+```
+
+**Note:** Download URL may include temporary authentication token. NSFW models always require API key.
+
+## Rate Limiting
+
+**CivitAI API:**
+- Without API key: ~100 requests/hour
+- With API key: ~1000 requests/hour
+- Be conservative with batch operations
+- Add delays between requests (0.5-1 second recommended)
+
+**ComfyUI API:**
+- No strict rate limit (local network)
+- Queue system handles concurrent requests
+- Monitor with `get_system_status()` for VRAM availability
+
+## Error Handling
+
+All tools return dictionaries with consistent structure:
+
+**Success:**
+```python
+{
+  "status": "success",
+  "results": [...],
+  # ... tool-specific data
+}
+```
+
+**Error:**
+```python
+{
+  "status": "error",
+  "error": "Error message description"
+}
+```
+
+## Example Workflows
+
+### Workflow 1: Verify LoRA Compatibility
+
+```python
+# 1. Get hash of local LoRA file
+import subprocess
+result = subprocess.run(
+    ['ssh', 'moira', 'powershell', '-Command', 
+     "(Get-FileHash -Algorithm SHA256 'C:\\Users\\jrjen\\comfy\\models\\loras\\mystery_lora.safetensors').Hash"],
+    capture_output=True, text=True
+)
+file_hash = result.stdout.strip()
+
+# 2. Look up on CivitAI
+lookup_result = await civitai_lookup_hash(file_hash)
+
+# 3. Check compatibility
+if lookup_result["status"] == "success":
+    base_model = lookup_result["base_model"]
+    if "SD 1.5" in base_model:
+        print("[OK] Compatible with SD 1.5 image generation")
+    elif "Wan Video" in base_model:
+        print("[WARN] Video-only LoRA - DO NOT use for images")
+    elif "SDXL" in base_model:
+        print("[OK] Compatible with SDXL")
+else:
+    print(f"[ERROR] {lookup_result['error']}")
+```
+
+### Workflow 2: Search and Download Model
+
+```python
+# 1. Search for models
+search_result = await civitai_search_models(
+    query="realistic portraits",
+    model_type="Checkpoint",
+    base_model="SD 1.5",
+    limit=5
+)
+
+# 2. Pick a model
+if search_result["status"] == "success":
+    model = search_result["results"][0]
+    print(f"Found: {model['name']} by {model['creator']}")
+    
+    # 3. Get download URL
+    download_result = await civitai_get_download_url(model["id"])
+    
+    if download_result["status"] == "success":
+        print(f"Download URL: {download_result['download_url']}")
+        # Now use this URL to download to moira
+```
+
+### Workflow 3: Generate Image with Validated LoRA
+
+```python
+# 1. Verify LoRA is SD 1.5 compatible
+lora_hash = "abc123..."  # Get from moira
+lookup = await civitai_lookup_hash(lora_hash)
+
+if "SD 1.5" in lookup.get("base_model", ""):
+    # 2. Generate with verified LoRA
+    result = await generate_image(
+        prompt="beautiful portrait",
+        model="sd15",
+        lora_preset="portrait_realism",  # Preset includes this LoRA
+        steps=50,
+        cfg=8.0
+    )
+    
+    print(f"Generated: {result['url']}")
+else:
+    print("[ERROR] LoRA not compatible with SD 1.5")
+```
+
+## Testing MCP Servers
+
+### Test comfy-gen Server
+```bash
+python3 tests/test_mcp_server.py
+```
+
+### Test civitai Server
+```bash
+python3 tests/test_civitai_mcp.py
+```
+
+### List Available Tools
+```bash
+# For comfy-gen server
+python3 -c "import asyncio; from mcp_server import mcp; asyncio.run(mcp.list_tools())"
+
+# For civitai server
+python3 -c "import asyncio; from mcp_servers.civitai_mcp import mcp; asyncio.run(mcp.list_tools())"
+```
+
+## Integration with VS Code / Claude Desktop
+
+Add servers to your MCP client configuration (e.g., Claude Desktop config):
+
+```json
+{
+  "mcpServers": {
+    "comfy-gen": {
+      "command": "/path/to/.venv/bin/python3",
+      "args": ["/path/to/comfy-gen/mcp_server.py"],
+      "env": {
+        "COMFYUI_HOST": "http://192.168.1.215:8188",
+        "MINIO_ENDPOINT": "192.168.1.215:9000",
+        "MINIO_BUCKET": "comfy-gen"
+      }
+    },
+    "civitai": {
+      "command": "/path/to/.venv/bin/python3",
+      "args": ["/path/to/comfy-gen/mcp_servers/civitai_mcp.py"],
+      "env": {
+        "CIVITAI_API_KEY": "your-api-key-here"
+      }
+    }
+  }
+}
+```
+
+## Security Notes
+
+- **CIVITAI_API_KEY**: Store in `.env` file (gitignored), never commit to repo
+- **Download URLs**: May contain temporary tokens, do not log or persist
+- **NSFW Content**: Requires API key, use responsibly
+- **Rate Limiting**: Respect CivitAI's rate limits to avoid IP bans
+
+## Troubleshooting
+
+### CivitAI server not starting
+- Check `CIVITAI_API_KEY` is set in environment
+- Verify internet connectivity
+- Check Python version (3.10+ required)
+
+### Hash lookup returns "Not found"
+- Verify hash is exactly 64 hex characters
+- Some models may not be on CivitAI (custom/private)
+- Check hash was computed for correct file
+
+### Download requires authentication
+- NSFW models always require API key
+- Set `CIVITAI_API_KEY` environment variable
+- Get API key from https://civitai.com/user/account
+
+## See Also
+
+- [USAGE.md](USAGE.md) - CLI usage and examples
+- [LORA_GUIDE.md](LORA_GUIDE.md) - LoRA selection guide
+- [MODEL_REGISTRY.md](MODEL_REGISTRY.md) - Installed model inventory
+- [API_REFERENCE.md](API_REFERENCE.md) - ComfyUI API reference

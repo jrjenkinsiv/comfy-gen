@@ -9,6 +9,14 @@
         "MINIO_ENDPOINT": "192.168.1.215:9000",
         "MINIO_BUCKET": "comfy-gen"
       }
+    },
+    "civitai": {
+      "command": ".venv/bin/python3",
+      "args": ["mcp_servers/civitai_mcp.py"],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "CIVITAI_API_KEY": "${CIVITAI_API_KEY}"
+      }
     }
   }
 }
