@@ -83,6 +83,55 @@ These are for video generation only - they are ~300MB and designed for Wan 2.2:
 | Flux.1 D | 150-700 MB | Flux.1 Dev |
 | Wan 2.2 | 300-400 MB | Wan 2.2 video models |
 
+## Pony Diffusion V6 Score System
+
+Pony V6 was trained with a quality rating system. **Always include score prefixes** in your prompts:
+
+### Quality Score Tags (Required Prefix)
+```
+score_9           - Highest quality (top ~10%)
+score_8_up        - High quality and above
+score_7_up        - Good quality and above
+score_6_up        - Acceptable quality and above
+score_5_up        - Average and above
+score_4_up        - Below average and above
+```
+
+### Recommended Positive Prefix
+```
+score_9, score_8_up, score_7_up, [your detailed prompt here]
+```
+
+### Recommended Negative Prefix
+```
+score_6, score_5, score_4, [your detailed negative prompt here]
+```
+
+### How It Works
+- The model was trained with human-rated quality scores
+- Including high scores in positive tells model "generate like the best examples"
+- Including low scores in negative avoids low-quality outputs
+- **This is additive** - you STILL need detailed prompts after the score prefix!
+
+### Example (Correct):
+```
+Positive: score_9, score_8_up, score_7_up, beautiful young asian woman with 
+long black hair, kneeling on a luxurious bed with silk sheets, POV blowjob, 
+penis in mouth, looking up at viewer seductively with half-lidded eyes, 
+soft bedroom lighting from a bedside lamp creating warm golden highlights, 
+realistic skin texture with subtle shine, intimate atmosphere...
+
+Negative: score_6, score_5, score_4, deformed, ugly, bad anatomy, blurry, 
+extra limbs, missing fingers, low quality, watermark, text, cartoon, anime
+```
+
+### Example (WRONG - too simple):
+```
+Positive: score_9, score_8_up, score_7_up, asian woman blowjob
+```
+
+**Key Insight**: Score tags tell the model QUALITY level, not CONTENT. You still need rich, detailed descriptions for good results.
+
 ## Prompt Engineering Tips
 
 ### Male Anatomy

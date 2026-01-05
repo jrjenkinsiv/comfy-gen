@@ -12,7 +12,6 @@ Generates images with systematic variations across:
 
 Key learnings applied:
 - NO fixed seeds (enables variety)
-- Upper body framing preferred (avoids leg anatomy issues)
 - Heavy anti-duplicate negatives
 - Multiple model/LoRA combinations
 

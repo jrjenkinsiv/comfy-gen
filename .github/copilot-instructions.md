@@ -86,12 +86,12 @@ magneto (git push) --> GitHub --> ant-man (runner) --> moira (ComfyUI)
 
 **Anti-Pattern (DO NOT DO THIS):**
 ```
-❌ See issue title → Assign to Copilot → Move on
+[BAD] See issue title -> Assign to Copilot -> Move on
 ```
 
 **Correct Pattern:**
 ```
-✅ Read issue body → Read ALL comments → Check for PRs → Assess remaining scope → Update issue if needed → THEN assign
+[OK] Read issue body -> Read ALL comments -> Check for PRs -> Assess remaining scope -> Update issue if needed -> THEN assign
 ```
 
 **Example Failure Case:**

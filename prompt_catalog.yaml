@@ -1,24 +1,52 @@
 # Prompt Catalog for ComfyGen
 # Systematic collection of prompt engineering patterns
-# Issue #68: Research and empirical testing
 #
-# Structure:
-#   quality_boosters: Keywords that improve output quality
-#   negative_presets: Common negative prompt patterns
-#   style_modifiers: Artistic style keywords
-#   templates: Full prompt templates by category
-#   model_specific: Adjustments per model type
+# Categories:
+#   - quality_boosters: Keywords that improve output quality
+#   - negative_presets: Common negative prompt patterns (by use case)
+#   - style_modifiers: Artistic style keywords
+#   - templates: Full prompt templates by category
+#   - saved_prompts: Tested prompts ready for reuse
+#   - test_results: Empirical validation data
+#
+# IMPORTANT: Single-subject generation tips
+#   - Always start prompts with "(single woman:1.5)" or similar weighted emphasis
+#   - Add "isolated subject", "solo", "alone" to reinforce
+#   - Include "multiple people, two people, crowd, group, duplicate, clone" in negatives
+
+# ========================================
+# SINGLE SUBJECT EMPHASIS (CRITICAL)
+# ========================================
+# SD 1.5 models frequently generate duplicates. Use these patterns:
+
+single_subject_patterns:
+  # Add these to START of positive prompt
+  positive_prefix:
+    strong: "(single woman:1.5), (one person only:1.4), isolated subject, solo,"
+    medium: "(single:1.3), alone, solitary,"
+    light: "single, one person,"
+  
+  # Add these to negative prompt
+  negative_additions:
+    - "multiple people"
+    - "two people" 
+    - "three people"
+    - "crowd"
+    - "group"
+    - "duplicate"
+    - "clone"
+    - "extra person"
+    - "background people"
 
 # ========================================
 # QUALITY BOOSTERS
 # ========================================
 # Keywords empirically shown to improve output quality
-# Add validation scores from testing
 
 quality_boosters:
   resolution:
     - keyword: "8K resolution"
-      effectiveness: "high"  # To be validated
+      effectiveness: "high"
       notes: "Works well with photorealistic prompts"
     - keyword: "4K"
       effectiveness: "medium"
@@ -56,9 +84,12 @@ quality_boosters:
       effectiveness: "medium"
     - keyword: "magazine cover"
       effectiveness: "medium"
+    - keyword: "centered composition"
+      effectiveness: "medium"
+      notes: "Helps reduce duplicates"
 
 # ========================================
-# NEGATIVE PRESETS
+# NEGATIVE PRESETS BY CATEGORY
 # ========================================
 # Tested negative prompt collections
 
@@ -72,17 +103,23 @@ negative_presets:
   photorealistic:
     prompt: "bad quality, blurry, low resolution, watermark, text, cartoon, anime, illustration, painting, drawing, 3d render, CGI, unrealistic, oversaturated, amateur"
     effectiveness: "high"
+  
+  # For single-person portraits (RECOMMENDED for NSFW)
+  single_portrait:
+    prompt: "multiple people, two people, three people, crowd, group, duplicate, clone, extra person, bad quality, blurry, low resolution, watermark, text, signatures, deformed, ugly, extra limbs, mutated, bad anatomy, bad hands, missing fingers, extra fingers, malformed limbs"
+    effectiveness: "high"
+    notes: "Use with single subject patterns in positive prompt"
+    
+  # For NSFW content
+  nsfw_portrait:
+    prompt: "multiple people, two people, three people, crowd, group, duplicate, clone, extra person, clothed, covered, bad quality, blurry, low resolution, watermark, text, signatures, deformed, ugly, old, wrinkled, skinny, thin, bony, flat chest, small butt, artificial, fake, plastic, tattoos, piercings, heavy makeup, obese, fat, overweight, cartoon, anime, CGI, 3D render, distorted anatomy, unrealistic proportions, amateur photography, extra fingers, mutated hands, bad hands, malformed limbs"
+    effectiveness: "high"
     
   # For game assets/icons
   game_assets:
     prompt: "realistic, 3d render, photograph, perspective, tilted, angled, complex background, text, watermark, multiple objects, blurry"
     effectiveness: "high"
     notes: "Use with vector/pixel art LoRAs"
-    
-  # For portraits
-  portrait:
-    prompt: "bad anatomy, bad hands, missing fingers, extra fingers, mutated, deformed, ugly, blurry, low quality, watermark, text, cropped head"
-    effectiveness: "high"
     
   # For landscapes/scenery
   landscape:
