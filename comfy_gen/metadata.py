@@ -164,9 +164,9 @@ def read_metadata_from_png(image_path: str) -> Optional[Dict[str, Any]]:
     try:
         img = Image.open(image_path)
         
-        # Check if it's a PNG
+        # Check if it's a PNG - silently return None for other formats
+        # (this is expected behavior, not an error)
         if img.format != "PNG":
-            print(f"[WARN] File is not a PNG: {image_path}")
             return None
         
         # Get PNG info
