@@ -52,6 +52,98 @@ The research consistently shows **two orthogonal quality dimensions**:
 
 ---
 
+## CLIP Encoder: Technical Details
+
+### The 77-Token Limit
+
+CLIP (Contrastive Language-Image Pre-training) has a **hard architectural limit of 77 tokens**:
+
+```python
+# From CLIP config (CLIPTextConfig)
+max_position_embeddings = 77  # Cannot be changed without retraining
+```
+
+This is why long, detailed prompts failed with tensor size mismatch errors like:
+```
+RuntimeError: The size of tensor a (124) must match the size of tensor b (77)
+```
+
+### Why ComfyUI GUI Accepts Long Prompts
+
+ComfyUI's Flux model uses **two text encoders**:
+1. **CLIP** - 77-token limit (used for image-text matching)
+2. **T5** - No token limit (used for primary text conditioning)
+
+The T5 encoder handles the detailed prompt text, while CLIP is used for embedding alignment.
+When generating images, T5 processes your full prompt. But for quality scoring and validation,
+we need CLIP specifically for image-text similarity scores.
+
+### Prompt Chunking Solution
+
+Following the industry standard (AUTOMATIC1111, Stable Diffusion WebUI), we implement **prompt chunking**:
+
+```
+Long prompt → Split into 75-token chunks → Encode each separately → Average embeddings
+```
+
+**Implementation (quality.py and validation.py):**
+
+```python
+def _chunk_prompt(self, prompt: str, max_chars: int = 250) -> list[str]:
+    """Split long prompts into ~77-token chunks (250 chars conservative estimate)."""
+    words = prompt.split()
+    chunks = []
+    current_chunk = []
+    current_length = 0
+    
+    for word in words:
+        word_len = len(word) + 1
+        if current_length + word_len > max_chars and current_chunk:
+            chunks.append(' '.join(current_chunk))
+            current_chunk = [word]
+            current_length = word_len
+        else:
+            current_chunk.append(word)
+            current_length += word_len
+    
+    if current_chunk:
+        chunks.append(' '.join(current_chunk))
+    
+    return chunks if chunks else [prompt]
+
+def compute_clip_score(self, image_path: str, prompt: str) -> float:
+    chunks = self._chunk_prompt(prompt)
+    
+    # Get image features once
+    image_features = self.clip_model.get_image_features(**image_inputs)
+    image_features = image_features / image_features.norm(dim=-1, keepdim=True)
+    
+    # Process each chunk, average embeddings
+    text_embeddings = []
+    for chunk in chunks:
+        text_features = self.clip_model.get_text_features(**text_inputs)
+        text_features = text_features / text_features.norm(dim=-1, keepdim=True)
+        text_embeddings.append(text_features)
+    
+    avg_text_features = torch.stack(text_embeddings).mean(dim=0)
+    avg_text_features = avg_text_features / avg_text_features.norm(dim=-1, keepdim=True)
+    
+    similarity = (image_features @ avg_text_features.T).squeeze()
+    return similarity.item()
+```
+
+### Best Practices for Prompts
+
+| Use Case | Max Tokens | Recommendation |
+|----------|-----------|----------------|
+| Quality scoring | Unlimited | Use detailed 100-200 token prompts |
+| Validation | Unlimited | Same prompt as generation |
+| Simple images | ~50-70 | Keep concise for faster processing |
+
+**Key insight**: With chunking, longer prompts actually **improve** quality scores because they provide more semantic signal. Use detailed, descriptive prompts for best results.
+
+---
+
 ## Architecture: Modular Two-Pipeline System
 
 ```
