@@ -1,0 +1,17 @@
+#!/usr/bin/env python3
+"""Wrapper script to run comfy CLI without installation.
+
+This allows running `./comfy` directly from the repository root.
+"""
+import sys
+from pathlib import Path
+
+# Add the repository root to Python path
+repo_root = Path(__file__).parent
+sys.path.insert(0, str(repo_root))
+
+# Import and run the CLI
+from comfy_gen.cli import main
+
+if __name__ == "__main__":
+    main()

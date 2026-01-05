@@ -44,6 +44,46 @@ Generate images and videos via text prompts without using the ComfyUI GUI. This 
 
 ## Quick Start
 
+### Using the Modern CLI (Recommended)
+
+```bash
+# Generate an image using the new CLI
+python3 comfy generate image --workflow workflows/flux-dev.json \
+    --prompt "a sunset over mountains" \
+    --output /tmp/sunset.png
+
+# Or after installation: comfy generate image --workflow ...
+
+# List available commands
+python3 comfy --help
+
+# Generate with validation and quality scoring
+python3 comfy generate image --workflow workflows/sd15.json \
+    --prompt "a beautiful landscape" \
+    --validate --quality-score \
+    --quality-threshold 8.0
+
+# Browse gallery
+python3 comfy gallery list --limit 10
+python3 comfy gallery open <filename>
+
+# Manage models
+python3 comfy models list --type checkpoints
+python3 comfy loras list
+python3 comfy loras verify <lora_file>
+
+# Search CivitAI
+python3 comfy civitai search "anime style" --type LORA --limit 5
+
+# Search HuggingFace
+python3 comfy hf search "stable diffusion" --library diffusers
+
+# Check server status
+python3 comfy server status
+```
+
+### Using Legacy CLI (Backward Compatible)
+
 ```bash
 # Generate an image locally (from magneto)
 python3 generate.py --workflow workflows/flux-dev.json \
@@ -158,7 +198,104 @@ curl -s http://192.168.1.215:9000/comfy-gen/ | grep -oP '(?<=<Key>)[^<]+'
 
 ## CLI Reference
 
-### Basic Usage
+### Modern CLI (Click-based)
+
+The new `comfy` CLI provides a modern, grouped interface for all ComfyGen functionality.
+
+#### Installation
+
+```bash
+# Install in development mode
+pip install -e .
+
+# Or run without installation
+python3 comfy <command>
+```
+
+#### Command Structure
+
+```
+comfy
+├── generate          # Image/video generation
+│   ├── image         # Generate image (default)
+│   └── video         # Generate video (Wan 2.2)
+├── validate          # Validate workflow JSON
+├── gallery           # Browse MinIO gallery
+│   ├── list          # List recent generations
+│   ├── open          # Open image in browser
+│   └── delete        # Delete image
+├── models            # Model management
+│   ├── list          # List installed models
+│   ├── info          # Get model info
+│   └── download      # Download from CivitAI/HF
+├── loras             # LoRA management
+│   ├── list          # List installed LoRAs
+│   ├── verify        # Verify LoRA base model
+│   └── catalog       # Show/update catalog
+├── civitai           # CivitAI integration
+│   ├── search        # Search models
+│   ├── info          # Get model info by ID
+│   └── lookup        # Look up by hash
+├── hf                # HuggingFace integration
+│   ├── search        # Search models
+│   ├── info          # Get model info
+│   └── download      # Download model file
+├── server            # ComfyUI server management
+│   ├── status        # Check server status
+│   ├── start         # Start ComfyUI
+│   └── stop          # Stop ComfyUI
+└── config            # Configuration
+    ├── show          # Show current config
+    └── set           # Set config value
+```
+
+#### Examples
+
+**Generate an image:**
+```bash
+comfy generate image \
+    --workflow workflows/flux-dev.json \
+    --prompt "a beautiful sunset" \
+    --steps 50 --cfg 7.5 \
+    --quality-score --quality-threshold 8.0
+```
+
+**Browse gallery:**
+```bash
+comfy gallery list --limit 20
+comfy gallery open 20240105_120000_image.png
+```
+
+**Search for models:**
+```bash
+comfy civitai search "photorealistic" --type Checkpoint --limit 10
+comfy hf search "stable diffusion" --library diffusers
+```
+
+**Manage LoRAs:**
+```bash
+comfy loras list
+comfy loras verify my_lora.safetensors
+```
+
+**Server management:**
+```bash
+comfy server status
+comfy server start
+```
+
+For detailed help on any command:
+```bash
+comfy --help
+comfy generate --help
+comfy generate image --help
+```
+
+### Legacy CLI (generate.py)
+
+The original `generate.py` script remains available for backward compatibility.
+
+#### Basic Usage
 
 ```bash
 python3 generate.py --workflow <workflow.json> --prompt "<prompt>" [OPTIONS]

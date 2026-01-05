@@ -253,3 +253,59 @@ class CivitAIClient:
             return True
         except Exception:
             return False
+    
+    def get_model_info(self, model_id: int) -> Optional[Dict[str, Any]]:
+        """Get detailed model information (alias for get_model).
+        
+        Args:
+            model_id: CivitAI model ID
+            
+        Returns:
+            Model information with simplified structure
+        """
+        model = self.get_model(model_id)
+        if not model:
+            return None
+        
+        # Simplify structure for CLI display
+        versions = model.get("modelVersions", [])
+        latest_version = versions[0] if versions else {}
+        
+        return {
+            "id": model.get("id"),
+            "name": model.get("name"),
+            "type": model.get("type"),
+            "description": model.get("description", ""),
+            "creator": model.get("creator", {}).get("username"),
+            "downloads": model.get("stats", {}).get("downloadCount", 0),
+            "rating": model.get("stats", {}).get("rating", 0),
+            "nsfw": model.get("nsfw", False),
+            "versions": [
+                {
+                    "name": v.get("name"),
+                    "id": v.get("id"),
+                    "base_model": v.get("baseModel"),
+                    "created_at": v.get("createdAt"),
+                }
+                for v in versions[:10]  # Limit to 10 versions
+            ]
+        }
+    
+    def lookup_by_hash(self, hash_value: str) -> Optional[Dict[str, Any]]:
+        """Look up model by hash (alias for get_model_by_hash).
+        
+        Args:
+            hash_value: SHA256 hash of the model file
+            
+        Returns:
+            Model version info or None
+        """
+        result = self.get_model_by_hash(hash_value)
+        if result and "error" not in result:
+            return {
+                "id": result.get("model_id"),
+                "name": result.get("model_name"),
+                "base_model": result.get("base_model"),
+                "trained_words": result.get("trained_words", []),
+            }
+        return None

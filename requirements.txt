@@ -12,3 +12,4 @@ aiofiles
 pyiqa
 ultralytics
 huggingface_hub
+click>=8.0
