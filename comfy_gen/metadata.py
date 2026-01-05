@@ -226,9 +226,10 @@ def get_comfyui_version() -> Optional[str]:
     """
     try:
         import requests
+        import os
         
         # ComfyUI host from environment or default
-        comfyui_host = "http://192.168.1.215:8188"
+        comfyui_host = os.getenv("COMFYUI_HOST", "http://192.168.1.215:8188")
         
         response = requests.get(f"{comfyui_host}/system_stats", timeout=5)
         

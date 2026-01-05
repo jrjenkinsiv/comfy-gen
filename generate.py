@@ -1466,6 +1466,7 @@ def embed_metadata_in_output(output_path, metadata):
     try:
         # Only embed in PNG files
         if not output_path.lower().endswith('.png'):
+            # Not an error - just skip for non-PNG files
             return False
         
         # Import metadata module
@@ -1669,6 +1670,11 @@ def main():
     global current_prompt_id, current_output_path
     
     # Handle special metadata show command before argparse
+    # NOTE: This is intentionally handled before argparse to provide a simple,
+    # git-style subcommand interface (e.g., "git commit" vs "git --help").
+    # This pattern is user-friendly and avoids conflicts with existing flags.
+    # The command doesn't need argparse features like --help integration since
+    # it's a simple read-only operation with minimal arguments.
     if len(sys.argv) >= 3 and sys.argv[1] == "metadata" and sys.argv[2] == "show":
         if len(sys.argv) < 4:
             print("Usage: python generate.py metadata show <image.png>")

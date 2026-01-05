@@ -218,10 +218,9 @@ def test_non_png_file():
     """Test that non-PNG files return None."""
     with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as f:
         temp_path = f.name
-        f.write(b"fake jpg content")
     
     try:
-        # Create a fake JPG using PIL
+        # Create a JPEG using PIL
         img = Image.new('RGB', (100, 100), color='green')
         img.save(temp_path, 'JPEG')
         
