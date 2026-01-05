@@ -50,9 +50,7 @@ body:
         - [ ] Display user-friendly error message when server is unreachable
         - [ ] Add retry logic with exponential backoff (3 attempts max)
         - [ ] Update error exit codes: use exit code 2 for connection failures
-        - [ ] Add unit tests for timeout scenarios
-      value: |
-        - [ ] 
+        - [ ] Add unit tests for timeout scenarios 
     validations:
       required: true
       
