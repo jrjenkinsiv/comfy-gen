@@ -31,6 +31,7 @@ Generate images and videos via text prompts without using the ComfyUI GUI. This 
 | **Image-to-Image** | Transform images with prompts and denoise control | [Input Images](#input-image-options) |
 | **Text-to-Video** | Create videos from prompts with Wan 2.2 | [Model Registry](docs/MODEL_REGISTRY.md) |
 | **Image-to-Video** | Animate existing images | [Usage Guide](docs/USAGE.md) |
+| **Prompt Enhancement** | Auto-enhance prompts using small LLM for better quality | [Usage Guide](docs/USAGE.md) |
 | **Dynamic LoRA Injection** | Add LoRAs via CLI without modifying workflows | [Architecture](docs/ARCHITECTURE.md) |
 | **Image Validation** | CLIP-based semantic similarity scoring | [Validation](#image-validation--auto-retry) |
 | **Auto-Retry** | Automatic retry with prompt adjustment on failure | [Validation](#image-validation--auto-retry) |
@@ -73,6 +74,14 @@ python3 generate.py --workflow workflows/flux-dev.json \
     --negative-prompt "multiple cars, duplicate, cloned, ghosting" \
     --output /tmp/porsche.png \
     --validate --auto-retry --retry-limit 3
+
+# Enhance prompt using small LLM for better quality
+python3 generate.py --workflow workflows/flux-dev.json \
+    --prompt "a cat" \
+    --enhance-prompt \
+    --output /tmp/cat.png
+# Enhanced prompt example: "A highly detailed photograph of a cat, professional 
+# pet photography, soft natural lighting, shallow depth of field, 8K resolution"
 
 # Add LoRAs dynamically (no workflow modification needed)
 python3 generate.py --workflow workflows/wan22-t2v.json \
