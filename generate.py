@@ -1679,6 +1679,13 @@ def main():
     
     args = parser.parse_args()
     
+    # Enforce --validate when --validate-person-count is used
+    if args.validate_person_count and not args.validate:
+        # Automatically enable validation when person count validation is requested
+        args.validate = True
+        if not args.quiet:
+            print("[INFO] Auto-enabling --validate because --validate-person-count was specified")
+    
     # Load configuration for defaults
     config = load_config()
     validation_config = config.get("validation", {})

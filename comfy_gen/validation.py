@@ -36,6 +36,24 @@ try:
 except ImportError:
     YOLO_AVAILABLE = False
 
+# Constants for person detection
+PERSON_TERMS = ('person', 'people', 'woman', 'women', 'man', 'men', 'individual', 'subject')
+NUMBER_WORDS = {
+    'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5,
+    'six': 6, 'seven': 7, 'eight': 8, 'nine': 9, 'ten': 10
+}
+
+# Module-level YOLO model cache
+_yolo_model = None
+
+
+def _get_yolo_model():
+    """Get or create cached YOLO model instance."""
+    global _yolo_model
+    if _yolo_model is None and YOLO_AVAILABLE:
+        _yolo_model = YOLO('yolov8n.pt')
+    return _yolo_model
+
 
 class ImageValidator:
     """Validates generated images using CLIP semantic similarity."""
@@ -280,20 +298,17 @@ def extract_expected_person_count(prompt: str) -> Optional[int]:
     if re.search(r'\b(solo|single)\b', prompt_lower):
         return 1
     
-    # Pattern 2: Number words followed by person/people/woman/man/etc.
-    number_words = {
-        'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5,
-        'six': 6, 'seven': 7, 'eight': 8, 'nine': 9, 'ten': 10
-    }
+    # Build pattern using person terms constant
+    person_pattern = '|'.join(PERSON_TERMS)
     
-    # Match "one person", "two women", "three people", etc.
-    for word, count in number_words.items():
-        pattern = rf'\b{word}\s+(person|people|woman|women|man|men|individual|subject)\b'
+    # Pattern 2: Number words followed by person-related terms
+    for word, count in NUMBER_WORDS.items():
+        pattern = rf'\b{word}\s+({person_pattern})\b'
         if re.search(pattern, prompt_lower):
             return count
     
-    # Pattern 3: Digit followed by person/people/etc.
-    digit_match = re.search(r'\b(\d+)\s+(person|people|woman|women|man|men|individual|subject)', prompt_lower)
+    # Pattern 3: Digit followed by person-related terms
+    digit_match = re.search(rf'\b(\d+)\s+({person_pattern})\b', prompt_lower)
     if digit_match:
         return int(digit_match.group(1))
     
@@ -301,8 +316,8 @@ def extract_expected_person_count(prompt: str) -> Optional[int]:
     group_match = re.search(r'group\s+of\s+(\w+)', prompt_lower)
     if group_match:
         word = group_match.group(1)
-        if word in number_words:
-            return number_words[word]
+        if word in NUMBER_WORDS:
+            return NUMBER_WORDS[word]
         elif word.isdigit():
             return int(word)
     
@@ -312,6 +327,8 @@ def extract_expected_person_count(prompt: str) -> Optional[int]:
 
 def count_persons_yolo(image_path: str, confidence: float = 0.5) -> Dict[str, Any]:
     """Count persons in image using YOLO object detection.
+    
+    Uses cached YOLO model instance for efficiency across multiple calls.
     
     Args:
         image_path: Path to the image
@@ -337,9 +354,13 @@ def count_persons_yolo(image_path: str, confidence: float = 0.5) -> Dict[str, An
                 "error": f"Image file not found: {image_path}"
             }
         
-        # Load YOLOv8 model (will download on first use)
-        # Use nano model for speed, runs well on CPU
-        model = YOLO('yolov8n.pt')
+        # Get cached model instance
+        model = _get_yolo_model()
+        if model is None:
+            return {
+                "person_count": None,
+                "error": "Failed to load YOLO model"
+            }
         
         # Run inference
         results = model(image_path, verbose=False)
@@ -371,6 +392,7 @@ def count_persons_yolo(image_path: str, confidence: float = 0.5) -> Dict[str, An
             "person_count": None,
             "error": f"YOLO detection failed: {str(e)}"
         }
+
 
 
 def validate_image(
@@ -425,9 +447,8 @@ def validate_image(
         # Check if YOLO detection failed
         if "error" in yolo_result:
             result["person_count_error"] = yolo_result["error"]
-            # Don't fail validation if YOLO unavailable, just warn
-            if not YOLO_AVAILABLE:
-                print(f"[WARN] {yolo_result['error']}")
+            # Store warning in result instead of printing
+            # The calling code in generate.py will handle displaying this
         elif expected_count is not None and yolo_result.get("person_count") is not None:
             # Validate count matches expectation
             actual_count = yolo_result["person_count"]

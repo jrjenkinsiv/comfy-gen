@@ -4,6 +4,7 @@
 import sys
 import os
 import tempfile
+import traceback
 from pathlib import Path
 
 # Add parent directory to path to import comfy_gen
@@ -163,7 +164,6 @@ if __name__ == "__main__":
             passed += 1
         except Exception as e:
             print(f"[FAILED] {test.__name__}: {e}")
-            import traceback
             traceback.print_exc()
             failed += 1
     
