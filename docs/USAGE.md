@@ -146,8 +146,12 @@ python3 generate.py \
 |-----------|-------|---------|--------|
 | `--steps` | 1-150 | 20 | Sampling steps (more = finer detail) |
 | `--cfg` | 1.0-20.0 | 7.0 | Prompt adherence (higher = stricter) |
-| `--seed` | -1 or int | random | Random seed for reproducibility |
+| `--seed` | -1 or int | random | Random seed (**avoid for exploration**) |
 | `--width` | 64-2048 | 512 | Output width (divisible by 8) |
+
+> ⚠️ **WARNING**: Avoid specifying `--seed` for batch generation or exploration.
+> Fixed seeds produce deterministic outputs, preventing variety. Only use seeds
+> when you need exact reproducibility (e.g., demonstrating a specific result).
 | `--height` | 64-2048 | 512 | Output height (divisible by 8) |
 | `--sampler` | string | varies | Sampler algorithm |
 | `--scheduler` | string | normal | Noise scheduler |
