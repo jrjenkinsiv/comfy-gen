@@ -91,20 +91,26 @@ class PromptEnhancer:
                 trust_remote_code=True
             )
             
+            # Load model - don't use device_map with pipeline to avoid accelerate conflict
             self.model = AutoModelForCausalLM.from_pretrained(
                 self.model_name,
                 cache_dir=CACHE_DIR,
                 torch_dtype=torch.float32,  # Use float32 for CPU
-                device_map=self.device,
-                trust_remote_code=True
+                trust_remote_code=True,
+                low_cpu_mem_usage=True
             )
             
-            # Create text generation pipeline
+            # Move to device if not using accelerate
+            if self.device == "cpu":
+                self.model = self.model.cpu()
+            elif self.device == "cuda" and torch.cuda.is_available():
+                self.model = self.model.cuda()
+            
+            # Create text generation pipeline without device arg (model already on correct device)
             self.pipeline = pipeline(
                 "text-generation",
                 model=self.model,
                 tokenizer=self.tokenizer,
-                device=self.device,
                 max_new_tokens=256,
                 do_sample=True,
                 temperature=0.7,
