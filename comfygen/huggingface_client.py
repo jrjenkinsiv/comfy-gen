@@ -166,11 +166,15 @@ class HuggingFaceClient:
             # Use cache_dir if provided, otherwise local_dir
             target_dir = cache_dir or local_dir
             
+            if not target_dir:
+                # Use default HuggingFace cache if no directory specified
+                target_dir = None
+            
             # Download file
             downloaded_path = hf_hub_download(
                 repo_id=model_id,
                 filename=filename,
-                local_dir=target_dir,
+                local_dir=target_dir if target_dir else None,
                 token=self.token,
             )
             

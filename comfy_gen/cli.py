@@ -4,9 +4,21 @@
 This module provides a modern, grouped CLI interface for all ComfyGen functionality.
 """
 
+import os
 import sys
-import click
 from pathlib import Path
+
+import click
+
+
+# Configuration constants (can be overridden with environment variables)
+COMFYUI_HOST = os.getenv("COMFYUI_HOST", "http://192.168.1.215:8188")
+MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "192.168.1.215:9000")
+MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
+MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", "minioadmin")
+BUCKET_NAME = os.getenv("MINIO_BUCKET", "comfy-gen")
+MOIRA_SSH_USER = os.getenv("MOIRA_SSH_USER", "jrjen")
+MOIRA_COMFY_PATH = os.getenv("MOIRA_COMFY_PATH", r"C:\Users\jrjen\comfy")
 
 
 @click.group()
@@ -240,11 +252,6 @@ def gallery_list(limit, filter):
     from minio import Minio
     from minio.error import S3Error
     
-    MINIO_ENDPOINT = "192.168.1.215:9000"
-    MINIO_ACCESS_KEY = "minioadmin"
-    MINIO_SECRET_KEY = "minioadmin"
-    BUCKET_NAME = "comfy-gen"
-    
     try:
         client = Minio(
             MINIO_ENDPOINT,
@@ -290,9 +297,6 @@ def gallery_open(filename):
     """Open an image in the default browser."""
     import webbrowser
     
-    MINIO_ENDPOINT = "192.168.1.215:9000"
-    BUCKET_NAME = "comfy-gen"
-    
     url = f"http://{MINIO_ENDPOINT}/{BUCKET_NAME}/{filename}"
     click.echo(f"Opening {url}")
     webbrowser.open(url)
@@ -305,11 +309,6 @@ def gallery_delete(filename):
     """Delete an image from MinIO."""
     from minio import Minio
     from minio.error import S3Error
-    
-    MINIO_ENDPOINT = "192.168.1.215:9000"
-    MINIO_ACCESS_KEY = "minioadmin"
-    MINIO_SECRET_KEY = "minioadmin"
-    BUCKET_NAME = "comfy-gen"
     
     try:
         client = Minio(
@@ -326,7 +325,8 @@ def gallery_delete(filename):
         try:
             client.remove_object(BUCKET_NAME, f"{filename}.json")
             click.echo(f"[OK] Deleted metadata {filename}.json")
-        except:
+        except S3Error:
+            # Silently ignore if metadata doesn't exist
             pass
             
     except S3Error as e:
@@ -350,8 +350,6 @@ def models():
 def models_list(model_type):
     """List installed models."""
     import requests
-    
-    COMFYUI_HOST = "http://192.168.1.215:8188"
     
     try:
         response = requests.get(f"{COMFYUI_HOST}/object_info", timeout=10)
@@ -405,6 +403,7 @@ def models_list(model_type):
 @click.argument("model_name")
 def models_info(model_name):
     """Get information about a specific model."""
+    # TODO: Implement model info retrieval
     click.echo(f"Model info for: {model_name}")
     click.echo("(Not yet implemented - will show file size, hash, metadata)")
 
@@ -415,6 +414,7 @@ def models_info(model_name):
               help="Download source")
 def models_download(model_id, source):
     """Download a model from CivitAI or HuggingFace."""
+    # TODO: Implement model download
     if source == "civitai":
         click.echo(f"Downloading model {model_id} from CivitAI...")
         click.echo("(Use 'comfy civitai' commands for now)")
@@ -498,11 +498,13 @@ def loras_verify(lora_file):
 @click.option("--update", is_flag=True, help="Update lora_catalog.yaml from server")
 def loras_catalog(update):
     """Show or update LoRA catalog."""
+    import yaml
+    
     if update:
+        # TODO: Implement catalog update
         click.echo("Updating lora_catalog.yaml...")
         click.echo("(Not yet implemented)")
     else:
-        import yaml
         catalog_path = Path("lora_catalog.yaml")
         if catalog_path.exists():
             with open(catalog_path) as f:
@@ -697,8 +699,6 @@ def server_status():
     """Check ComfyUI server status."""
     import requests
     
-    COMFYUI_HOST = "http://192.168.1.215:8188"
-    
     try:
         response = requests.get(f"{COMFYUI_HOST}/system_stats", timeout=5)
         if response.status_code == 200:
@@ -721,7 +721,9 @@ def server_start():
     """Start ComfyUI server on moira (requires SSH access)."""
     import subprocess
     
-    cmd = 'ssh moira "C:\\\\Users\\\\jrjen\\\\comfy\\\\.venv\\\\Scripts\\\\python.exe C:\\\\Users\\\\jrjen\\\\comfy-gen\\\\scripts\\\\start_comfyui.py"'
+    venv_python = f"{MOIRA_COMFY_PATH}\\.venv\\Scripts\\python.exe"
+    start_script = f"{MOIRA_COMFY_PATH}\\..\\comfy-gen\\scripts\\start_comfyui.py"
+    cmd = f'ssh moira "{venv_python} {start_script}"'
     
     click.echo("Starting ComfyUI on moira...")
     try:
@@ -740,6 +742,7 @@ def server_start():
 @server.command("stop")
 def server_stop():
     """Stop ComfyUI server on moira."""
+    # TODO: Implement server stop via SSH task kill
     click.echo("Stopping ComfyUI server...")
     click.echo("(Not yet implemented - requires SSH task kill)")
 
@@ -758,7 +761,6 @@ def config():
 def config_show():
     """Show current configuration."""
     import yaml
-    from pathlib import Path
     
     config_files = ["presets.yaml", "lora_catalog.yaml", "prompt_catalog.yaml"]
     
@@ -776,6 +778,7 @@ def config_show():
 @click.argument("value")
 def config_set(key, value):
     """Set a configuration value."""
+    # TODO: Implement configuration setting
     click.echo(f"Setting {key} = {value}")
     click.echo("(Not yet implemented)")
 
