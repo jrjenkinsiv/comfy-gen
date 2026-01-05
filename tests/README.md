@@ -86,6 +86,8 @@ python3 tests/manual_test_transparent.py
 - **Mock Responses:** Simulated queue status, generation results, system stats
 - **Example:**
   ```python
+  from unittest.mock import patch
+  
   with patch('requests.post') as mock_post:
       mock_post.return_value.json.return_value = {"prompt_id": "test-123"}
       result = queue_workflow(workflow, server_address)
@@ -97,6 +99,8 @@ python3 tests/manual_test_transparent.py
 - **Note:** No dedicated MinIO mocking library used (e.g., moto is for AWS S3)
 - **Example:**
   ```python
+  from unittest.mock import patch
+  
   with patch('minio.Minio') as mock_minio:
       mock_client = mock_minio.return_value
       mock_client.bucket_exists.return_value = True
@@ -107,6 +111,8 @@ python3 tests/manual_test_transparent.py
 - **Strategy:** Create real temp files for I/O tests, clean up automatically
 - **Example:**
   ```python
+  import tempfile
+  
   with tempfile.NamedTemporaryFile(suffix='.png') as tmp:
       test_image_path = tmp.name
       # Test code using test_image_path
@@ -117,8 +123,13 @@ python3 tests/manual_test_transparent.py
 - **Strategy:** Mock model outputs to avoid downloading large models in tests
 - **Example:**
   ```python
+  from unittest.mock import patch
+  
   with patch('transformers.pipeline') as mock_pipeline:
-      mock_pipeline.return_value.return_value = [{"generated_text": "enhanced prompt"}]
+      # Mock the pipeline function to return a mock pipeline object
+      mock_pipe = mock_pipeline.return_value
+      # Mock the pipeline object's call to return generated text
+      mock_pipe.return_value = [{"generated_text": "enhanced prompt"}]
   ```
 
 ## CI Integration
@@ -135,14 +146,22 @@ Currently, CI focuses on generation workflows rather than running pytest. Future
 # Future CI test job (proposed)
 jobs:
   test:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            network: false
+          - runner: self-hosted
+            network: true
+    runs-on: ${{ matrix.runner }}
     steps:
       - name: Run Unit Tests
+        if: matrix.network == false
         run: |
           pytest tests/ -v -m "not network_required"
       
       - name: Run Integration Tests (Local Network)
-        if: runner.name == 'ant-man'  # Self-hosted runner only
+        if: matrix.network == true
         run: |
           pytest tests/ -v -m "network_required"
 ```
