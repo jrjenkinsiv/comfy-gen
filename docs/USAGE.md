@@ -219,6 +219,20 @@ python3 generate.py \
     --negative-prompt "multiple cars, duplicate, cloned" \
     --output /tmp/car.png \
     --validate --auto-retry --retry-limit 3
+
+# Validate with person count detection (YOLO)
+python3 generate.py \
+    --workflow workflows/flux-dev.json \
+    --prompt "solo woman standing in a field, detailed portrait" \
+    --output /tmp/portrait.png \
+    --validate --validate-person-count
+
+# Person count with auto-retry
+python3 generate.py \
+    --workflow workflows/flux-dev.json \
+    --prompt "two women talking, casual conversation" \
+    --output /tmp/conversation.png \
+    --validate --validate-person-count --auto-retry
 ```
 
 **Validation Options:**
@@ -226,6 +240,7 @@ python3 generate.py \
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
 | `--validate` | Boolean | False | Run validation after generation |
+| `--validate-person-count` | Boolean | False | Validate person count using YOLO (requires `--validate`) |
 | `--auto-retry` | Boolean | False | Retry if validation fails |
 | `--retry-limit` | Integer | 3 | Maximum retry attempts |
 | `--positive-threshold` | Float | 0.25 | Minimum CLIP score (0-1) |
@@ -235,6 +250,44 @@ python3 generate.py \
 - **0.20-0.25**: Marginal match
 - **0.25-0.35**: Acceptable (default threshold)
 - **> 0.35**: Good semantic match
+
+**Person Count Validation:**
+
+Person count validation uses YOLOv8 to detect and count persons in generated images. This helps catch issues where CLIP semantic similarity alone cannot distinguish between "solo woman" and "two women".
+
+**Installation:**
+```bash
+pip install ultralytics
+```
+
+**Supported Keywords for Person Count:**
+- **"solo", "single"** → Expects 1 person
+- **"one person", "one woman", "one man"** → Expects 1 person
+- **"two people", "two women", "two men"** → Expects 2 persons
+- **"three people", "four women", etc.** → Expects N persons (supports up to "ten")
+- **"group of five"** → Expects 5 persons
+- **Number + person/people/woman/man** (e.g., "5 people") → Expects specified count
+
+**How It Works:**
+1. Extracts expected person count from prompt using keyword patterns
+2. Runs YOLOv8 detection on generated image (runs on CPU)
+3. Compares detected count with expected count
+4. Fails validation if counts don't match
+
+**Use Cases:**
+- Portrait generation where exact subject count matters
+- Avoiding duplicate/merged subjects (common with certain models)
+- Ensuring "solo" prompts don't generate multiple subjects
+- Validating group shots have correct number of people
+
+**Example Output:**
+```
+[INFO] Running validation...
+[INFO] Detected persons: 2
+[INFO] Expected persons: 1
+[INFO] Validation result: Person count mismatch: expected 1, detected 2
+[WARN] Image failed validation: Person count mismatch: expected 1, detected 2
+```
 
 ---
 

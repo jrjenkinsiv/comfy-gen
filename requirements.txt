@@ -10,3 +10,4 @@ pyyaml
 httpx
 aiofiles
 pyiqa
+ultralytics

@@ -1658,6 +1658,7 @@ def main():
     parser.add_argument("--dry-run", action="store_true", help="Validate workflow without generating")
     parser.add_argument("--validate", action="store_true", help="Run validation after generation (default: from config)")
     parser.add_argument("--no-validate", action="store_true", help="Disable validation even if config enables it")
+    parser.add_argument("--validate-person-count", action="store_true", help="Validate person count using YOLO (requires --validate)")
     parser.add_argument("--auto-retry", action="store_true", help="Automatically retry if validation fails (default: from config)")
     parser.add_argument("--retry-limit", type=int, default=None, help="Maximum retry attempts (default: from config or 3)")
     parser.add_argument("--positive-threshold", type=float, default=None, help="Minimum CLIP score for positive prompt (default: from config or 0.25)")
@@ -1677,6 +1678,13 @@ def main():
     parser.add_argument("--preset", help="Use a generation preset (draft, balanced, high-quality)")
     
     args = parser.parse_args()
+    
+    # Enforce --validate when --validate-person-count is used
+    if args.validate_person_count and not args.validate:
+        # Automatically enable validation when person count validation is requested
+        args.validate = True
+        if not args.quiet:
+            print("[INFO] Auto-enabling --validate because --validate-person-count was specified")
     
     # Load configuration for defaults
     config = load_config()
@@ -2091,7 +2099,8 @@ def main():
                     args.output,
                     args.prompt,
                     effective_negative_prompt if effective_negative_prompt else None,
-                    positive_threshold=args.positive_threshold
+                    positive_threshold=args.positive_threshold,
+                    validate_person_count=args.validate_person_count
                 )
                 
                 if not args.quiet:
@@ -2101,6 +2110,15 @@ def main():
                     if validation_result.get('negative_score'):
                         print(f"[INFO] Negative score: {validation_result['negative_score']:.3f}")
                         print(f"[INFO] Delta: {validation_result.get('score_delta', 0.0):.3f}")
+                    
+                    # Print person count validation results if available
+                    if args.validate_person_count:
+                        if validation_result.get('person_count') is not None:
+                            print(f"[INFO] Detected persons: {validation_result['person_count']}")
+                            if validation_result.get('expected_person_count') is not None:
+                                print(f"[INFO] Expected persons: {validation_result['expected_person_count']}")
+                        if validation_result.get('person_count_error'):
+                            print(f"[WARN] Person count validation: {validation_result['person_count_error']}")
                 
                 if validation_result['passed']:
                     if not args.quiet:
