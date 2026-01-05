@@ -330,4 +330,4 @@ When adding or updating documentation:
 
 ---
 
-**Documentation Policy:** NO DOCUMENT PROLIFERATION. All documentation files listed in this index are authoritative references. Do NOT create new documentation files without explicit approval. Add new infrastructure information to existing docs only. See [copilot-instructions.md](../.github/copilot-instructions.md) for details.
+**Documentation Policy:** NO DOCUMENT PROLIFERATION. All documentation files listed in this index are authoritative references. Do NOT create new documentation files without explicit approval. Add new infrastructure information to existing docs only.
