@@ -330,4 +330,4 @@ When adding or updating documentation:
 
 ---
 
-**Documentation Policy:** NO DOCUMENT PROLIFERATION. All documentation files listed in this index are authoritative references. Do NOT create new documentation files without explicit approval. Add new infrastructure information to existing docs only.
+**Documentation Policy:** This is the authoritative documentation index. Do NOT create new documentation files without explicit approval. Add new infrastructure information to existing docs only.
