@@ -72,6 +72,7 @@ class PromptEnhancer:
                     return yaml.safe_load(f) or {}
             except Exception as e:
                 print(f"[WARN] Failed to load prompt_catalog.yaml: {e}", file=sys.stderr)
+                print(f"[WARN] Enhancement will proceed without catalog context", file=sys.stderr)
         return {}
     
     def _ensure_model_loaded(self):
@@ -191,7 +192,7 @@ Output ONLY the enhanced prompt, nothing else."""
                 formatted_prompt,
                 max_new_tokens=256,
                 num_return_sequences=1,
-                pad_token_id=self.tokenizer.eos_token_id,
+                pad_token_id=self.tokenizer.pad_token_id if self.tokenizer.pad_token_id is not None else self.tokenizer.eos_token_id,
             )
             
             # Extract the generated text
@@ -274,3 +275,13 @@ def is_available() -> bool:
         True if transformers library is installed, False otherwise
     """
     return TRANSFORMERS_AVAILABLE
+
+
+def reset_enhancer() -> None:
+    """Reset the global enhancer instance.
+    
+    This is primarily useful for testing to ensure a clean state
+    between test cases.
+    """
+    global _enhancer_instance
+    _enhancer_instance = None

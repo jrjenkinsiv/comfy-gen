@@ -202,11 +202,10 @@ class TestPromptEnhancerAPI:
         mock_enhancer_class.return_value = mock_enhancer
         
         with patch('comfy_gen.prompt_enhancer.TRANSFORMERS_AVAILABLE', True):
-            from comfy_gen.prompt_enhancer import enhance_prompt
+            from comfy_gen.prompt_enhancer import enhance_prompt, reset_enhancer
             
-            # Clear global instance
-            import comfy_gen.prompt_enhancer
-            comfy_gen.prompt_enhancer._enhancer_instance = None
+            # Reset to clean state
+            reset_enhancer()
             
             result = enhance_prompt("a cat", style="photorealistic")
             
@@ -224,11 +223,10 @@ class TestPromptEnhancerAPI:
         mock_enhancer_class.return_value = mock_enhancer
         
         with patch('comfy_gen.prompt_enhancer.TRANSFORMERS_AVAILABLE', True):
-            from comfy_gen.prompt_enhancer import enhance_prompt
+            from comfy_gen.prompt_enhancer import enhance_prompt, reset_enhancer
             
-            # Clear global instance
-            import comfy_gen.prompt_enhancer
-            comfy_gen.prompt_enhancer._enhancer_instance = None
+            # Reset to clean state
+            reset_enhancer()
             
             result = enhance_prompt("a cat", model="microsoft/phi-2")
             
