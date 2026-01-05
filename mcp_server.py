@@ -176,6 +176,7 @@ async def generate_image(
     seed: int = -1,
     preset: str = None,
     lora_preset: str = None,
+    transparent: bool = False,
     output_path: str = None,
     json_progress: bool = False,
     validate: bool = None,
@@ -200,6 +201,7 @@ async def generate_image(
         preset: Generation preset (draft, balanced, high-quality, fast, ultra). Overrides steps/cfg/sampler/scheduler
         lora_preset: LoRA preset name from lora_catalog.yaml model_suggestions 
                     (e.g., text_to_video, simple_image, battleship_ship_icon)
+        transparent: Generate image with transparent background (requires SAM model)
         output_path: Optional local file path to save the generated image (in addition to MinIO)
         json_progress: If True, returns progress updates as structured JSON instead of text (default: False)
         validate: Run CLIP validation after generation. If None, uses preset or config default
@@ -291,6 +293,7 @@ async def generate_image(
         scheduler=final_scheduler,
         seed=seed,
         loras=loras,
+        transparent=transparent,
         output_path=output_path,
         progress_callback=progress_callback,
         validate=final_validate,
