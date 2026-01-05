@@ -40,12 +40,15 @@ class HuggingFaceClient:
             List of model dictionaries with simplified metadata
         """
         try:
-            # Build filter arguments
-            filter_kwargs = {}
+            # Build filter - library should be in tags list for newer API
+            filter_tags = tags or []
             if library:
-                filter_kwargs["library"] = library
-            if tags:
-                filter_kwargs["tags"] = tags
+                filter_tags.append(library)
+            
+            # Build filter kwargs
+            filter_kwargs = {}
+            if filter_tags:
+                filter_kwargs["tags"] = filter_tags
             if pipeline_tag:
                 filter_kwargs["pipeline_tag"] = pipeline_tag
             
