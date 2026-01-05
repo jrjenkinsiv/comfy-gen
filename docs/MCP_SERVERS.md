@@ -4,10 +4,11 @@ This document describes all MCP (Model Context Protocol) servers available in co
 
 ## Overview
 
-comfy-gen provides two MCP servers:
+comfy-gen provides three MCP servers:
 
 1. **comfy-gen** (`mcp_server.py`) - Main server for ComfyUI image/video generation
 2. **civitai** (`mcp_servers/civitai_mcp.py`) - CivitAI model discovery and verification
+3. **huggingface** (`mcp_servers/huggingface_mcp.py`) - HuggingFace Hub model discovery and download
 
 ## Configuration
 
@@ -30,6 +31,13 @@ MCP servers are configured in `mcp_config.json`. Each server requires specific e
       "args": ["mcp_servers/civitai_mcp.py"],
       "env": {
         "CIVITAI_API_KEY": "${CIVITAI_API_KEY}"
+      }
+    },
+    "huggingface": {
+      "command": ".venv/bin/python3",
+      "args": ["mcp_servers/huggingface_mcp.py"],
+      "env": {
+        "HF_TOKEN": "${HF_TOKEN}"
       }
     }
   }
@@ -345,7 +353,198 @@ Get authenticated download URL for a CivitAI model.
 
 **Note:** Download URL may include temporary authentication token. NSFW models always require API key.
 
+## Server 3: huggingface (HuggingFace Hub Discovery Server)
+
+**File:** `mcp_servers/huggingface_mcp.py`
+
+**Purpose:** Agent-assisted model discovery, metadata lookup, and downloads from HuggingFace Hub.
+
+**Authentication:** Requires `HF_TOKEN` environment variable for:
+- Gated models (models requiring terms acceptance)
+- Higher rate limits
+- Private repositories
+
+### HuggingFace Hub Tools
+
+#### `hf_search_models(query, library, tags, pipeline_tag, sort, limit)`
+Search HuggingFace Hub for models by query with filters.
+
+**Parameters:**
+- `query` (str, optional): Search query (e.g., "stable diffusion", "flux", "text encoder")
+- `library` (str, optional): Filter by library - "diffusers", "transformers", etc.
+- `tags` (str, optional): Comma-separated tags to filter by (e.g., "text-to-image,sdxl")
+- `pipeline_tag` (str, optional): Filter by pipeline tag - "text-to-image", "image-to-image", etc.
+- `sort` (str): "downloads" (default), "likes", "created", "modified"
+- `limit` (int): Max results (default: 10, max: 100)
+
+**Returns:**
+```python
+{
+  "status": "success",
+  "results": [
+    {
+      "id": "stabilityai/stable-diffusion-xl-base-1.0",
+      "author": "stabilityai",
+      "name": "stable-diffusion-xl-base-1.0",
+      "downloads": 5000000,
+      "likes": 12000,
+      "tags": ["text-to-image", "sdxl", "diffusers"],
+      "pipeline_tag": "text-to-image",
+      "library": "diffusers",
+      "created_at": "2023-07-26T15:00:00.000Z",
+      "last_modified": "2024-01-15T10:30:00.000Z"
+    }
+  ],
+  "count": 1,
+  "query": "stable diffusion"
+}
+```
+
+**Example Usage:**
+```python
+# Search for SDXL models
+result = await hf_search_models(
+    query="stable diffusion",
+    library="diffusers",
+    tags="text-to-image,sdxl",
+    sort="downloads",
+    limit=10
+)
+
+# Search for text encoders
+result = await hf_search_models(
+    query="t5 encoder",
+    library="transformers",
+    limit=5
+)
+
+# Search for Flux models
+result = await hf_search_models(
+    query="flux",
+    pipeline_tag="text-to-image",
+    sort="likes"
+)
+```
+
+#### `hf_get_model_info(model_id)`
+Get detailed information about a specific HuggingFace model.
+
+**Parameters:**
+- `model_id` (str): HuggingFace model ID (e.g., "stabilityai/stable-diffusion-xl-base-1.0")
+
+**Returns:**
+```python
+{
+  "status": "success",
+  "model": {
+    "id": "stabilityai/stable-diffusion-xl-base-1.0",
+    "author": "stabilityai",
+    "name": "stable-diffusion-xl-base-1.0",
+    "downloads": 5000000,
+    "likes": 12000,
+    "tags": ["text-to-image", "sdxl", "diffusers"],
+    "pipeline_tag": "text-to-image",
+    "library": "diffusers",
+    "created_at": "2023-07-26T15:00:00.000Z",
+    "last_modified": "2024-01-15T10:30:00.000Z",
+    "card_data": {
+      "license": "openrail++",
+      "tags": ["text-to-image", "stable-diffusion"]
+    },
+    "sha": "abc123...",
+    "siblings": [
+      {"filename": "model_index.json", "size": 543},
+      {"filename": "unet/diffusion_pytorch_model.safetensors", "size": 5135000000}
+    ],
+    "gated": false
+  }
+}
+```
+
+**Example:**
+```python
+result = await hf_get_model_info("stabilityai/stable-diffusion-xl-base-1.0")
+model = result["model"]
+print(f"Model: {model['id']}")
+print(f"Downloads: {model['downloads']}")
+print(f"Files: {len(model['siblings'])}")
+if model["gated"]:
+    print("[WARN] This model requires accepting terms on HuggingFace")
+```
+
+#### `hf_list_files(model_id)`
+List all files in a HuggingFace model repository.
+
+**Parameters:**
+- `model_id` (str): HuggingFace model ID
+
+**Returns:**
+```python
+{
+  "status": "success",
+  "files": [
+    {"filename": "config.json", "size": 543},
+    {"filename": "model.safetensors", "size": 5135000000},
+    {"filename": "README.md", "size": 1234}
+  ],
+  "count": 3
+}
+```
+
+**Example:**
+```python
+result = await hf_list_files("stabilityai/stable-diffusion-xl-base-1.0")
+for file in result["files"]:
+    size_mb = file["size"] / (1024 * 1024)
+    print(f"{file['filename']}: {size_mb:.2f} MB")
+```
+
+#### `hf_download(model_id, filename, local_dir)`
+Download a specific file from a HuggingFace model repository.
+
+**Parameters:**
+- `model_id` (str): HuggingFace model ID
+- `filename` (str): File to download (e.g., "model.safetensors", "config.json")
+- `local_dir` (str): Local directory to save file (default: /tmp)
+
+**Returns:**
+```python
+{
+  "status": "success",
+  "path": "/tmp/model.safetensors",
+  "model_id": "stabilityai/stable-diffusion-xl-base-1.0",
+  "filename": "model.safetensors"
+}
+```
+
+**Example:**
+```python
+# Download a text encoder
+result = await hf_download(
+    model_id="openai/clip-vit-large-patch14",
+    filename="pytorch_model.bin",
+    local_dir="/tmp"
+)
+
+if result["status"] == "success":
+    print(f"Downloaded to: {result['path']}")
+    # Transfer to moira if needed
+    # scp {result['path']} moira:C:\\Users\\jrjen\\comfy\\models\\text_encoders\\
+```
+
+**Notes:**
+- Gated models require `HF_TOKEN` environment variable
+- Some models require accepting terms on HuggingFace website before download
+- Downloads are cached in HuggingFace cache directory (`~/.cache/huggingface/`)
+- Use SSH/SCP to transfer files to moira models directory after download
+
 ## Rate Limiting
+
+**HuggingFace Hub API:**
+- Without token: ~1000 requests/hour
+- With token: Higher limits (not publicly documented)
+- Be conservative with batch operations
+- Add delays between requests (0.5-1 second recommended)
 
 **CivitAI API:**
 - Without API key: ~100 requests/hour
@@ -455,6 +654,39 @@ else:
     print("[ERROR] LoRA not compatible with SD 1.5")
 ```
 
+### Workflow 4: Download Model from HuggingFace Hub
+
+```python
+# 1. Search for a specific model
+search_result = await hf_search_models(
+    query="flux",
+    library="diffusers",
+    pipeline_tag="text-to-image",
+    limit=5
+)
+
+# 2. Get detailed info about the model
+if search_result["status"] == "success" and search_result["count"] > 0:
+    model_id = search_result["results"][0]["id"]
+    info_result = await hf_get_model_info(model_id)
+    
+    # 3. List files to find what we need
+    files_result = await hf_list_files(model_id)
+    
+    # 4. Download specific file
+    for file in files_result["files"]:
+        if file["filename"].endswith(".safetensors"):
+            download_result = await hf_download(
+                model_id=model_id,
+                filename=file["filename"],
+                local_dir="/tmp"
+            )
+            
+            if download_result["status"] == "success":
+                print(f"Downloaded: {download_result['path']}")
+                # Now transfer to moira models directory
+```
+
 ## Testing MCP Servers
 
 ### Test comfy-gen Server
@@ -467,6 +699,11 @@ python3 tests/test_mcp_server.py
 python3 tests/test_civitai_mcp.py
 ```
 
+### Test huggingface Server
+```bash
+python3 tests/test_huggingface_mcp.py
+```
+
 ### List Available Tools
 ```bash
 # For comfy-gen server
@@ -474,6 +711,9 @@ python3 -c "import asyncio; from mcp_server import mcp; asyncio.run(mcp.list_too
 
 # For civitai server
 python3 -c "import asyncio; from mcp_servers.civitai_mcp import mcp; asyncio.run(mcp.list_tools())"
+
+# For huggingface server
+python3 -c "import asyncio; from mcp_servers.huggingface_mcp import mcp; asyncio.run(mcp.list_tools())"
 ```
 
 ## Integration with VS Code / Claude Desktop
@@ -498,6 +738,13 @@ Add servers to your MCP client configuration (e.g., Claude Desktop config):
       "env": {
         "CIVITAI_API_KEY": "your-api-key-here"
       }
+    },
+    "huggingface": {
+      "command": "/path/to/.venv/bin/python3",
+      "args": ["/path/to/comfy-gen/mcp_servers/huggingface_mcp.py"],
+      "env": {
+        "HF_TOKEN": "your-hf-token-here"
+      }
     }
   }
 }
@@ -506,6 +753,7 @@ Add servers to your MCP client configuration (e.g., Claude Desktop config):
 ## Security Notes
 
 - **CIVITAI_API_KEY**: Store in `.env` file (gitignored), never commit to repo
+- **HF_TOKEN**: Store in `.env` file (gitignored), never commit to repo
 - **Download URLs**: May contain temporary tokens, do not log or persist
 - **NSFW Content**: Requires API key, use responsibly
 - **Rate Limiting**: Respect CivitAI's rate limits to avoid IP bans
@@ -517,15 +765,31 @@ Add servers to your MCP client configuration (e.g., Claude Desktop config):
 - Verify internet connectivity
 - Check Python version (3.10+ required)
 
+### HuggingFace server not starting
+- Check `HF_TOKEN` is set in environment (optional but recommended)
+- Verify internet connectivity
+- Check Python version (3.10+ required)
+- Ensure `huggingface_hub` package is installed
+
 ### Hash lookup returns "Not found"
 - Verify hash is exactly 64 hex characters
 - Some models may not be on CivitAI (custom/private)
 - Check hash was computed for correct file
 
 ### Download requires authentication
-- NSFW models always require API key
+- NSFW models (CivitAI) always require API key
 - Set `CIVITAI_API_KEY` environment variable
 - Get API key from https://civitai.com/user/account
+- Gated models (HuggingFace) require HF_TOKEN
+- Set `HF_TOKEN` environment variable
+- Get token from https://huggingface.co/settings/tokens
+- Some models require accepting terms on HuggingFace website first
+
+### HuggingFace download fails
+- Check if model is gated (requires token)
+- Verify you've accepted terms on HuggingFace website for gated models
+- Check filename exists in repository with `hf_list_files`
+- Ensure you have sufficient disk space
 
 ## See Also
 

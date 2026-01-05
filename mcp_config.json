@@ -17,6 +17,14 @@
       "env": {
         "CIVITAI_API_KEY": "${CIVITAI_API_KEY}"
       }
+    },
+    "huggingface": {
+      "command": ".venv/bin/python3",
+      "args": ["mcp_servers/huggingface_mcp.py"],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "HF_TOKEN": "${HF_TOKEN}"
+      }
     }
   }
 }
