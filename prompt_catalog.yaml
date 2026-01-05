@@ -13,6 +13,20 @@
 #   - Always start prompts with "(single woman:1.5)" or similar weighted emphasis
 #   - Add "isolated subject", "solo", "alone" to reinforce
 #   - Include "multiple people, two people, crowd, group, duplicate, clone" in negatives
+#
+# CRITICAL: Multi-figure scenes (NSFW with male anatomy)
+#   SD 1.5 CANNOT reliably generate two distinct human bodies. Common failures:
+#   - "Floating cock": Penis LoRAs generate anatomy but no coherent male body attached
+#   - "Limb soup": Body parts from both figures merge into distorted mess
+#   - "Clone woman": Two copies of the female instead of male+female
+#
+#   SOLUTIONS:
+#   1. POV-ONLY for scenes with male anatomy - camera IS the male, cock enters from frame edge
+#   2. Post-act cum shots - no male in frame, just the result on the woman
+#   3. "Waiting" poses - solo woman in position, implying male presence off-camera
+#   4. NEVER prompt "man standing" or show full male body - it will fail
+#
+#   See scripts/batch_explicit_v2.py for working prompt templates
 
 # ========================================
 # SINGLE SUBJECT EMPHASIS (CRITICAL)
