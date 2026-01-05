@@ -483,6 +483,7 @@ ssh moira "C:\\Users\\jrjen\\comfy\\.venv\\Scripts\\python.exe C:\\Users\\jrjen\
 
 | Document | Description |
 |----------|-------------|
+| [QUICKSTART.md](docs/QUICKSTART.md) | 5-minute fast onboarding guide for new users |
 | [USAGE.md](docs/USAGE.md) | Complete usage guide: CLI, MCP server, workflows, prompt engineering |
 | [ARCHITECTURE.md](docs/ARCHITECTURE.md) | System design: workflows, presets, LoRA injection, metadata tracking |
 | [MODEL_REGISTRY.md](docs/MODEL_REGISTRY.md) | Complete model inventory and compatibility matrix |
