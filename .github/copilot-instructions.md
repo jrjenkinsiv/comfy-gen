@@ -80,7 +80,7 @@ magneto (git push) --> GitHub --> ant-man (runner) --> moira (ComfyUI)
 
 ### Meta-Issue Handling (Instruction Updates)
 
-**Meta-issues** are issues about the workflow itself (e.g., updating copilot-instructions.md, issue templates, workflow documentation).
+**Meta-issues** are issues about the workflow itself (e.g., updating `copilot-instructions.md`, issue templates, workflow documentation).
 
 **Assignment Rules for Meta-Issues:**
 - **Copilot can handle:** Updates to `.github/copilot-instructions.md` when the issue has clear, specific acceptance criteria
