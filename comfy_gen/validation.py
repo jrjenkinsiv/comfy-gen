@@ -5,14 +5,21 @@ This module provides automated image validation to detect issues like:
 - Semantic mismatch between prompt and generated image
 - Low quality or artifacts
 - Multiple subjects when only one is expected
+- Person count mismatch (using YOLO)
 
 The primary validation method uses CLIP (Contrastive Language-Image Pre-training)
 to compute similarity scores between the image and text prompts.
+
+Person count validation uses YOLO for object detection to count people in images.
 """
 
 import sys
-from typing import Dict, Optional, Any
+import re
+from typing import Dict, Optional, Any, TYPE_CHECKING
 from pathlib import Path
+
+if TYPE_CHECKING:
+    import torch
 
 try:
     import torch
@@ -21,6 +28,13 @@ try:
     CLIP_AVAILABLE = True
 except ImportError:
     CLIP_AVAILABLE = False
+    torch = None  # type: ignore
+
+try:
+    from ultralytics import YOLO
+    YOLO_AVAILABLE = True
+except ImportError:
+    YOLO_AVAILABLE = False
 
 
 class ImageValidator:
@@ -77,7 +91,7 @@ class ImageValidator:
         
         return chunks if chunks else [prompt]
     
-    def _get_text_embedding(self, prompt: str) -> torch.Tensor:
+    def _get_text_embedding(self, prompt: str) -> "torch.Tensor":
         """Get averaged text embedding for a prompt, handling long prompts via chunking.
         
         Args:
@@ -243,12 +257,129 @@ class ImageValidator:
         }
 
 
+def extract_expected_person_count(prompt: str) -> Optional[int]:
+    """Extract expected person count from prompt using heuristics.
+    
+    Args:
+        prompt: The text prompt
+    
+    Returns:
+        Expected person count (int) or None if not specified
+    
+    Examples:
+        "solo woman" -> 1
+        "one person" -> 1
+        "two women" -> 2
+        "three people" -> 3
+        "group of five" -> 5
+    """
+    # Normalize to lowercase for matching
+    prompt_lower = prompt.lower()
+    
+    # Pattern 1: "solo" or "single" -> 1 person
+    if re.search(r'\b(solo|single)\b', prompt_lower):
+        return 1
+    
+    # Pattern 2: Number words followed by person/people/woman/man/etc.
+    number_words = {
+        'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5,
+        'six': 6, 'seven': 7, 'eight': 8, 'nine': 9, 'ten': 10
+    }
+    
+    # Match "one person", "two women", "three people", etc.
+    for word, count in number_words.items():
+        pattern = rf'\b{word}\s+(person|people|woman|women|man|men|individual|subject)\b'
+        if re.search(pattern, prompt_lower):
+            return count
+    
+    # Pattern 3: Digit followed by person/people/etc.
+    digit_match = re.search(r'\b(\d+)\s+(person|people|woman|women|man|men|individual|subject)', prompt_lower)
+    if digit_match:
+        return int(digit_match.group(1))
+    
+    # Pattern 4: "group of [number]"
+    group_match = re.search(r'group\s+of\s+(\w+)', prompt_lower)
+    if group_match:
+        word = group_match.group(1)
+        if word in number_words:
+            return number_words[word]
+        elif word.isdigit():
+            return int(word)
+    
+    # No specific count found
+    return None
+
+
+def count_persons_yolo(image_path: str, confidence: float = 0.5) -> Dict[str, Any]:
+    """Count persons in image using YOLO object detection.
+    
+    Args:
+        image_path: Path to the image
+        confidence: Minimum confidence threshold for detections (default: 0.5)
+    
+    Returns:
+        Dictionary with:
+            - person_count: Number of persons detected
+            - detections: List of detection dicts with bbox, confidence
+            - error: Error message if detection failed
+    """
+    if not YOLO_AVAILABLE:
+        return {
+            "person_count": None,
+            "error": "YOLO not available. Install with: pip install ultralytics"
+        }
+    
+    try:
+        # Validate image exists
+        if not Path(image_path).exists():
+            return {
+                "person_count": None,
+                "error": f"Image file not found: {image_path}"
+            }
+        
+        # Load YOLOv8 model (will download on first use)
+        # Use nano model for speed, runs well on CPU
+        model = YOLO('yolov8n.pt')
+        
+        # Run inference
+        results = model(image_path, verbose=False)
+        
+        # COCO class ID for person is 0
+        person_class_id = 0
+        
+        detections = []
+        for result in results:
+            boxes = result.boxes
+            for box in boxes:
+                cls = int(box.cls[0])
+                conf = float(box.conf[0])
+                
+                # Filter for person class and confidence threshold
+                if cls == person_class_id and conf >= confidence:
+                    detections.append({
+                        "confidence": conf,
+                        "bbox": box.xyxy[0].tolist()  # [x1, y1, x2, y2]
+                    })
+        
+        return {
+            "person_count": len(detections),
+            "detections": detections
+        }
+        
+    except Exception as e:
+        return {
+            "person_count": None,
+            "error": f"YOLO detection failed: {str(e)}"
+        }
+
+
 def validate_image(
     image_path: str,
     positive_prompt: str,
     negative_prompt: Optional[str] = None,
     positive_threshold: float = 0.25,
-    delta_threshold: Optional[float] = None
+    delta_threshold: Optional[float] = None,
+    validate_person_count: bool = False
 ) -> Dict[str, Any]:
     """Convenience function to validate an image without creating a validator instance.
     
@@ -261,25 +392,53 @@ def validate_image(
         negative_prompt: Optional negative prompt
         positive_threshold: Minimum acceptable positive CLIP score
         delta_threshold: Minimum acceptable delta if negative prompt provided
+        validate_person_count: Whether to validate person count using YOLO
     
     Returns:
         Dictionary with validation results (see ImageValidator.validate_image)
     """
     if not CLIP_AVAILABLE:
-        return {
+        result = {
             "passed": False,
             "reason": "CLIP dependencies not available",
             "positive_score": 0.0
         }
+    else:
+        validator = ImageValidator()
+        result = validator.validate_image(
+            image_path, 
+            positive_prompt, 
+            negative_prompt,
+            positive_threshold,
+            delta_threshold
+        )
     
-    validator = ImageValidator()
-    return validator.validate_image(
-        image_path, 
-        positive_prompt, 
-        negative_prompt,
-        positive_threshold,
-        delta_threshold
-    )
+    # Add person count validation if requested
+    if validate_person_count:
+        expected_count = extract_expected_person_count(positive_prompt)
+        yolo_result = count_persons_yolo(image_path)
+        
+        # Add YOLO results to validation result
+        result["person_count"] = yolo_result.get("person_count")
+        result["expected_person_count"] = expected_count
+        
+        # Check if YOLO detection failed
+        if "error" in yolo_result:
+            result["person_count_error"] = yolo_result["error"]
+            # Don't fail validation if YOLO unavailable, just warn
+            if not YOLO_AVAILABLE:
+                print(f"[WARN] {yolo_result['error']}")
+        elif expected_count is not None and yolo_result.get("person_count") is not None:
+            # Validate count matches expectation
+            actual_count = yolo_result["person_count"]
+            if actual_count != expected_count:
+                result["passed"] = False
+                result["reason"] = (
+                    f"Person count mismatch: expected {expected_count}, "
+                    f"detected {actual_count}"
+                )
+    
+    return result
 
 
 if __name__ == "__main__":
