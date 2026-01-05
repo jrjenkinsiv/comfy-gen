@@ -9,12 +9,29 @@
 
 ### How to Tell the Difference
 
-**File Size is the Key:**
+**Use CivitAI `baseModel` field - NOT file size!**
 
-| Type | Size Range | Example |
-|------|------------|---------|
-| **SD 1.5 Image LoRAs** | 10-170 MB | `airoticart_penis.safetensors` (151 MB) |
-| **Wan 2.2 Video LoRAs** | 300+ MB | `erect_penis_epoch_80.safetensors` (307 MB) |
+File size can correlate with model type, but the **authoritative source** is the
+`baseModel` field from CivitAI API. Use `scripts/civitai_audit.py` to verify.
+
+**Hash Lookup Method (Recommended):**
+```bash
+# 1. Get SHA256 hash of the LoRA file
+ssh moira "powershell -Command \"(Get-FileHash -Algorithm SHA256 '<path>').Hash\""
+
+# 2. Look up on CivitAI API
+curl "https://civitai.com/api/v1/model-versions/by-hash/<HASH>"
+# Response includes: baseModel, trainedWords, modelId
+```
+
+**Base Model Categories:**
+| Base Model | Use For | Example |
+|------------|---------|---------|
+| `SD 1.5` | Image generation (majicmix, realistic vision) | `airoticart_penis.safetensors` |
+| `SDXL 1.0` | High-res image generation | Various SDXL LoRAs |
+| `Pony` | Stylized image generation | Various Pony LoRAs |
+| `Wan Video 14B t2v/i2v` | Video generation ONLY | `erect_penis_epoch_80.safetensors` |
+| `Flux` | Flux image generation | `nsfw_master_flux.safetensors` |
 
 ### Common Mistake: Wrong Penis LoRA
 
@@ -30,28 +47,28 @@
 --lora "airoticart_penis.safetensors:0.85"     # 151 MB - SD 1.5 IMAGE LORA
 ```
 
-### Validated SD 1.5 Image LoRAs (by size)
+### Verified SD 1.5 Image LoRAs (CivitAI Confirmed)
 
-| LoRA | Size | Use Case | Trigger Words |
-|------|------|----------|---------------|
-| `airoticart_penis.safetensors` | 151 MB | Male anatomy for photos | `penerec` (erect), `penflac` (flaccid) |
-| `polyhedron_skin.safetensors` | 151 MB | Realistic skin texture | `detailed skin` |
-| `realora_skin.safetensors` | 151 MB | Subtle skin enhancement | (none needed) |
-| `more_details.safetensors` | 10 MB | Detail enhancement | (none needed) |
-| `add_detail.safetensors` | 38 MB | Detail tweaker | (none needed) |
+| LoRA | CivitAI ID | Base Model | Trigger Words |
+|------|------------|------------|---------------|
+| `airoticart_penis.safetensors` | 15040 | SD 1.5 | `penerec` (erect), `penflac` (flaccid) |
+| `polyhedron_skin.safetensors` | 109043 | SD 1.5 | `detailed skin`, `skin blemish` |
+| `realora_skin.safetensors` | 137258 | SD 1.5 | (none needed) |
+| `more_details.safetensors` | 82098 | SD 1.5 | (none needed) |
+| `add_detail.safetensors` | 58390 | SD 1.5 | (none needed) |
 
-### Video LoRAs (DO NOT use for images)
+### Verified Wan 2.2 Video LoRAs (DO NOT use for images)
 
-These are ~307 MB and designed for Wan 2.2 video models:
-
-- `erect_penis_epoch_80.safetensors` - Video LoRA
-- `deepthroat_epoch_80.safetensors` - Video LoRA
-- `dicks_epoch_100.safetensors` - Video LoRA
-- `flaccid_penis_epoch_100.safetensors` - Video LoRA
-- `big_breasts_v2_epoch_30.safetensors` - Video LoRA
-- `BoobPhysics_WAN_v6.safetensors` - Video LoRA
-- `BounceHighWan2_2.safetensors` - Video LoRA
-- All files with `wan`, `WAN`, `i2v`, `t2v` in name - Video LoRAs
+| LoRA | Base Model | Trigger Words |
+|------|------------|---------------|
+| `erect_penis_epoch_80.safetensors` | Wan Video 14B t2v | `penis` |
+| `deepthroat_epoch_80.safetensors` | Wan Video 14B t2v | `blowjob`, `deepthroat` |
+| `dicks_epoch_100.safetensors` | Wan Video 14B t2v | (unknown) |
+| `flaccid_penis_epoch_100.safetensors` | Wan Video 14B t2v | (unknown) |
+| `big_breasts_v2_epoch_30.safetensors` | Wan Video 14B t2v | `big breasts` |
+| `BetterTitfuck_v4_July2025.safetensors` | Wan Video 14B t2v | `titfuck` |
+| `doggyPOV_v1_1.safetensors` | Wan Video 14B i2v | `POVdog` |
+| All files with `wan`, `WAN`, `i2v`, `t2v` in name | Various Wan models | Check trigger |
 
 ---
 

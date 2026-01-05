@@ -239,26 +239,40 @@ C:\Users\jrjen\comfy\models\
 
 ### CRITICAL: Video vs Image LoRAs
 
-**NEVER use Wan 2.2 video LoRAs (~307MB) for SD 1.5 image generation.**
+**NEVER use Wan 2.2 video LoRAs for SD 1.5 image generation.**
 
-**How to tell the difference:**
-| Type | File Size | Use For |
-|------|-----------|---------|
-| SD 1.5 Image LoRAs | 10-170 MB | Image generation (majicmix, realistic vision) |
-| Wan 2.2 Video LoRAs | 300+ MB | Video generation only |
+**How to verify LoRA compatibility - Use CivitAI `baseModel`, NOT file size!**
 
-**Common WRONG LoRAs for images:**
-- `erect_penis_epoch_80.safetensors` (307MB) - VIDEO LORA, causes distorted anatomy!
-- `deepthroat_epoch_80.safetensors` (307MB) - VIDEO LORA
-- `dicks_epoch_100.safetensors` (307MB) - VIDEO LORA
-- Any file with `wan`, `WAN`, `i2v`, `t2v` in name - VIDEO LORA
+The authoritative source for LoRA base model is CivitAI API. Use `scripts/civitai_audit.py` to verify, or:
 
-**CORRECT LoRAs for images:**
-- `airoticart_penis.safetensors` (151MB) - Trigger: `penerec` (erect), `penflac` (flaccid)
-- `polyhedron_skin.safetensors` (151MB) - Realistic skin texture
-- `realora_skin.safetensors` (151MB) - Subtle skin enhancement
+```bash
+# 1. Get SHA256 hash from moira
+ssh moira "powershell -Command \"(Get-FileHash -Algorithm SHA256 '<path>').Hash\""
+
+# 2. Look up on CivitAI API - returns baseModel, trainedWords
+curl "https://civitai.com/api/v1/model-versions/by-hash/<SHA256_HASH>"
+```
+
+**Base Model Categories:**
+| Base Model | Use For | Example Files |
+|------------|---------|---------------|
+| `SD 1.5` | Image generation | `airoticart_penis.safetensors`, `polyhedron_skin.safetensors` |
+| `Wan Video 14B t2v/i2v` | Video generation ONLY | `erect_penis_epoch_80.safetensors`, `deepthroat_epoch_80.safetensors` |
+
+**Verified SD 1.5 Image LoRAs (CivitAI Confirmed):**
+- `airoticart_penis.safetensors` - SD 1.5, triggers: `penerec` (erect), `penflac` (flaccid)
+- `polyhedron_skin.safetensors` - SD 1.5, triggers: `detailed skin`
+- `realora_skin.safetensors` - SD 1.5, no triggers needed
+
+**Verified Wan Video LoRAs (DO NOT use for images):**
+- `erect_penis_epoch_80.safetensors` - Wan Video 14B t2v
+- `deepthroat_epoch_80.safetensors` - Wan Video 14B t2v
+- `big_breasts_v2_epoch_30.safetensors` - Wan Video 14B t2v
+- `doggyPOV_v1_1.safetensors` - Wan Video 14B i2v
+- Any file with `wan`, `WAN`, `i2v`, `t2v` in name
 
 **See `docs/LORA_GUIDE.md` for complete LoRA selection guide.**
+**See `lora_catalog.yaml` for full inventory with CivitAI verification status.**
 
 See `docs/USAGE.md` for:
 - LoRA selection and strength guidelines

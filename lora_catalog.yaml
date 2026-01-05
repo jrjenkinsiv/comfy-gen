@@ -371,78 +371,106 @@ loras:
     description: "Adult titfuck for Wan 2.2"
     category: "nsfw"
 
-  # --- Flux/SD Adult Content LoRAs ---
+  # --- Wan 2.2 Video NSFW LoRAs ---
+  # WARNING: These are VIDEO LoRAs - DO NOT use for image generation!
+  # Verified via CivitAI hash lookup - baseModel: "Wan Video 14B t2v" or similar
+  
   - filename: "big_breasts_v2_epoch_30.safetensors"
-    tags: ["nsfw", "adult", "body", "enhancement"]
-    compatible_with: ["flux1-dev-fp8.safetensors", "v1-5-pruned-emaonly-fp16.safetensors"]
+    tags: ["nsfw", "adult", "body", "enhancement", "wan2.2", "video"]
+    base_model: "Wan Video 14B t2v"  # VERIFIED via CivitAI hash lookup
+    compatible_with: ["wan2.2_t2v_high_noise_14B_fp8_scaled.safetensors", "wan2.2_t2v_low_noise_14B_fp8_scaled.safetensors"]
     recommended_strength: 0.7
-    description: "Body enhancement LoRA"
+    description: "Body enhancement VIDEO LoRA - NOT for images!"
+    trigger_words: ["big breasts", "huge breasts"]
     category: "nsfw"
+    civitai_verified: true
+    notes: "WARNING: This is a Wan 2.2 video LoRA - will cause distorted anatomy if used with SD 1.5 images"
 
   - filename: "deepthroat_epoch_80.safetensors"
-    tags: ["nsfw", "adult", "deepthroat"]
-    compatible_with: ["flux1-dev-fp8.safetensors", "v1-5-pruned-emaonly-fp16.safetensors"]
+    tags: ["nsfw", "adult", "deepthroat", "wan2.2", "video"]
+    base_model: "Wan Video 14B t2v"  # VERIFIED via CivitAI hash lookup
+    compatible_with: ["wan2.2_t2v_high_noise_14B_fp8_scaled.safetensors", "wan2.2_t2v_low_noise_14B_fp8_scaled.safetensors"]
     recommended_strength: 0.7
-    description: "Adult deepthroat for Flux/SD"
+    description: "Adult deepthroat VIDEO LoRA - NOT for images!"
+    trigger_words: ["blowjob", "deepthroat"]
     category: "nsfw"
+    civitai_verified: true
+    notes: "WARNING: This is a Wan 2.2 video LoRA - will cause distorted anatomy if used with SD 1.5 images"
 
   - filename: "dicks_epoch_100.safetensors"
-    tags: ["nsfw", "adult", "anatomy"]
-    compatible_with: ["flux1-dev-fp8.safetensors", "v1-5-pruned-emaonly-fp16.safetensors"]
+    tags: ["nsfw", "adult", "anatomy", "wan2.2", "video"]
+    base_model: "Wan Video 14B t2v"  # VERIFIED via CivitAI hash lookup
+    compatible_with: ["wan2.2_t2v_high_noise_14B_fp8_scaled.safetensors", "wan2.2_t2v_low_noise_14B_fp8_scaled.safetensors"]
     recommended_strength: 0.7
-    description: "Adult anatomy LoRA"
+    description: "Adult anatomy VIDEO LoRA - NOT for images!"
+    trigger_words: []
     category: "nsfw"
+    civitai_verified: true
+    notes: "WARNING: This is a Wan 2.2 video LoRA - will cause distorted anatomy if used with SD 1.5 images"
 
   - filename: "erect_penis_epoch_80.safetensors"
-    tags: ["nsfw", "adult", "anatomy"]
-    compatible_with: ["flux1-dev-fp8.safetensors", "v1-5-pruned-emaonly-fp16.safetensors"]
+    tags: ["nsfw", "adult", "anatomy", "wan2.2", "video"]
+    base_model: "Wan Video 14B t2v"  # VERIFIED via CivitAI hash lookup - Model: "Wan 2.1 - Erect Penis, Cock, Dick, Lora, I2V"
+    compatible_with: ["wan2.2_t2v_high_noise_14B_fp8_scaled.safetensors", "wan2.2_t2v_low_noise_14B_fp8_scaled.safetensors"]
     recommended_strength: 0.7
-    description: "Adult anatomy LoRA (erect)"
+    description: "Adult anatomy VIDEO LoRA (erect) - NOT for images!"
+    trigger_words: ["penis"]
     category: "nsfw"
+    civitai_verified: true
+    notes: "WARNING: This is a Wan 2.2 video LoRA - will cause distorted anatomy if used with SD 1.5 images. Use airoticart_penis.safetensors for SD 1.5 images instead!"
 
   - filename: "flaccid_penis_epoch_100.safetensors"
-    tags: ["nsfw", "adult", "anatomy"]
-    compatible_with: ["flux1-dev-fp8.safetensors", "v1-5-pruned-emaonly-fp16.safetensors"]
+    tags: ["nsfw", "adult", "anatomy", "wan2.2", "video"]
+    base_model: "Wan Video 14B t2v"  # Inferred from file size (307MB) - needs CivitAI verification
+    compatible_with: ["wan2.2_t2v_high_noise_14B_fp8_scaled.safetensors", "wan2.2_t2v_low_noise_14B_fp8_scaled.safetensors"]
     recommended_strength: 0.7
-    description: "Adult anatomy LoRA (flaccid)"
+    description: "Adult anatomy VIDEO LoRA (flaccid) - NOT for images!"
+    trigger_words: []
     category: "nsfw"
-    notes: "WARNING: This is a Wan 2.2 video LoRA (~307MB) - may not work well with SD 1.5/Flux images"
+    civitai_verified: false
+    notes: "WARNING: This is a Wan 2.2 video LoRA (~307MB) - will cause distorted anatomy if used with SD 1.5 images"
 
-  # --- SD 1.5 Image NSFW LoRAs (Validated) ---
+  # --- SD 1.5 Image NSFW LoRAs (CivitAI Verified) ---
   # These LoRAs are specifically designed for SD 1.5 image generation
-  # Much smaller (~144MB) and optimized for still images
+  # VERIFIED via CivitAI hash lookup - baseModel: "SD 1.5"
   
   - filename: "airoticart_penis.safetensors"
     tags: ["nsfw", "adult", "anatomy", "male", "sd15", "image", "penis", "realistic"]
+    base_model: "SD 1.5"  # VERIFIED via CivitAI - Model ID 15040
     compatible_with: ["realisticVisionV60B1_v51HyperVAE.safetensors", "majicmixRealistic_v7.safetensors", "v1-5-pruned-emaonly-fp16.safetensors"]
     recommended_strength: 0.85  # Range: 0.8-0.9
     description: "Realistic male genitalia for SD 1.5 photorealistic images"
     trigger_words: ["penerec", "penflac", "erect penis", "flaccid penis"]
     category: "nsfw"
-    source: "CivitAI ID 15040 (21K downloads)"
+    civitai_id: 15040
+    civitai_version_id: 17719
+    civitai_verified: true
     notes: |
       Use 'penerec' for erect, 'penflac' for flaccid in positive prompt.
       Add opposite trigger to negative prompt for best results.
       Stack with skin LoRAs for improved realism.
+      CivitAI: https://civitai.com/models/15040
 
   - filename: "polyhedron_skin.safetensors"
     tags: ["skin", "detail", "realistic", "sd15", "image", "male", "female"]
+    base_model: "SD 1.5"  # VERIFIED via CivitAI hash lookup - "Skin & Hands (male/female) from Polyhedron"
     compatible_with: ["realisticVisionV60B1_v51HyperVAE.safetensors", "majicmixRealistic_v7.safetensors", "v1-5-pruned-emaonly-fp16.safetensors"]
     recommended_strength: 0.6  # Range: 0.5-0.7
     description: "Realistic skin texture for male and female subjects"
-    trigger_words: ["detailed skin", "skin blemish", "skin pores"]
+    trigger_words: ["detailed skin", "skin blemish"]
     category: "enhancement"
-    source: "CivitAI ID 109043 (72K downloads)"
+    civitai_verified: true
     notes: "Works great stacked with anatomy LoRAs for photorealistic results."
 
   - filename: "realora_skin.safetensors"
     tags: ["skin", "detail", "realistic", "sd15", "image", "photorealistic"]
+    base_model: "SD 1.5"  # VERIFIED via CivitAI hash lookup - "ReaLora/Realistic skin texture"
     compatible_with: ["realisticVisionV60B1_v51HyperVAE.safetensors", "majicmixRealistic_v7.safetensors", "v1-5-pruned-emaonly-fp16.safetensors"]
     recommended_strength: 0.6  # Range: 0.5-0.7
     description: "Subtle realistic skin enhancement, more natural than polyhedron"
     trigger_words: []  # No trigger words needed - style transfer
     category: "enhancement"
-    source: "CivitAI ID 137258 (45K downloads)"
+    civitai_verified: true
     notes: "Style transfer LoRA - no trigger words needed. More subtle than polyhedron_skin."
 
   # --- Flux.1 NSFW LoRAs ---
