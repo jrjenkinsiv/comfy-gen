@@ -789,8 +789,53 @@ A structured collection of prompt patterns is available in `prompt_catalog.yaml`
 - **Style Modifiers** - Photography, pixel art, vector, illustration styles
 - **Templates** - Ready-to-use prompts for common scenarios (automotive, game icons, portraits)
 - **Model-Specific Adjustments** - CFG and step recommendations by model
+- **Saved Prompts** - Production-ready prompts that have been tested and validated
 
 Use the catalog to build consistent, high-quality prompts.
+
+### Using Prompt Presets
+
+The `prompt_catalog.yaml` file includes a `saved_prompts` section with tested, production-ready prompts. You can use these presets with the `--prompt-preset` flag:
+
+**List available presets:**
+```bash
+python3 generate.py --list-presets
+```
+
+**Use a preset:**
+```bash
+# Use complete preset (prompt + negative prompt)
+python3 generate.py \
+    --workflow workflows/flux-dev.json \
+    --prompt-preset nude_woman_garden \
+    --output /tmp/output.png
+
+# Override preset positive prompt with your own
+python3 generate.py \
+    --workflow workflows/flux-dev.json \
+    --prompt-preset nude_woman_garden \
+    --prompt "your custom prompt here" \
+    --output /tmp/output.png
+
+# Add custom negative prompt (merged with preset negative)
+python3 generate.py \
+    --workflow workflows/flux-dev.json \
+    --prompt-preset nude_woman_garden \
+    --negative-prompt "extra custom negative terms" \
+    --output /tmp/output.png
+```
+
+**How presets work:**
+- If you don't provide `--prompt`, the preset's positive prompt is used
+- If you provide `--prompt`, it overrides the preset's positive prompt
+- Preset negative prompts are **always** merged with any user-supplied `--negative-prompt`
+- Recommended settings from the preset (steps, cfg, loras) can be referenced in the catalog
+
+**Example presets in catalog:**
+- `nude_woman_garden` - Photorealistic portrait in botanical garden (NSFW)
+- `woman_beach_sunset` - Beach lifestyle photography at sunset
+
+Add your own tested prompts to `prompt_catalog.yaml` under the `saved_prompts` section for reuse.
 
 ### CRITICAL: Use Detailed, Verbose Prompts
 

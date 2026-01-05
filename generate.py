@@ -1019,6 +1019,24 @@ def load_config():
         print(f"[ERROR] Failed to load presets.yaml: {e}")
         return {"presets": {}, "default_negative_prompt": "", "validation": {}}
 
+def load_prompt_catalog():
+    """Load prompt catalog from prompt_catalog.yaml.
+    
+    Returns:
+        dict: Catalog dictionary with saved_prompts and other categories, or empty dict on failure
+    """
+    catalog_path = Path(__file__).parent / "prompt_catalog.yaml"
+    if not catalog_path.exists():
+        return {}
+    
+    try:
+        with open(catalog_path, 'r', encoding='utf-8') as f:
+            data = yaml.safe_load(f)
+        return data or {}
+    except Exception as e:
+        print(f"[ERROR] Failed to load prompt_catalog.yaml: {e}")
+        return {}
+
 def queue_workflow(workflow, retry=True):
     """Send workflow to ComfyUI server with retry logic.
     
@@ -1714,6 +1732,10 @@ def main():
                         help="Use a predefined LoRA preset from lora_catalog.yaml")
     parser.add_argument("--list-loras", action="store_true", 
                         help="List available LoRAs and presets, then exit")
+    parser.add_argument("--prompt-preset", metavar="PRESET_NAME",
+                        help="Load a prompt preset from prompt_catalog.yaml (saved_prompts section)")
+    parser.add_argument("--list-presets", action="store_true",
+                        help="List available prompt presets from prompt_catalog.yaml, then exit")
     parser.add_argument("--cancel", metavar="PROMPT_ID", help="Cancel a specific prompt by ID")
     parser.add_argument("--dry-run", action="store_true", help="Validate workflow without generating")
     parser.add_argument("--validate", action="store_true", help="Run validation after generation (default: from config)")
@@ -1775,6 +1797,34 @@ def main():
     # Default negative prompt from config (applied later if user didn't provide one)
     config_negative_prompt = config.get("default_negative_prompt", "")
     
+    # Handle list-presets mode
+    if args.list_presets:
+        print("[INFO] Loading prompt presets from prompt_catalog.yaml...")
+        
+        catalog = load_prompt_catalog()
+        if catalog and "saved_prompts" in catalog:
+            saved_prompts = catalog["saved_prompts"]
+            if saved_prompts:
+                print(f"\n[OK] Available prompt presets ({len(saved_prompts)}):")
+                for preset_name, preset_data in saved_prompts.items():
+                    category = preset_data.get("category", "general")
+                    subject = preset_data.get("subject", "N/A")
+                    print(f"  - {preset_name}")
+                    print(f"      Category: {category}")
+                    print(f"      Subject: {subject}")
+                    if "tested_with" in preset_data:
+                        print(f"      Tested with: {preset_data['tested_with']}")
+                    if "notes" in preset_data:
+                        print(f"      Notes: {preset_data['notes']}")
+                    print()
+            else:
+                print("[WARN] No saved prompts found in prompt_catalog.yaml")
+        else:
+            print("[ERROR] Failed to load prompt_catalog.yaml or no saved_prompts section found")
+            sys.exit(EXIT_CONFIG_ERROR)
+        
+        sys.exit(EXIT_SUCCESS)
+    
     # Handle list-loras mode
     if args.list_loras:
         print("[INFO] Querying available LoRAs from ComfyUI server...")
@@ -1826,12 +1876,45 @@ def main():
             sys.exit(EXIT_FAILURE)
     
     # Validate required args for generation mode
-    # Note: --cancel and --list-loras exit early and never reach these checks
+    # Note: --cancel and --list-loras and --list-presets exit early and never reach these checks
     if not args.workflow:
         parser.error("--workflow is required")
     
+    # Handle prompt preset loading
+    preset_positive = None
+    preset_negative = None
+    if args.prompt_preset:
+        catalog = load_prompt_catalog()
+        if not catalog or "saved_prompts" not in catalog:
+            print(f"[ERROR] Failed to load prompt_catalog.yaml or no saved_prompts section found")
+            sys.exit(EXIT_CONFIG_ERROR)
+        
+        saved_prompts = catalog["saved_prompts"]
+        if args.prompt_preset not in saved_prompts:
+            print(f"[ERROR] Prompt preset not found: {args.prompt_preset}")
+            available = ', '.join(saved_prompts.keys()) if saved_prompts else 'none'
+            print(f"[ERROR] Available presets: {available}")
+            sys.exit(EXIT_CONFIG_ERROR)
+        
+        preset_data = saved_prompts[args.prompt_preset]
+        preset_positive = preset_data.get("positive", "")
+        preset_negative = preset_data.get("negative", "")
+        
+        if not args.quiet:
+            print(f"[OK] Loaded prompt preset '{args.prompt_preset}'")
+            if preset_data.get("category"):
+                print(f"[INFO] Category: {preset_data['category']}")
+            if preset_data.get("subject"):
+                print(f"[INFO] Subject: {preset_data['subject']}")
+        
+        # Use preset positive as prompt if user didn't provide one
+        if not args.prompt and preset_positive:
+            args.prompt = preset_positive.strip()
+            if not args.quiet:
+                print(f"[INFO] Using preset positive prompt")
+    
     if not args.dry_run and not args.prompt:
-        parser.error("--prompt is required (unless using --dry-run)")
+        parser.error("--prompt is required (unless using --dry-run or --prompt-preset)")
     
     # Check server availability first
     if not check_server_availability():
@@ -1922,6 +2005,19 @@ def main():
         effective_negative_prompt = config_negative_prompt
         if not args.quiet:
             print(f"[OK] Using default negative prompt from config")
+    
+    # Merge preset negative prompt if using a preset
+    if args.prompt_preset and preset_negative:
+        if effective_negative_prompt:
+            # Merge user-supplied and preset negatives
+            effective_negative_prompt = f"{preset_negative}, {effective_negative_prompt}"
+            if not args.quiet:
+                print(f"[OK] Merged preset negative prompt with user-supplied negative prompt")
+        else:
+            # Use only preset negative
+            effective_negative_prompt = preset_negative
+            if not args.quiet:
+                print(f"[OK] Using preset negative prompt")
 
     # Modify workflow with prompts
     workflow = modify_prompt(workflow, args.prompt, effective_negative_prompt)
