@@ -243,24 +243,66 @@ See `docs/USAGE.md` for:
 - Error handling procedures
 - Decision tree for model selection
 
-## 9. Troubleshooting
+## 9. Copilot Assignment & Unassignment
 
-- **Assignment Stuck:** Unassign and reassign `@copilot` on the **issue**.
-- **Dirty Merges / Stale PRs:** If a PR has merge conflicts or is stale after `main` changed, **unassign then reassign the issue** (not the PR). Copilot will create a fresh branch from updated `main`. The old PR will be superseded.
-- **Rate Limited (PR Stopped):** Copilot hit token limits. Wait 1-2 hours, then unassign and reassign the issue. The PR branch may be salvageable - check if it has partial progress worth keeping.
+### How to Assign Copilot to an Issue
 
-**Unassignment Procedure (MCP Tool Workaround):**
-The `mcp_github_issue_write` tool with `assignees: []` is **ignored** - it does NOT clear assignees.
-The `mcp_github_assign_copilot_to_issue` tool **adds** Copilot to existing assignees (doesn't replace).
+**CRITICAL: Use the MCP tool, NOT `gh issue edit`**
 
-To properly reset an issue for Copilot (correct order: REMOVE first, then ADD):
-```bash
-# Step 1: Remove ALL assignees including Copilot
-gh issue edit <N> --repo <owner>/<repo> --remove-assignee Copilot,<other_users>
+The `gh issue edit --add-assignee Copilot` command does NOT reliably trigger Copilot to start working. It may add the assignee but Copilot won't pick up the issue.
 
-# Step 2: Assign Copilot fresh (triggers new work from current main)
-# Use mcp_github_assign_copilot_to_issue tool
+**Correct Method - Use MCP Tool:**
 ```
+mcp_github_assign_copilot_to_issue(owner="jrjenkinsiv", repo="comfy-gen", issueNumber=<N>)
+```
+
+This is the ONLY reliable way to trigger Copilot to start working on an issue.
+
+**Fallback (if MCP tool fails):**
+```bash
+# Use the GitHub API directly
+gh api repos/jrjenkinsiv/comfy-gen/issues/<N>/assignees -X POST -f 'assignees[]=Copilot'
+```
+
+### How to Unassign Copilot from an Issue
+
+**Use `gh issue edit` for removal - this DOES work:**
+```bash
+gh issue edit <N> --remove-assignee Copilot
+```
+
+### How to Reset/Reassign (Trigger Fresh Work)
+
+When Copilot is stuck, rate-limited, or a PR has conflicts:
+
+```bash
+# Step 1: Remove Copilot (this works)
+gh issue edit <N> --remove-assignee Copilot
+
+# Step 2: Assign fresh using MCP tool (triggers new work from current main)
+# Use: mcp_github_assign_copilot_to_issue(owner, repo, issueNumber)
+```
+
+**Why this matters:**
+- Removing triggers Copilot to abandon any in-progress work
+- Re-assigning via MCP tool triggers a fresh start from updated `main`
+- The old PR/branch will be superseded by the new work
+
+### Assignment Verification
+
+After assigning, verify with:
+```bash
+gh issue view <N> --json assignees --jq '.assignees[].login'
+```
+
+Expected output should include `Copilot`.
+
+## 10. Troubleshooting
+
+- **Assignment Stuck:** Use reset procedure above (unassign via `gh`, reassign via MCP tool).
+- **Dirty Merges / Stale PRs:** Unassign then reassign the **issue** (not the PR). Copilot will create a fresh branch.
+- **Rate Limited (PR Stopped):** Wait 1-2 hours, then use reset procedure.
+- **MCP Tool Returns Error:** Fall back to API method: `gh api repos/.../issues/<N>/assignees -X POST -f 'assignees[]=Copilot'`
 - **ComfyUI not responding:** SSH to moira, check `tasklist | findstr python`, restart with `start_comfyui.py`.
 - **Model not found:** Verify model exists in `C:\Users\jrjen\comfy\models\` and workflow references correct filename.
 - **MinIO access denied:** Bucket policy may have reset. Run `scripts/set_bucket_policy.py`.
