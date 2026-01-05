@@ -865,6 +865,40 @@ Metadata sidecars:
 http://192.168.1.215:9000/comfy-gen/<filename>.png.json
 ```
 
+### Metadata Management
+
+**View Embedded Metadata:**
+
+ComfyGen embeds comprehensive generation metadata directly into PNG files:
+
+```bash
+# View metadata from any generated PNG
+python3 generate.py metadata show /tmp/sunset.png
+```
+
+Output shows:
+- Prompt and negative prompt
+- Model, VAE, and workflow used
+- All generation parameters (seed, steps, CFG, sampler, etc.)
+- LoRAs applied with strengths
+- Quality scores (if enabled)
+- Generation time and file size
+
+**Embedded Metadata Features:**
+
+- **Portable**: Metadata travels with the image file
+- **No Sidecar Loss**: No risk of losing JSON files when moving images
+- **Tool Compatible**: Readable by ExifTool, ImageMagick, and image viewers
+- **CivitAI Ready**: Images can be uploaded to CivitAI with full generation info
+
+**Disable Embedding:**
+
+```bash
+python3 generate.py --workflow ... --no-embed-metadata
+```
+
+Sidecar JSON files are always created regardless of embedding setting.
+
 ---
 
 ## See Also
