@@ -63,6 +63,7 @@ def generate():
 @click.option("--no-validate", is_flag=True, help="Disable validation even if config enables it")
 @click.option("--auto-retry", is_flag=True, help="Automatically retry if validation fails")
 @click.option("--retry-limit", type=int, help="Maximum retry attempts")
+@click.option("--positive-threshold", type=float, help="Minimum CLIP score for positive prompt")
 @click.option("--quality-score", is_flag=True, help="Run quality scoring after generation")
 @click.option("--quality-threshold", type=float, default=7.0, help="Minimum quality score (0-10)")
 @click.option("--max-attempts", type=int, default=3, help="Maximum generation attempts")
@@ -141,6 +142,8 @@ def generate_image(**kwargs):
         args.append("--auto-retry")
     if kwargs.get("retry_limit") is not None:
         args.extend(["--retry-limit", str(kwargs["retry_limit"])])
+    if kwargs.get("positive_threshold") is not None:
+        args.extend(["--positive-threshold", str(kwargs["positive_threshold"])])
     
     # Quality args
     if kwargs.get("quality_score"):
