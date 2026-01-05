@@ -7,6 +7,7 @@ from typing import Dict, Any, Optional, List
 # Lazy initialization of clients
 _comfyui = None
 _civitai = None
+_huggingface = None
 _model_registry = None
 
 
@@ -30,6 +31,17 @@ def _get_civitai():
             api_key=os.getenv("CIVITAI_API_KEY")
         )
     return _civitai
+
+
+def _get_huggingface():
+    """Get or create HuggingFace client."""
+    global _huggingface
+    if _huggingface is None:
+        from comfygen.huggingface_client import HuggingFaceClient
+        _huggingface = HuggingFaceClient(
+            token=os.getenv("HF_TOKEN")
+        )
+    return _huggingface
 
 
 def _get_model_registry():
@@ -371,3 +383,150 @@ async def get_download_progress(download_id: str) -> Dict[str, Any]:
         "status": "error",
         "error": "Download progress tracking not yet implemented"
     }
+
+
+# ============================================================================
+# HUGGINGFACE HUB TOOLS
+# ============================================================================
+
+async def hf_search_models(
+    query: str = "",
+    library: Optional[str] = None,
+    pipeline_tag: Optional[str] = None,
+    tags: Optional[List[str]] = None,
+    sort: str = "downloads",
+    limit: int = 10,
+) -> Dict[str, Any]:
+    """Search HuggingFace Hub for models.
+    
+    Args:
+        query: Search query (searches in model name and description)
+        library: Filter by library (diffusers, transformers, etc.)
+        pipeline_tag: Filter by pipeline tag (text-to-image, image-to-image, etc.)
+        tags: Additional tags to filter by (e.g., ['sdxl', 'flux', 'lora'])
+        sort: Sort method (downloads, likes, trending, updated)
+        limit: Maximum results to return (default: 10)
+        
+    Returns:
+        Dictionary with search results
+    """
+    try:
+        results = _get_huggingface().search_models(
+            query=query,
+            library=library,
+            pipeline_tag=pipeline_tag,
+            tags=tags,
+            sort=sort,
+            limit=limit,
+        )
+        
+        return {
+            "status": "success",
+            "results": results,
+            "count": len(results)
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "error": str(e)
+        }
+
+
+async def hf_get_model_info(model_id: str) -> Dict[str, Any]:
+    """Get detailed information about a HuggingFace model.
+    
+    Args:
+        model_id: HuggingFace model ID (e.g., 'black-forest-labs/FLUX.1-dev')
+        
+    Returns:
+        Dictionary with model details
+    """
+    try:
+        model = _get_huggingface().get_model_info(model_id)
+        if not model:
+            return {
+                "status": "error",
+                "error": f"Model not found: {model_id}"
+            }
+        
+        if "error" in model:
+            return {
+                "status": "error",
+                "error": model["error"]
+            }
+        
+        return {
+            "status": "success",
+            "model": model
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "error": str(e)
+        }
+
+
+async def hf_list_files(model_id: str) -> Dict[str, Any]:
+    """List files in a HuggingFace model repository.
+    
+    Args:
+        model_id: HuggingFace model ID
+        
+    Returns:
+        Dictionary with list of files
+    """
+    try:
+        files = _get_huggingface().get_model_files(model_id)
+        
+        return {
+            "status": "success",
+            "files": files,
+            "count": len(files)
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "error": str(e)
+        }
+
+
+async def hf_download(
+    model_id: str,
+    filename: str,
+    local_dir: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Download a file from HuggingFace Hub.
+    
+    Args:
+        model_id: HuggingFace model ID
+        filename: Filename to download
+        local_dir: Optional local directory to save file (uses HF cache if not provided)
+        
+    Returns:
+        Dictionary with download status and file path
+    """
+    try:
+        filepath = _get_huggingface().download_file(
+            model_id=model_id,
+            filename=filename,
+            local_dir=local_dir,
+        )
+        
+        if not filepath:
+            return {
+                "status": "error",
+                "error": "Download failed - check logs for details"
+            }
+        
+        return {
+            "status": "success",
+            "filepath": filepath,
+            "model_id": model_id,
+            "filename": filename
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "error": str(e)
+        }
+

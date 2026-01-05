@@ -7,7 +7,8 @@
       "env": {
         "COMFYUI_HOST": "http://192.168.1.215:8188",
         "MINIO_ENDPOINT": "192.168.1.215:9000",
-        "MINIO_BUCKET": "comfy-gen"
+        "MINIO_BUCKET": "comfy-gen",
+        "HF_TOKEN": "${HF_TOKEN}"
       }
     }
   }

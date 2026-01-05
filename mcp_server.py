@@ -10,7 +10,8 @@ Core Generation:
 Model Management:
 - list_models, list_loras, get_model_info
 - suggest_model, suggest_loras
-- search_civitai (model discovery)
+- search_civitai (CivitAI model discovery)
+- hf_search_models, hf_get_model_info, hf_list_files, hf_download (HuggingFace Hub)
 
 Gallery & History:
 - list_images, get_image_info, delete_image, get_history
@@ -531,6 +532,87 @@ async def search_civitai(
         sort=sort,
         nsfw=nsfw,
         limit=limit
+    )
+
+
+@mcp.tool()
+async def hf_search_models(
+    query: str = "",
+    library: str = None,
+    pipeline_tag: str = None,
+    tags: list = None,
+    sort: str = "downloads",
+    limit: int = 10,
+) -> dict:
+    """Search HuggingFace Hub for models.
+    
+    Args:
+        query: Search query (searches in model name and description)
+        library: Filter by library - diffusers, transformers, etc. (optional)
+        pipeline_tag: Filter by pipeline tag - text-to-image, image-to-image, etc. (optional)
+        tags: Additional tags to filter by, e.g. ['sdxl', 'flux', 'lora'] (optional)
+        sort: Sort method - downloads, likes, trending, updated (default: downloads)
+        limit: Maximum results (default: 10)
+    
+    Returns:
+        Dictionary with search results
+    """
+    return await models.hf_search_models(
+        query=query,
+        library=library,
+        pipeline_tag=pipeline_tag,
+        tags=tags,
+        sort=sort,
+        limit=limit
+    )
+
+
+@mcp.tool()
+async def hf_get_model_info(model_id: str) -> dict:
+    """Get detailed information about a HuggingFace model.
+    
+    Args:
+        model_id: HuggingFace model ID (e.g., 'black-forest-labs/FLUX.1-dev')
+    
+    Returns:
+        Dictionary with model details including metadata, tags, and model card excerpt
+    """
+    return await models.hf_get_model_info(model_id)
+
+
+@mcp.tool()
+async def hf_list_files(model_id: str) -> dict:
+    """List files in a HuggingFace model repository.
+    
+    Args:
+        model_id: HuggingFace model ID
+    
+    Returns:
+        Dictionary with list of files and their metadata
+    """
+    return await models.hf_list_files(model_id)
+
+
+@mcp.tool()
+async def hf_download(
+    model_id: str,
+    filename: str,
+    local_dir: str = None,
+) -> dict:
+    """Download a file from HuggingFace Hub.
+    
+    Args:
+        model_id: HuggingFace model ID
+        filename: Filename to download
+        local_dir: Optional local directory to save file (uses HF cache if not provided)
+    
+    Returns:
+        Dictionary with download status and file path
+    """
+    return await models.hf_download(
+        model_id=model_id,
+        filename=filename,
+        local_dir=local_dir
     )
 
 
