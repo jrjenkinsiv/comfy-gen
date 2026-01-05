@@ -473,6 +473,70 @@ loras:
     civitai_verified: true
     notes: "Style transfer LoRA - no trigger words needed. More subtle than polyhedron_skin."
 
+  # --- SD 1.5 NSFW Action LoRAs (CivitAI Verified) ---
+  # These LoRAs define specific sex acts/positions for SD 1.5 models
+  # CRITICAL: Use the exact trigger words for best results!
+  
+  - filename: "POVMissionary.safetensors"
+    tags: ["nsfw", "adult", "sex", "missionary", "pov", "sd15"]
+    base_model: "SD 1.5"
+    compatible_with: ["majicmixRealistic_v7.safetensors", "realisticVisionV60B1_v51HyperVAE.safetensors"]
+    recommended_strength: 0.85
+    description: "POV missionary sex position"
+    trigger_words: ["missionarypose", "1boy", "penis", "lying", "missionary", "vaginal"]
+    category: "nsfw"
+    civitai_id: 31385
+    civitai_verified: true
+    notes: "Use 'missionarypose' trigger. Combine with anatomy LoRA for male genitalia."
+
+  - filename: "MissionaryVaginal-v2.safetensors"
+    tags: ["nsfw", "adult", "sex", "missionary", "vaginal", "closeup", "sd15"]
+    base_model: "SD 1.5"
+    compatible_with: ["majicmixRealistic_v7.safetensors", "realisticVisionV60B1_v51HyperVAE.safetensors"]
+    recommended_strength: 0.85
+    description: "Close-up missionary vaginal penetration"
+    trigger_words: ["missionary vaginal", "close up", "creampie", "spreading legs", "legs up", "deep", "huge penis"]
+    category: "nsfw"
+    civitai_id: 20120
+    civitai_verified: true
+    notes: "Best for close-up penetration shots. Use 'missionary vaginal' + 'close up' triggers."
+
+  - filename: "EkuneSideDoggy.safetensors"
+    tags: ["nsfw", "adult", "sex", "doggy", "sideview", "sd15"]
+    base_model: "SD 1.5"
+    compatible_with: ["majicmixRealistic_v7.safetensors", "realisticVisionV60B1_v51HyperVAE.safetensors"]
+    recommended_strength: 0.85
+    description: "Doggystyle sex from side view"
+    trigger_words: ["sidedoggystyle", "1boy", "ass", "doggystyle", "sex"]
+    category: "nsfw"
+    civitai_id: 28360
+    civitai_verified: true
+    notes: "Use 'sidedoggystyle' trigger for side-view doggy position."
+
+  - filename: "PovBlowjob-v3.safetensors"
+    tags: ["nsfw", "adult", "oral", "blowjob", "pov", "sd15"]
+    base_model: "SD 1.5"
+    compatible_with: ["majicmixRealistic_v7.safetensors", "realisticVisionV60B1_v51HyperVAE.safetensors"]
+    recommended_strength: 0.85
+    description: "POV blowjob with multiple angles and effects"
+    trigger_words: ["blowjob", "deepthroat", "pov", "creampie", "cum", "kneeling", "hand on penis", "wet penis"]
+    category: "nsfw"
+    civitai_id: 24001
+    civitai_verified: true
+    notes: "Use 'blowjob' + 'pov' triggers. Add 'deepthroat' for that effect."
+
+  - filename: "EkunePOVFellatioV2.safetensors"
+    tags: ["nsfw", "adult", "oral", "fellatio", "pov", "sd15"]
+    base_model: "SD 1.5"
+    compatible_with: ["majicmixRealistic_v7.safetensors", "realisticVisionV60B1_v51HyperVAE.safetensors"]
+    recommended_strength: 0.85
+    description: "POV fellatio/oral sex"
+    trigger_words: ["povfellatio", "1boy", "penis"]
+    category: "nsfw"
+    civitai_id: 25980
+    civitai_verified: true
+    notes: "Use 'povfellatio' trigger for POV oral shots."
+
   # --- Flux.1 NSFW LoRAs ---
   # Flux models are censored by default - these LoRAs unlock NSFW generation
   
