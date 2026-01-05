@@ -1,5 +1,7 @@
 # Model Registry
 
+**Last verified:** 2026-01-05
+
 This document tracks all models and LoRAs installed on moira for ComfyUI.
 
 **Last Updated:** 2026-01-04  
@@ -404,3 +406,7 @@ ckpts = data.get('CheckpointLoaderSimple', {}).get('input', {}).get('required', 
 for c in ckpts: print(c)
 "
 ```
+
+---
+
+**Documentation Policy:** This is an authoritative reference document. Do NOT create new documentation files without explicit approval. Add new infrastructure information to existing docs only. See [copilot-instructions.md](../.github/copilot-instructions.md) for details.

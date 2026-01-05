@@ -1,5 +1,7 @@
 # ComfyGen Architecture
 
+**Last verified:** 2026-01-05
+
 System design documentation covering workflows, presets, LoRA injection, and metadata tracking.
 
 ## Table of Contents
@@ -725,3 +727,7 @@ Metadata creation happens in `generate.py`:
 - [USAGE.md](USAGE.md) - Complete usage guide for CLI and MCP
 - [MODEL_REGISTRY.md](MODEL_REGISTRY.md) - Available models and LoRAs
 - [API_REFERENCE.md](API_REFERENCE.md) - Internal module documentation
+
+---
+
+**Documentation Policy:** This is an authoritative reference document. Do NOT create new documentation files without explicit approval. Add new infrastructure information to existing docs only. See [copilot-instructions.md](../.github/copilot-instructions.md) for details.

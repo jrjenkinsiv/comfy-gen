@@ -1,5 +1,7 @@
 # MCP Servers Documentation
 
+**Last verified:** 2026-01-05
+
 This document describes all MCP (Model Context Protocol) servers available in comfy-gen and their exposed tools.
 
 ## Overview
@@ -797,3 +799,7 @@ Add servers to your MCP client configuration (e.g., Claude Desktop config):
 - [LORA_GUIDE.md](LORA_GUIDE.md) - LoRA selection guide
 - [MODEL_REGISTRY.md](MODEL_REGISTRY.md) - Installed model inventory
 - [API_REFERENCE.md](API_REFERENCE.md) - ComfyUI API reference
+
+---
+
+**Documentation Policy:** This is an authoritative reference document. Do NOT create new documentation files without explicit approval. Add new infrastructure information to existing docs only. See [copilot-instructions.md](../.github/copilot-instructions.md) for details.

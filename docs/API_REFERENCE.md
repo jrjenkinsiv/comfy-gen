@@ -1,5 +1,7 @@
 # API Reference
 
+**Last verified:** 2026-01-05
+
 This document provides technical documentation for ComfyGen's internal modules and functions.
 
 ## Table of Contents
@@ -893,3 +895,7 @@ while True:
 - [USAGE.md](USAGE.md) - Usage guide for CLI and MCP server
 - [USAGE.md](USAGE.md) - Error handling patterns
 - [MODEL_REGISTRY.md](MODEL_REGISTRY.md) - Available models
+
+---
+
+**Documentation Policy:** This is an authoritative reference document. Do NOT create new documentation files without explicit approval. Add new infrastructure information to existing docs only. See [copilot-instructions.md](../.github/copilot-instructions.md) for details.

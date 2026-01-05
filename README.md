@@ -481,13 +481,24 @@ ssh moira "C:\\Users\\jrjen\\comfy\\.venv\\Scripts\\python.exe C:\\Users\\jrjen\
 
 ## Documentation
 
-| Document | Description |
-|----------|-------------|
-| [QUICKSTART.md](docs/QUICKSTART.md) | 5-minute fast onboarding guide for new users |
-| [USAGE.md](docs/USAGE.md) | Complete usage guide: CLI, MCP server, workflows, prompt engineering |
-| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | System design: workflows, presets, LoRA injection, metadata tracking |
-| [MODEL_REGISTRY.md](docs/MODEL_REGISTRY.md) | Complete model inventory and compatibility matrix |
-| [API_REFERENCE.md](docs/API_REFERENCE.md) | Internal module and function documentation |
+**Complete documentation index:** See [docs/README.md](docs/README.md) for comprehensive guide and task-oriented navigation.
+
+### Quick Reference
+
+| Document | Description | Use When |
+|----------|-------------|----------|
+| [QUICKSTART.md](docs/QUICKSTART.md) | 5-minute fast onboarding guide | First-time setup |
+| [USAGE.md](docs/USAGE.md) | Complete CLI and MCP usage guide | Generating images/videos |
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | System design and workflows | Understanding internals |
+| [MODEL_REGISTRY.md](docs/MODEL_REGISTRY.md) | Complete model inventory | Downloading/verifying models |
+| [LORA_GUIDE.md](docs/LORA_GUIDE.md) | LoRA compatibility and selection | Adding LoRAs safely |
+| [MCP_SERVERS.md](docs/MCP_SERVERS.md) | MCP server integration | AI assistant setup |
+| [NSFW_GUIDE.md](docs/NSFW_GUIDE.md) | Explicit content generation | NSFW generation |
+| [QUALITY_SYSTEM.md](docs/QUALITY_SYSTEM.md) | Quality assessment design | Understanding validation |
+| [METADATA_SCHEMA.md](docs/METADATA_SCHEMA.md) | JSON metadata format | Experiment tracking |
+| [API_REFERENCE.md](docs/API_REFERENCE.md) | Internal module documentation | Python API usage |
+
+**Documentation Policy:** These are authoritative references. Do NOT create new docs without approval - add to existing docs instead.
 
 ## Examples
 

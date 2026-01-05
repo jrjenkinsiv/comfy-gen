@@ -1,5 +1,7 @@
 # ComfyGen Usage Guide
 
+**Last verified:** 2026-01-05
+
 Complete guide for using ComfyGen via CLI and MCP server for AI-driven image and video generation.
 
 ## Table of Contents
@@ -1269,3 +1271,7 @@ Sidecar JSON files are always created regardless of embedding setting.
 - [MODEL_REGISTRY.md](MODEL_REGISTRY.md) - Available models and LoRAs
 - [API_REFERENCE.md](API_REFERENCE.md) - Internal module documentation
 - [ARCHITECTURE.md](ARCHITECTURE.md) - System design and workflows
+
+---
+
+**Documentation Policy:** This is an authoritative reference document. Do NOT create new documentation files without explicit approval. Add new infrastructure information to existing docs only. See [copilot-instructions.md](../.github/copilot-instructions.md) for details.
