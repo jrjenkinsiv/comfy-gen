@@ -406,6 +406,60 @@ loras:
     recommended_strength: 0.7
     description: "Adult anatomy LoRA (flaccid)"
     category: "nsfw"
+    notes: "WARNING: This is a Wan 2.2 video LoRA (~307MB) - may not work well with SD 1.5/Flux images"
+
+  # --- SD 1.5 Image NSFW LoRAs (Validated) ---
+  # These LoRAs are specifically designed for SD 1.5 image generation
+  # Much smaller (~144MB) and optimized for still images
+  
+  - filename: "airoticart_penis.safetensors"
+    tags: ["nsfw", "adult", "anatomy", "male", "sd15", "image", "penis", "realistic"]
+    compatible_with: ["realisticVisionV60B1_v51HyperVAE.safetensors", "majicmixRealistic_v7.safetensors", "v1-5-pruned-emaonly-fp16.safetensors"]
+    recommended_strength: 0.85  # Range: 0.8-0.9
+    description: "Realistic male genitalia for SD 1.5 photorealistic images"
+    trigger_words: ["penerec", "penflac", "erect penis", "flaccid penis"]
+    category: "nsfw"
+    source: "CivitAI ID 15040 (21K downloads)"
+    notes: |
+      Use 'penerec' for erect, 'penflac' for flaccid in positive prompt.
+      Add opposite trigger to negative prompt for best results.
+      Stack with skin LoRAs for improved realism.
+
+  - filename: "polyhedron_skin.safetensors"
+    tags: ["skin", "detail", "realistic", "sd15", "image", "male", "female"]
+    compatible_with: ["realisticVisionV60B1_v51HyperVAE.safetensors", "majicmixRealistic_v7.safetensors", "v1-5-pruned-emaonly-fp16.safetensors"]
+    recommended_strength: 0.6  # Range: 0.5-0.7
+    description: "Realistic skin texture for male and female subjects"
+    trigger_words: ["detailed skin", "skin blemish", "skin pores"]
+    category: "enhancement"
+    source: "CivitAI ID 109043 (72K downloads)"
+    notes: "Works great stacked with anatomy LoRAs for photorealistic results."
+
+  - filename: "realora_skin.safetensors"
+    tags: ["skin", "detail", "realistic", "sd15", "image", "photorealistic"]
+    compatible_with: ["realisticVisionV60B1_v51HyperVAE.safetensors", "majicmixRealistic_v7.safetensors", "v1-5-pruned-emaonly-fp16.safetensors"]
+    recommended_strength: 0.6  # Range: 0.5-0.7
+    description: "Subtle realistic skin enhancement, more natural than polyhedron"
+    trigger_words: []  # No trigger words needed - style transfer
+    category: "enhancement"
+    source: "CivitAI ID 137258 (45K downloads)"
+    notes: "Style transfer LoRA - no trigger words needed. More subtle than polyhedron_skin."
+
+  # --- Flux.1 NSFW LoRAs ---
+  # Flux models are censored by default - these LoRAs unlock NSFW generation
+  
+  - filename: "nsfw_master_flux.safetensors"
+    tags: ["nsfw", "adult", "flux", "image", "enabling", "uncensor"]
+    compatible_with: ["flux1-dev-fp8.safetensors"]
+    recommended_strength: 0.9  # Range: 0.7-1.0
+    description: "Unlocks NSFW content generation on censored Flux models"
+    trigger_words: []  # No trigger words - enables capability
+    category: "nsfw"
+    source: "CivitAI ID 667086 (113K downloads)"
+    notes: |
+      Flux models are censored by default.
+      This LoRA enables NSFW generation.
+      Higher strength = more explicit content.
 
 # ========================================
 # MODEL SUGGESTIONS - Predefined scenarios
