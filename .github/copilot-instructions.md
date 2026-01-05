@@ -386,3 +386,175 @@ gh pr list --state open --json number,title,createdAt
 - **Model not found:** Verify model exists in `C:\Users\jrjen\comfy\models\` and workflow references correct filename.
 - **MinIO access denied:** Bucket policy may have reset. Run `scripts/set_bucket_policy.py`.
 - **Image not appearing:** Check MinIO bucket at `http://192.168.1.215:9000/minio/comfy-gen/`.
+
+## 11. Workflow Pickup Procedure
+
+**Trigger phrases:** "pick up workflow", "continue workflow", "check status", "resume", "initiate workflow"
+
+**When triggered, execute these steps IN ORDER (autonomously, without asking):**
+
+### Step 1: Discover State
+
+Check the current state of PRs and issues:
+
+```bash
+# Check open PRs
+gh pr list --repo jrjenkinsiv/comfy-gen --state open --json number,title,createdAt,headRefName,isDraft
+
+# Check open issues (unassigned or assigned to Copilot)
+gh issue list --repo jrjenkinsiv/comfy-gen --state open --json number,title,labels,assignees
+```
+
+**Analysis:**
+- Identify PRs ready for review (non-draft, CI passing)
+- Identify issues that need assignment (no assignee or assigned to Copilot)
+- Note any `local-network` or `human-required` items
+
+### Step 2: Review & Merge PRs (Priority)
+
+**CRITICAL:** Clear the PR queue first to unblock the pipeline.
+
+For each open PR:
+1. Read PR description and diff
+2. Check CI status: `gh pr checks <PR_NUMBER>`
+3. **If CI passing and code looks good:**
+   ```bash
+   gh pr review <PR_NUMBER> --approve --body "LGTM - CI passing, changes verified"
+   gh pr merge <PR_NUMBER> --squash --delete-branch
+   ```
+4. **If CI failing:**
+   - Read error logs
+   - If fixable by Copilot → Add review comment requesting fix
+   - If needs reset → Use GraphQL reset procedure (Section 9)
+5. **If conflicts or stale:**
+   - Unassign and reassign the linked issue (Section 9) to trigger fresh branch
+
+### Step 3: Identify Assignable Issues
+
+Filter issues by label type:
+
+**Assign to Copilot:**
+- `serial-assignment` - ONE AT A TIME (wait for PR merge before next)
+- `parallel-ok` - Batch 3-5 simultaneously
+
+**Handle Directly (Orchestrator):**
+- `local-network` - Requires local network access (SSH, ComfyUI API, generation)
+
+**Report to User:**
+- `human-required` - Needs true human intervention
+
+**Skip:**
+- Already assigned to Copilot with open PR
+- Already assigned to user
+
+### Step 4: Pre-Assignment Checklist (MANDATORY)
+
+**Before assigning ANY issue, complete ALL steps from Section 3:**
+
+1. **Read issue body** - Full scope and acceptance criteria
+2. **Read ALL comments:**
+   ```bash
+   # Use GitHub MCP tool if available, or:
+   gh issue view <ISSUE_NUMBER> --json number,title,body,comments --jq '.comments[].body'
+   ```
+3. **Check for linked PRs:**
+   ```bash
+   gh pr list --search "fixes #<ISSUE_NUMBER>" --state all
+   ```
+4. **Evaluate remaining scope** - Update issue if needed
+5. **Verify label accuracy** - Still `serial-assignment` or now `parallel-ok`?
+
+### Step 5: Assign to Copilot
+
+Use GraphQL mutation (Section 9):
+
+```bash
+# 1. Get issue node ID
+ISSUE_ID=$(gh api graphql -f query='
+query {
+  repository(owner: "jrjenkinsiv", name: "comfy-gen") {
+    issue(number: <N>) {
+      id
+    }
+  }
+}' --jq '.data.repository.issue.id')
+
+# 2. Assign via GraphQL
+gh api graphql -f query="
+mutation {
+  addAssigneesToAssignable(input: {
+    assignableId: \"$ISSUE_ID\"
+    assigneeIds: [\"BOT_kgDOC9w8XQ\"]
+  }) {
+    assignable {
+      ... on Issue { assignees(first: 5) { nodes { login } } }
+    }
+  }
+}"
+
+# 3. Verify PR appears within 60 seconds
+sleep 60
+gh pr list --state open --json number,title,createdAt
+```
+
+**Rate Limiting:**
+- Maximum 3 `parallel-ok` issues at once
+- Wait for at least 1 PR to complete before assigning more
+
+### Step 6: Report Actions Taken
+
+Provide a summary of:
+- **PRs merged:** Count and issue numbers closed
+- **Issues assigned:** Issue numbers and labels
+- **Local-network items:** Actions taken by Orchestrator
+- **Blocked items:** `human-required` issues waiting for user
+
+**Example Report:**
+```
+Workflow pickup complete:
+- Merged PRs: #45, #46 (CI passing)
+- Assigned to Copilot: #47 (serial-assignment), #48 (parallel-ok)
+- Handled directly: #49 (local-network - image generation completed)
+- Awaiting user: #50 (human-required - CivitAI account setup)
+```
+
+### Decision Tree
+
+```
+Trigger phrase detected
+    |
+    v
+[Step 1] Discover state (PRs, issues)
+    |
+    v
+[Step 2] Any open PRs?
+    |-- Yes --> Review each PR
+    |           |-- CI passing? --> Approve & merge
+    |           |-- CI failing? --> Request fix or reset
+    |           |-- Conflicts? --> Unassign/reassign issue
+    |
+    v
+[Step 3] Filter issues by label
+    |-- serial-assignment --> Check if any already assigned
+    |                         |-- None assigned? --> Proceed to Step 4
+    |                         |-- One assigned? --> Wait for merge
+    |
+    |-- parallel-ok --> Check count already assigned
+    |                   |-- <3 assigned? --> Proceed to Step 4
+    |                   |-- >=3 assigned? --> Wait for completion
+    |
+    |-- local-network --> Handle directly (Orchestrator)
+    |
+    |-- human-required --> Report to user
+    |
+    v
+[Step 4] Pre-assignment checklist (Section 3)
+    |-- Read body, comments, check PRs
+    |-- Evaluate remaining scope
+    |
+    v
+[Step 5] Assign via GraphQL (Section 9)
+    |
+    v
+[Step 6] Report summary to user
+```
