@@ -219,8 +219,8 @@ def print_audit_results(results: list[dict]) -> None:
     
     for r in sorted(results, key=lambda x: x.get("status", "zzz")):
         filename = r["filename"][:44]
-        source = r.get("source", r.get("catalog_source", "unknown"))[:19]
-        base = r.get("base_model", "-")[:19]
+        source = r.get("source", r.get("catalog_source", "unknown"))[:19] if r.get("source") or r.get("catalog_source") else "unknown"
+        base = (r.get("base_model") or "-")[:19]
         status = r.get("status", "ERROR")
         
         # Color coding via prefix
