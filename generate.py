@@ -1876,7 +1876,7 @@ def main():
             sys.exit(EXIT_FAILURE)
     
     # Validate required args for generation mode
-    # Note: --cancel and --list-loras and --list-presets exit early and never reach these checks
+    # Note: --cancel, --list-loras, and --list-presets exit early and never reach these checks
     if not args.workflow:
         parser.error("--workflow is required")
     
@@ -1914,7 +1914,7 @@ def main():
                 print(f"[INFO] Using preset positive prompt")
     
     if not args.dry_run and not args.prompt:
-        parser.error("--prompt is required (unless using --dry-run or --prompt-preset)")
+        parser.error("--prompt is required unless using --dry-run or --prompt-preset")
     
     # Check server availability first
     if not check_server_availability():
