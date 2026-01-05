@@ -243,9 +243,23 @@ open "http://192.168.1.215:9000/comfy-gen/<filename>.png"
 
 - **CRITICAL: No PowerShell/Batch Files** - All scripts must be Python for cross-platform compatibility.
 - **CRITICAL: No Emojis** - Windows cp1252 encoding breaks on Unicode. Use `[OK]`, `[WARN]`, `[ERROR]`.
-- **CRITICAL: Use Detailed, Verbose Prompts** - Models can handle paragraph-length prompts. See `docs/USAGE.md` for examples. Short prompts like "a battleship, top-down" are inadequate - use 100-200 token detailed descriptions with redundant constraint reinforcement.
 - **Style:** Python with type hints. Use `sys.exit(1)` for failures.
 - **File organization:** Workflows in `workflows/`, scripts in `scripts/`. NEVER create files in root except `generate.py`.
+
+**Prompting Strategy (2026-01 Update):**
+Two approaches, choose based on use case:
+
+| Approach | When to Use | Example |
+|----------|-------------|---------|
+| **Short + LoRA** | NSFW, specific anatomical features | `(large natural tits:1.3), (cumshot:1.4), photorealistic` + LoRAs |
+| **Verbose Detailed** | Landscapes, cars, complex scenes | 100-200 tokens with camera settings, lighting, etc. |
+
+**NSFW Prompting Best Practices:**
+- Use colloquial/explicit terms (cock not penis, tits not breasts) - models trained on internet data
+- Use weight syntax: `(keyword:1.3)` for emphasis, stack related terms
+- Shorter focused prompts (30-50 tokens) + quality LoRAs outperform 200-token verbose prompts
+- See `prompt_catalog.yaml` section `nsfw_methodology` for terminology guide
+- See `nsfw_templates` for working short-form prompt examples
 
 **NSFW Content Policy:**
 - **NEVER** include NSFW prompts, tags, or keywords in any committed file

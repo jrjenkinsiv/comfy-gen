@@ -335,3 +335,121 @@ saved_prompts:
       - "more_details.safetensors:0.5"
       - "scenery_lora.safetensors:0.4"
 
+# ========================================
+# NSFW PROMPTING METHODOLOGY (2026-01 Update)
+# ========================================
+# Key insight: Shorter, focused prompts + LoRAs outperform long verbose prompts.
+# Models are trained on internet data where explicit terminology dominates.
+
+nsfw_methodology:
+  # Terminology - use explicit/colloquial terms over clinical
+  terminology:
+    use: ["cock", "dick", "cum", "cumshot", "pussy", "tits", "boobs", "balls", "ballsack"]
+    avoid: ["penis", "semen", "ejaculation", "vagina", "breasts", "testicles", "scrotum"]
+    reason: "Models trained on internet data respond better to colloquial terms"
+  
+  # Weight syntax for emphasis
+  weight_syntax:
+    slight: "(keyword:1.2)"
+    strong: "(keyword:1.3-1.4)"
+    maximum: "(keyword:1.5-1.8)"
+    notes: "Stack related terms: (uncut:1.3), (foreskin:1.3), uncircumcised, natural"
+  
+  # Recommended models for NSFW
+  recommended_models:
+    image:
+      - name: "Pony Diffusion V6 XL"
+        notes: "Best for anatomical variety and detail"
+      - name: "RealVisXL V4.0"
+        notes: "Excellent photorealism and skin tones"
+      - name: "Juggernaut XL"
+        notes: "Strong anatomical accuracy"
+      - name: "AutismmixSDXL"
+        notes: "Highly detailed genital rendering"
+    video:
+      - name: "AnimateDiff V3"
+        notes: "Standard for ComfyUI video"
+      - name: "HotShot-XL"
+        notes: "SDXL-based workflows"
+      - name: "Stable Video Diffusion (SVD)"
+        notes: "Good for subject consistency"
+  
+  # Technical settings
+  settings:
+    steps: "35-40"
+    cfg: "8-9"
+    sampler: "DPM++ 2M Karras"
+    resolution_portrait: "1024x1536"
+    resolution_landscape_pov: "1536x1024"
+
+# Focused prompt templates (SHORT + LoRA approach)
+nsfw_templates:
+  # Asian woman kneeling with cumshot - focused version
+  asian_cumshot_focused:
+    style: "short_focused"
+    positive: "(Asian woman:1.2), (kneeling:1.2), on her knees, (looking up at camera:1.1), (large natural tits:1.3), (cum on tits:1.4), (cumshot:1.3), thick cum, cum dripping, detailed skin, pores visible, natural lighting, photorealistic, 8K, sharp focus, (POV angle:1.2), black hair, beautiful face, submissive expression"
+    negative: "erect nipples, fake tits, standing, clothed, censored, blurred, mosaic, cartoon, anime, 3D render, plastic skin, bad anatomy, extra limbs, watermark, text"
+    settings:
+      steps: 35
+      cfg: 8.5
+    recommended_loras:
+      - "realistic_skin.safetensors:0.6"
+    notes: "Short focused prompt - relies on LoRAs for detail"
+  
+  # Genital detail close-up
+  genital_closeup:
+    style: "short_focused"
+    positive: "extreme close-up, macro shot, (uncut cock:1.4), detailed foreskin, (veiny dick:1.3), prominent veins, vascular detail, flaccid, soft, (precum leaking:1.2), glistening tip, (hanging balls:1.2), wrinkled skin texture, natural lighting, photorealistic, 8K, shallow depth of field"
+    negative: "erect, hard, circumcised, person visible, face, body, smooth, cartoon, fake"
+    settings:
+      steps: 40
+      cfg: 9.0
+    recommended_loras:
+      - "veiny_detail.safetensors:0.7"
+      - "foreskin.safetensors:0.6"
+    notes: "Use vascular LoRAs at 0.6-0.8 strength"
+  
+  # Large natural breasts
+  natural_breasts:
+    style: "short_focused"
+    positive: "(large natural tits:1.3), (big breasts:1.2), natural sag, realistic breast shape, soft breasts, natural hang, detailed skin texture, visible pores, areola detail, photorealistic"
+    negative: "fake tits, implants, bolt-ons, perky, anime, cartoon, plastic, perfect spheres, unrealistic shape"
+    settings:
+      steps: 35
+      cfg: 8.0
+    recommended_loras:
+      - "realistic_breasts.safetensors:0.5"
+    notes: "Natural sag and hang are key differentiators from fake"
+
+# Common NSFW negative template
+nsfw_negative_template: "erect, hard, circumcised, cut, censored, blurred, mosaic, pixelated, cartoon, anime, hentai, illustration, 3D render, CGI, plastic skin, airbrushed, fake tan, smooth skin, hairless, waxed, perfect skin, unrealistic proportions, bad anatomy, deformed anatomy, extra limbs, missing limbs, extra fingers, bad hands, watermark, text, logo, signature, artist name, low quality, low res, jpeg artifacts"
+
+# Troubleshooting common issues
+nsfw_troubleshooting:
+  circumcised_when_want_uncut:
+    problem: "Getting circumcised when you want uncut"
+    solutions:
+      - "Increase weight: (uncut:1.5), (foreskin:1.4)"
+      - "Add to negative: circumcised, cut, no foreskin"
+      - "Try European ethnicity tags"
+  
+  always_erect:
+    problem: "Always erect instead of flaccid"
+    solutions:
+      - "Increase: (flaccid:1.4), (soft:1.3)"
+      - "Add: relaxed state, hanging, drooping"
+      - "Negative: erect, hard, stiff, aroused"
+  
+  not_enough_veins:
+    problem: "Not enough veins"
+    solutions:
+      - "Use vascular LoRAs at 0.6-0.8 strength"
+      - "Prompt: (extremely veiny:1.5), thick prominent veins"
+      - "Upscale with detail enhancement"
+  
+  unrealistic_cum_texture:
+    problem: "Unrealistic cum texture"
+    solutions:
+      - "Prompt: thick cum, creamy cum, realistic cum texture, viscous"
+      - "Reference real images with img2img at low denoise"
+      - "Some models have cum texture LoRAs"

@@ -682,6 +682,30 @@ python3 generate.py \
 
 The MCP (Model Context Protocol) server provides 25 AI-ready tools for image and video generation, allowing AI assistants like Claude to control ComfyGen.
 
+### Prerequisites
+
+**Python 3.10+ Required:** MCP requires Python 3.10 or later. The system Python on macOS (3.9) won't work.
+
+```bash
+# Create Python 3.12 venv (one-time setup)
+cd /Users/jrjenkinsiv/Development/comfy-gen
+/usr/local/bin/python3.12 -m venv .venv
+
+# Activate and install dependencies
+source .venv/bin/activate
+pip install -e .
+pip install 'accelerate==1.1.0' 'transformers==4.37.2' mcp httpx websockets
+
+# For quality scoring (optional)
+pip install --no-deps pyiqa
+pip install timm einops scipy scikit-image 'numpy<2' 'opencv-python-headless<4.12'
+```
+
+**Infrastructure Location:**
+- **MCP Server runs on:** magneto (192.168.1.124) - the dev workstation
+- **ComfyUI runs on:** moira (192.168.1.215) - the GPU server
+- **MCP communicates with ComfyUI over local network**
+
 ### MCP Setup
 
 Add to your MCP client configuration (VS Code, Claude Desktop, etc.):
@@ -690,8 +714,8 @@ Add to your MCP client configuration (VS Code, Claude Desktop, etc.):
 {
   "mcpServers": {
     "comfy-gen": {
-      "command": "python3",
-      "args": ["/path/to/comfy-gen/mcp_server.py"],
+      "command": "/Users/jrjenkinsiv/Development/comfy-gen/.venv/bin/python",
+      "args": ["/Users/jrjenkinsiv/Development/comfy-gen/mcp_server.py"],
       "env": {
         "COMFYUI_HOST": "http://192.168.1.215:8188",
         "MINIO_ENDPOINT": "192.168.1.215:9000",
@@ -702,6 +726,8 @@ Add to your MCP client configuration (VS Code, Claude Desktop, etc.):
   }
 }
 ```
+
+**Note:** Use the full path to the venv Python, not system `python3`.
 
 **Environment Variables:**
 - `COMFYUI_HOST` - ComfyUI server URL (default: http://192.168.1.215:8188)
