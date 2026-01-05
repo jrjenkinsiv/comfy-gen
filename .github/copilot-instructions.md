@@ -593,9 +593,11 @@ When building new services, be intentional about placement to avoid later migrat
 | Machine | IP | Currently Running Services |
 |---------|-----|---------------------------|
 | **magneto** | 192.168.1.124 | Development workstation (VS Code, git, local testing) |
-| **cerebro** | *(TBD - new addition)* | Gallery server, PostgreSQL, MLflow, monitoring dashboards |
+| **cerebro** | *(IP not documented yet)* | Monitoring & persistent services (Gallery server, PostgreSQL, MLflow, dashboards) |
 | **moira** | 192.168.1.215 | ComfyUI server (`:8188`), MinIO (`:9000`), GPU tasks (RTX 5090) |
 | **ant-man** | 192.168.1.253 | GitHub Actions runner (ARM64) |
+
+**Note:** Cerebro is not yet included in Section 2's infrastructure table. Update Section 2 when IP is confirmed.
 
 ### Decision Checklist for New Services
 
