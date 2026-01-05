@@ -181,6 +181,43 @@ Issue #68 had a comment showing Phase 2 and 3 were complete, only `--prompt-pres
 
 **High-conflict files (for code changes):** `generate.py`, `workflows/flux-dev.json` (base workflow)
 
+### Local Work Follows the Same Workflow as Remote
+
+**CRITICAL: `local-network` work uses the SAME issue→branch→PR→review→merge pattern as Copilot work.**
+
+The only difference is WHO does the work, not HOW it's tracked.
+
+**Workflow for `local-network` issues (Orchestrator handles directly):**
+
+1. **Pick up the issue** - Comment "Starting work on this issue"
+2. **Create a branch** - `git checkout -b fix/<issue-number>-<short-description>`
+3. **Do the work** - SSH to machines, run generation, test locally
+4. **Commit with issue reference** - `git commit -m "feat: <description>\n\nCloses #<N>"`
+5. **Push and open PR** - `git push -u origin <branch>` then create PR
+6. **Self-review or request review** - For trivial changes, approve own PR; for complex, request user review
+7. **Merge and close** - Squash merge closes the linked issue automatically
+
+**Why this matters:**
+- All work is tracked in git history with issue references
+- PRs provide diff visibility and rollback capability
+- Consistent pattern regardless of who does the work
+- No "drive-by commits" directly to main
+
+**Example:**
+```bash
+# Issue #99: Audit LoRA catalog
+git checkout -b fix/99-lora-catalog-audit
+# ... do work ...
+git add -A && git commit -m "Add source verification to LoRA catalog
+
+- Add HuggingFace source fields to catalog entries
+- Fix civitai_audit.py --update-catalog functionality
+
+Closes #99"
+git push -u origin fix/99-lora-catalog-audit
+# Open PR via GitHub CLI or web UI
+```
+
 ## 5. Build & Test Commands
 
 ```bash

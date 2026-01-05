@@ -1,14 +1,21 @@
 #!/usr/bin/env python3
 """
-CivitAI LoRA Audit Tool
+LoRA Audit Tool (CivitAI + HuggingFace)
 
-Audits LoRA files on moira by looking up their SHA256 hashes on CivitAI API.
+Audits LoRA files on moira by looking up their SHA256 hashes on CivitAI API,
+and validates HuggingFace-sourced LoRAs via metadata in lora_catalog.yaml.
+
 This is the AUTHORITATIVE way to determine base model compatibility - NOT file size.
+
+Sources supported:
+- CivitAI: Hash-based lookup via API
+- HuggingFace: Metadata validation from catalog's source field
 
 Usage:
     python3 scripts/civitai_audit.py                    # Audit all LoRAs
     python3 scripts/civitai_audit.py --file <name>      # Audit single file
     python3 scripts/civitai_audit.py --update-catalog   # Update lora_catalog.yaml
+    python3 scripts/civitai_audit.py --verify-sources   # Verify HuggingFace sources are reachable
 """
 
 import argparse
@@ -24,6 +31,14 @@ import yaml
 
 MOIRA_LORA_PATH = r"C:\Users\jrjen\comfy\models\loras"
 CIVITAI_API_BASE = "https://civitai.com/api/v1"
+HUGGINGFACE_API_BASE = "https://huggingface.co/api"
+
+# Known HuggingFace repos for LoRAs (used for source verification)
+KNOWN_HF_REPOS = {
+    "lightx2v/Wan2.2-Distill-Loras": ["wan2.2_t2v_lightx2v", "wan2.2_i2v_lightx2v"],
+    "XLabs-AI/flux-lora-collection": ["art_lora", "disney_lora", "mjv6_lora", "scenery_lora", "anime_lora"],
+    "Kijai/WanVideo_comfy": ["Seko"],
+}
 
 
 def get_hash_from_moira(filename: str) -> str | None:
@@ -51,6 +66,7 @@ def lookup_civitai_by_hash(hash_val: str) -> dict[str, Any] | None:
         if resp.status_code == 200:
             data = resp.json()
             return {
+                "source": "CivitAI",
                 "civitai_model_name": data.get("model", {}).get("name"),
                 "civitai_model_id": data.get("modelId"),
                 "civitai_version_id": data.get("id"),
@@ -65,6 +81,59 @@ def lookup_civitai_by_hash(hash_val: str) -> dict[str, Any] | None:
     return None
 
 
+def lookup_huggingface_repo(repo_id: str) -> dict[str, Any] | None:
+    """Verify a HuggingFace repo exists and get metadata."""
+    try:
+        resp = requests.get(
+            f"{HUGGINGFACE_API_BASE}/models/{repo_id}",
+            timeout=15
+        )
+        if resp.status_code == 200:
+            data = resp.json()
+            return {
+                "source": f"HuggingFace {repo_id}",
+                "hf_repo_id": repo_id,
+                "hf_model_id": data.get("modelId"),
+                "hf_tags": data.get("tags", []),
+                "hf_downloads": data.get("downloads"),
+                "hf_likes": data.get("likes"),
+                "hf_verified": True,
+            }
+        elif resp.status_code == 404:
+            return {"error": f"HuggingFace repo {repo_id} not found", "hf_verified": False}
+    except requests.RequestException as e:
+        return {"error": str(e), "hf_verified": False}
+    return None
+
+
+def check_catalog_source(filename: str, catalog_path: str = "lora_catalog.yaml") -> dict[str, Any] | None:
+    """Check if a LoRA has source info in the catalog."""
+    try:
+        with open(catalog_path, "r") as f:
+            catalog = yaml.safe_load(f)
+        
+        for lora in catalog.get("loras", []):
+            if lora.get("filename") == filename:
+                source = lora.get("source")
+                if source and "HuggingFace" in source:
+                    # Extract repo ID from source like "HuggingFace lightx2v/Wan2.2-Distill-Loras"
+                    parts = source.replace("HuggingFace ", "").strip()
+                    return {
+                        "catalog_source": source,
+                        "hf_repo_id": parts if "/" in parts else None,
+                        "civitai_verified": lora.get("civitai_verified", False),
+                        "base_model": lora.get("base_model") or lora.get("civitai_base_model"),
+                    }
+                elif source:
+                    return {
+                        "catalog_source": source,
+                        "civitai_verified": lora.get("civitai_verified", False),
+                    }
+    except Exception:
+        pass
+    return None
+
+
 def list_loras_on_moira() -> list[str]:
     """List all .safetensors files in moira's loras directory."""
     cmd = f'ssh moira "dir {MOIRA_LORA_PATH}\\*.safetensors /b" 2>/dev/null'
@@ -76,23 +145,45 @@ def list_loras_on_moira() -> list[str]:
         return []
 
 
-def audit_lora(filename: str) -> dict[str, Any]:
-    """Audit a single LoRA file."""
+def audit_lora(filename: str, catalog_path: str = "lora_catalog.yaml") -> dict[str, Any]:
+    """Audit a single LoRA file against CivitAI and HuggingFace."""
     result = {"filename": filename}
     
+    # First check catalog for existing source info (HuggingFace entries)
+    catalog_info = check_catalog_source(filename, catalog_path)
+    if catalog_info and catalog_info.get("hf_repo_id"):
+        # This is a known HuggingFace LoRA - verify the repo exists
+        hf_info = lookup_huggingface_repo(catalog_info["hf_repo_id"])
+        if hf_info and hf_info.get("hf_verified"):
+            result.update(hf_info)
+            result["base_model"] = catalog_info.get("base_model", "See catalog")
+            result["status"] = "verified_hf"
+            return result
+        else:
+            result["catalog_source"] = catalog_info.get("catalog_source")
+            result["status"] = "hf_unverified"
+            return result
+    
+    # Try CivitAI hash lookup
     hash_val = get_hash_from_moira(filename)
     if not hash_val:
         result["status"] = "hash_error"
+        if catalog_info:
+            result["catalog_source"] = catalog_info.get("catalog_source", "unknown")
         return result
     
     result["sha256"] = hash_val
     
     civitai_info = lookup_civitai_by_hash(hash_val)
-    if civitai_info:
+    if civitai_info and "base_model" in civitai_info:
         result.update(civitai_info)
-        result["status"] = "found" if "base_model" in civitai_info else "not_found"
+        result["status"] = "verified_civitai"
+    elif catalog_info:
+        # Not on CivitAI but has catalog source
+        result["catalog_source"] = catalog_info.get("catalog_source")
+        result["status"] = "catalog_only"
     else:
-        result["status"] = "lookup_error"
+        result["status"] = "unknown"
     
     return result
 
@@ -120,31 +211,51 @@ def categorize_base_model(base_model: str | None) -> str:
 
 def print_audit_results(results: list[dict]) -> None:
     """Print audit results in a table format."""
-    print("\n" + "=" * 100)
-    print("LoRA AUDIT RESULTS - CivitAI Hash Lookup")
-    print("=" * 100)
-    print(f"{'Filename':<45} | {'Base Model':<25} | {'Category':<8} | Triggers")
-    print("-" * 100)
+    print("\n" + "=" * 110)
+    print("LoRA AUDIT RESULTS - CivitAI + HuggingFace Verification")
+    print("=" * 110)
+    print(f"{'Filename':<45} | {'Source':<20} | {'Base Model':<20} | {'Status':<12}")
+    print("-" * 110)
     
-    for r in sorted(results, key=lambda x: categorize_base_model(x.get("base_model"))):
+    for r in sorted(results, key=lambda x: x.get("status", "zzz")):
         filename = r["filename"][:44]
-        base = r.get("base_model", r.get("status", "ERROR"))[:24]
-        category = categorize_base_model(r.get("base_model"))
-        triggers = r.get("trained_words", [])[:2]
-        triggers_str = str(triggers) if triggers else "[]"
-        print(f"{filename:<45} | {base:<25} | {category:<8} | {triggers_str}")
+        source = r.get("source", r.get("catalog_source", "unknown"))[:19]
+        base = r.get("base_model", "-")[:19]
+        status = r.get("status", "ERROR")
+        
+        # Color coding via prefix
+        status_icon = {
+            "verified_civitai": "[OK]",
+            "verified_hf": "[OK]",
+            "catalog_only": "[CATALOG]",
+            "hf_unverified": "[WARN]",
+            "unknown": "[?]",
+            "hash_error": "[ERR]",
+        }.get(status, "[?]")
+        
+        print(f"{filename:<45} | {source:<20} | {base:<20} | {status_icon}")
     
     # Summary
-    print("\n" + "=" * 100)
+    print("\n" + "=" * 110)
     print("SUMMARY:")
-    categories = {}
-    for r in results:
-        cat = categorize_base_model(r.get("base_model"))
-        categories[cat] = categories.get(cat, 0) + 1
     
-    for cat, count in sorted(categories.items()):
-        safe = "[OK] " if cat in ("sd15", "sdxl", "pony") else "[VIDEO] " if cat == "video" else ""
-        print(f"  {safe}{cat}: {count} LoRAs")
+    status_counts = {}
+    for r in results:
+        status = r.get("status", "unknown")
+        status_counts[status] = status_counts.get(status, 0) + 1
+    
+    verified = status_counts.get("verified_civitai", 0) + status_counts.get("verified_hf", 0)
+    catalog = status_counts.get("catalog_only", 0)
+    unknown = status_counts.get("unknown", 0) + status_counts.get("hf_unverified", 0)
+    errors = status_counts.get("hash_error", 0)
+    
+    print(f"  [OK] Verified (CivitAI): {status_counts.get('verified_civitai', 0)}")
+    print(f"  [OK] Verified (HuggingFace): {status_counts.get('verified_hf', 0)}")
+    print(f"  [CATALOG] Catalog-only (community): {catalog}")
+    print(f"  [?] Unknown source: {unknown}")
+    if errors:
+        print(f"  [ERR] Hash errors: {errors}")
+    print(f"\n  Total: {len(results)} | Verified: {verified} | Tracked: {verified + catalog} | Unknown: {unknown}")
 
 
 def update_catalog(results: list[dict], catalog_path: str = "lora_catalog.yaml") -> None:
@@ -197,12 +308,49 @@ def update_catalog(results: list[dict], catalog_path: str = "lora_catalog.yaml")
     print(f"[INFO] {len(missing)} LoRAs not in catalog (add manually if needed)")
 
 
+def verify_hf_sources(catalog_path: str = "lora_catalog.yaml") -> None:
+    """Verify all HuggingFace sources in the catalog are reachable."""
+    print("[INFO] Verifying HuggingFace sources in catalog...")
+    
+    try:
+        with open(catalog_path, "r") as f:
+            catalog = yaml.safe_load(f)
+    except Exception as e:
+        print(f"[ERROR] Failed to read catalog: {e}")
+        return
+    
+    hf_sources = set()
+    for lora in catalog.get("loras", []):
+        source = lora.get("source", "")
+        if "HuggingFace" in source:
+            # Extract repo ID
+            repo_id = source.replace("HuggingFace ", "").strip()
+            if "/" in repo_id:
+                hf_sources.add(repo_id)
+    
+    print(f"[INFO] Found {len(hf_sources)} unique HuggingFace repos to verify")
+    
+    for repo_id in sorted(hf_sources):
+        info = lookup_huggingface_repo(repo_id)
+        if info and info.get("hf_verified"):
+            downloads = info.get("hf_downloads", 0)
+            likes = info.get("hf_likes", 0)
+            print(f"  [OK] {repo_id} ({downloads:,} downloads, {likes} likes)")
+        else:
+            print(f"  [ERR] {repo_id} - NOT FOUND OR UNREACHABLE")
+
+
 def main():
-    parser = argparse.ArgumentParser(description="Audit LoRAs via CivitAI hash lookup")
+    parser = argparse.ArgumentParser(description="Audit LoRAs via CivitAI + HuggingFace")
     parser.add_argument("--file", "-f", help="Audit a specific file only")
     parser.add_argument("--update-catalog", action="store_true", help="Update lora_catalog.yaml")
+    parser.add_argument("--verify-sources", action="store_true", help="Verify HuggingFace sources are reachable")
     parser.add_argument("--output", "-o", help="Output JSON file for results")
     args = parser.parse_args()
+    
+    if args.verify_sources:
+        verify_hf_sources()
+        return
     
     if args.file:
         result = audit_lora(args.file)
@@ -219,8 +367,9 @@ def main():
         print(f"[{i+1}/{len(loras)}] Auditing {lora}...", end=" ", flush=True)
         result = audit_lora(lora)
         results.append(result)
-        status = result.get("base_model", result.get("status", "?"))
-        print(status)
+        status = result.get("status", "?")
+        source = result.get("source", result.get("catalog_source", ""))[:30]
+        print(f"{status} ({source})")
     
     print_audit_results(results)
     
