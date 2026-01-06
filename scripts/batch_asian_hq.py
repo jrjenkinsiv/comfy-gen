@@ -65,15 +65,15 @@ def run_generation(scenario: dict, index: int) -> bool:
     loras = scenario["loras"]
     steps = scenario["steps"]
     cfg = scenario["cfg"]
-    
+
     output_name = f"asian_hq_{index:03d}_{name}.png"
-    
+
     print(f"\n{'='*60}")
     print(f"[{index}/5] Generating: {name}")
     print(f"Steps: {steps}, CFG: {cfg}")
     print(f"LoRAs: {', '.join(f'{l[0]} @ {l[1]}' for l in loras)}")
     print(f"{'='*60}")
-    
+
     # Build command
     cmd = [
         "python3", "generate.py",
@@ -84,11 +84,11 @@ def run_generation(scenario: dict, index: int) -> bool:
         "--cfg", str(cfg),
         "--output", f"/tmp/{output_name}",
     ]
-    
+
     # Add each LoRA as separate flag
     for lora_name, lora_strength in loras:
         cmd.extend(["--lora", f"{lora_name}:{lora_strength}"])
-    
+
     try:
         result = subprocess.run(
             cmd,
@@ -97,7 +97,7 @@ def run_generation(scenario: dict, index: int) -> bool:
             text=True,
             timeout=600,  # 10 minute timeout for high-quality
         )
-        
+
         if result.returncode == 0:
             print(f"[OK] Generated: {output_name}")
             # Extract URL from output
@@ -109,7 +109,7 @@ def run_generation(scenario: dict, index: int) -> bool:
             print(f"[ERROR] Failed: {name}")
             print(f"    stderr: {result.stderr[:500]}")
             return False
-            
+
     except subprocess.TimeoutExpired:
         print(f"[ERROR] Timeout: {name}")
         return False
@@ -121,27 +121,27 @@ def run_generation(scenario: dict, index: int) -> bool:
 def main():
     start_idx = int(sys.argv[1]) if len(sys.argv) > 1 else 1
     count = int(sys.argv[2]) if len(sys.argv) > 2 else 5
-    
-    print(f"Ultra-HQ Asian Generation")
+
+    print("Ultra-HQ Asian Generation")
     print(f"Starting from scenario {start_idx}, generating {count} images")
-    print(f"Using Pony Realism V2.2 + Amateur/Real Cum LoRAs")
-    print(f"Max quality settings: 60-70 steps, detailed prompts")
-    
+    print("Using Pony Realism V2.2 + Amateur/Real Cum LoRAs")
+    print("Max quality settings: 60-70 steps, detailed prompts")
+
     success = 0
     failed = 0
-    
+
     for i in range(count):
         scenario_idx = (start_idx - 1 + i) % len(SCENARIOS)
         scenario = SCENARIOS[scenario_idx]
-        
+
         if run_generation(scenario, start_idx + i):
             success += 1
         else:
             failed += 1
-    
+
     print(f"\n{'='*60}")
     print(f"COMPLETE: {success} succeeded, {failed} failed")
-    print(f"View at: http://192.168.1.215:9000/comfy-gen/")
+    print("View at: http://192.168.1.215:9000/comfy-gen/")
     print(f"{'='*60}")
 
 

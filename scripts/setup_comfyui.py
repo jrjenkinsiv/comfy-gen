@@ -7,7 +7,6 @@ This script:
 - Configures for GPU usage
 """
 
-import os
 import subprocess
 import sys
 from pathlib import Path
@@ -18,7 +17,7 @@ COMFYUI_REPO = "https://github.com/comfyanonymous/ComfyUI.git"
 def run_command(cmd, cwd=None):
     """Run a command and return success."""
     try:
-        result = subprocess.run(cmd, shell=True, cwd=cwd, check=True, capture_output=True, text=True)
+        subprocess.run(cmd, shell=True, cwd=cwd, check=True, capture_output=True, text=True)
         print(f"[OK] {cmd}")
         return True
     except subprocess.CalledProcessError as e:

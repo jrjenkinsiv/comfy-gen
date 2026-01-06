@@ -1,26 +1,21 @@
 """Image generation MCP tools."""
 
 import os
-import random
 import re
 import tempfile
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any, Optional, List
+from typing import Any, Dict, List, Optional
 
 # Regex pattern for prompt adjustment (matches "single/one + adjective + noun" before prepositions)
 # Example: "single red car" before "on" -> captures "single red car"
 _PROMPT_WEIGHT_PATTERN_2WORD = re.compile(
-    r'\b(single|one)\s+(\w+\s+\w+)(?=\s+(?:on|in|at|with|near|by|under|over|,|$))',
-    re.IGNORECASE
+    r"\b(single|one)\s+(\w+\s+\w+)(?=\s+(?:on|in|at|with|near|by|under|over|,|$))", re.IGNORECASE
 )
 
 # Regex pattern for single-word subject after "single/one"
 # Example: "single car" -> captures "single car"
-_PROMPT_WEIGHT_PATTERN_1WORD = re.compile(
-    r'\b(single|one)\s+(\w+)(?=\s|,|$)',
-    re.IGNORECASE
-)
+_PROMPT_WEIGHT_PATTERN_1WORD = re.compile(r"\b(single|one)\s+(\w+)(?=\s|,|$)", re.IGNORECASE)
 
 
 # Lazy initialization of clients
@@ -35,9 +30,8 @@ def _get_comfyui():
     global _comfyui
     if _comfyui is None:
         from comfygen.comfyui_client import ComfyUIClient
-        _comfyui = ComfyUIClient(
-            host=os.getenv("COMFYUI_HOST", "http://192.168.1.215:8188")
-        )
+
+        _comfyui = ComfyUIClient(host=os.getenv("COMFYUI_HOST", "http://192.168.1.215:8188"))
     return _comfyui
 
 
@@ -46,9 +40,9 @@ def _get_minio():
     global _minio
     if _minio is None:
         from comfygen.minio_client import MinIOClient
+
         _minio = MinIOClient(
-            endpoint=os.getenv("MINIO_ENDPOINT", "192.168.1.215:9000"),
-            bucket=os.getenv("MINIO_BUCKET", "comfy-gen")
+            endpoint=os.getenv("MINIO_ENDPOINT", "192.168.1.215:9000"), bucket=os.getenv("MINIO_BUCKET", "comfy-gen")
         )
     return _minio
 
@@ -58,6 +52,7 @@ def _get_workflow_mgr():
     global _workflow_mgr
     if _workflow_mgr is None:
         from comfygen.workflows import WorkflowManager
+
         _workflow_mgr = WorkflowManager()
     return _workflow_mgr
 
@@ -67,17 +62,18 @@ def _get_model_registry():
     global _model_registry
     if _model_registry is None:
         from comfygen.models import ModelRegistry
+
         _model_registry = ModelRegistry()
     return _model_registry
 
 
 def _generate_filename(prefix: str = "output", extension: str = "png") -> str:
     """Generate timestamped filename.
-    
+
     Args:
         prefix: Filename prefix
         extension: File extension
-        
+
     Returns:
         Timestamped filename
     """
@@ -85,65 +81,45 @@ def _generate_filename(prefix: str = "output", extension: str = "png") -> str:
     return f"{timestamp}_{prefix}.{extension}"
 
 
-def _adjust_prompt_for_retry(
-    positive_prompt: str, 
-    negative_prompt: str, 
-    attempt: int
-) -> tuple:
+def _adjust_prompt_for_retry(positive_prompt: str, negative_prompt: str, attempt: int) -> tuple:
     """Adjust prompts for retry attempt to improve quality.
-    
+
     Args:
         positive_prompt: Original positive prompt
         negative_prompt: Original negative prompt (can be empty string)
         attempt: Current retry attempt number (1-based)
-    
+
     Returns:
         Tuple of (adjusted_positive, adjusted_negative)
     """
     # Increase emphasis on key terms
     adjusted_positive = positive_prompt
     positive_lower = positive_prompt.lower()
-    
+
     # Add emphasis to "single" and "one" if they appear
     if "single" in positive_lower or "one" in positive_lower:
         # Increase weight multiplier based on attempt
         multiplier = 1.0 + (attempt * 0.3)
-        
+
         # Apply weight to "single/one + (adjective) + noun" patterns
         # Strategy: Match 2 words if followed by prep/punctuation, else 1 word
         # This handles: "single car", "single red car", but not "single car driving"
-        
+
         # First try 2-word pattern (adjective + noun) if followed by prep/punctuation
-        adjusted = _PROMPT_WEIGHT_PATTERN_2WORD.sub(
-            rf'(\1 \2:{multiplier:.1f})',
-            adjusted_positive,
-            count=1
-        )
-        
-        # If no match, try 1-word pattern  
+        adjusted = _PROMPT_WEIGHT_PATTERN_2WORD.sub(rf"(\1 \2:{multiplier:.1f})", adjusted_positive, count=1)
+
+        # If no match, try 1-word pattern
         if adjusted == adjusted_positive:
-            adjusted = _PROMPT_WEIGHT_PATTERN_1WORD.sub(
-                rf'(\1 \2:{multiplier:.1f})',
-                adjusted_positive,
-                count=1
-            )
-        
+            adjusted = _PROMPT_WEIGHT_PATTERN_1WORD.sub(rf"(\1 \2:{multiplier:.1f})", adjusted_positive, count=1)
+
         adjusted_positive = adjusted
-    
+
     # Strengthen negative prompt (handle empty string)
     adjusted_negative = negative_prompt if negative_prompt else ""
     adjusted_negative_lower = adjusted_negative.lower()
-    
-    retry_negative_terms = [
-        "multiple",
-        "duplicate",
-        "cloned",
-        "ghosting",
-        "mirrored",
-        "two",
-        "extra"
-    ]
-    
+
+    retry_negative_terms = ["multiple", "duplicate", "cloned", "ghosting", "mirrored", "two", "extra"]
+
     # Add retry-specific negative terms if not already present
     for term in retry_negative_terms:
         if term not in adjusted_negative_lower:
@@ -153,7 +129,7 @@ def _adjust_prompt_for_retry(
                 adjusted_negative = term
             # Update lowercase version for next iteration
             adjusted_negative_lower = adjusted_negative.lower()
-    
+
     return adjusted_positive, adjusted_negative
 
 
@@ -179,7 +155,7 @@ async def generate_image(
     progress_callback: Optional[Any] = None,
 ) -> Dict[str, Any]:
     """Generate image from text prompt.
-    
+
     Args:
         prompt: Positive text prompt
         negative_prompt: Negative text prompt (what to avoid)
@@ -200,73 +176,61 @@ async def generate_image(
         retry_limit: Maximum retry attempts (default: 3)
         positive_threshold: Minimum CLIP score for positive prompt (default: 0.25)
         progress_callback: Optional callback for progress updates
-        
+
     Returns:
         Dictionary with status, url, metadata, and validation results
     """
     # Determine max attempts based on validation settings
     max_attempts = retry_limit if (validate and auto_retry) else 1
-    
+
     # Store original prompts for retries
     original_prompt = prompt
     original_negative = negative_prompt
-    
+
     # Track validation results
     validation_result = None
     last_error = None
-    
+
     for attempt in range(1, max_attempts + 1):
         try:
             # Adjust prompts for retry attempts
             if attempt > 1:
                 current_prompt, current_negative = _adjust_prompt_for_retry(
-                    original_prompt,
-                    original_negative,
-                    attempt - 1
+                    original_prompt, original_negative, attempt - 1
                 )
             else:
                 current_prompt = prompt
                 current_negative = negative_prompt
-            
+
             # Get clients
             comfyui = _get_comfyui()
             minio = _get_minio()
             workflow_mgr = _get_workflow_mgr()
-            
+
             # Check server availability
             if not comfyui.check_availability():
-                return {
-                    "status": "error",
-                    "error": "ComfyUI server is not available"
-                }
-            
+                return {"status": "error", "error": "ComfyUI server is not available"}
+
             # Load appropriate workflow
             workflow_map = {
                 "sd15": "flux-dev.json",  # TODO: Update to use sd15-specific workflow when available
                 "flux": "flux-dev.json",
-                "sdxl": "flux-dev.json"   # TODO: Update to use sdxl-specific workflow when available
+                "sdxl": "flux-dev.json",  # TODO: Update to use sdxl-specific workflow when available
             }
             workflow_file = workflow_map.get(model, "flux-dev.json")
-            
+
             workflow = workflow_mgr.load_workflow(workflow_file)
             if not workflow:
-                return {
-                    "status": "error",
-                    "error": f"Failed to load workflow: {workflow_file}"
-                }
-            
+                return {"status": "error", "error": f"Failed to load workflow: {workflow_file}"}
+
             # Apply parameters to workflow
             workflow = workflow_mgr.set_prompt(workflow, current_prompt, current_negative)
             workflow = workflow_mgr.set_dimensions(workflow, width, height)
             workflow = workflow_mgr.set_seed(workflow, seed)
             workflow = workflow_mgr.set_sampler_params(
-                workflow,
-                steps=steps,
-                cfg=cfg,
-                sampler_name=sampler,
-                scheduler=scheduler
+                workflow, steps=steps, cfg=cfg, sampler_name=sampler, scheduler=scheduler
             )
-            
+
             # Apply LoRAs if specified
             if loras:
                 for lora_spec in loras:
@@ -274,54 +238,39 @@ async def generate_image(
                     strength = lora_spec.get("strength", 1.0)
                     if lora_name:
                         workflow = workflow_mgr.inject_lora(workflow, lora_name, strength, strength)
-            
+
             # Apply transparency if requested
             if transparent:
                 workflow = workflow_mgr.enable_transparency(workflow)
-            
+
             # Queue workflow
             prompt_id = comfyui.queue_prompt(workflow)
             if not prompt_id:
                 last_error = "Failed to queue workflow"
                 if attempt >= max_attempts:
-                    return {
-                        "status": "error",
-                        "error": last_error
-                    }
+                    return {"status": "error", "error": last_error}
                 continue
-            
+
             # Wait for completion with progress callback
-            result = comfyui.wait_for_completion(
-                prompt_id, 
-                timeout=300,
-                progress_callback=progress_callback
-            )
+            result = comfyui.wait_for_completion(prompt_id, timeout=300, progress_callback=progress_callback)
             if not result:
                 last_error = "Generation timed out or failed"
                 if attempt >= max_attempts:
-                    return {
-                        "status": "error",
-                        "error": last_error,
-                        "prompt_id": prompt_id
-                    }
+                    return {"status": "error", "error": last_error, "prompt_id": prompt_id}
                 continue
-            
+
             # Extract output image path from result
             outputs = result.get("outputs", {})
             if not outputs:
                 last_error = "No outputs in result"
                 if attempt >= max_attempts:
-                    return {
-                        "status": "error",
-                        "error": last_error,
-                        "prompt_id": prompt_id
-                    }
+                    return {"status": "error", "error": last_error, "prompt_id": prompt_id}
                 continue
-            
+
             # Find the SaveImage node output
             image_url = None
             image_filename = None
-            for node_id, node_output in outputs.items():
+            for _node_id, node_output in outputs.items():
                 if "images" in node_output:
                     images = node_output["images"]
                     if images:
@@ -333,32 +282,29 @@ async def generate_image(
                             # Construct MinIO URL
                             image_url = f"http://{minio.endpoint}/{minio.bucket}/{image_filename}"
                             break
-            
+
             if not image_url:
                 last_error = "Failed to get output image URL"
                 if attempt >= max_attempts:
-                    return {
-                        "status": "error",
-                        "error": last_error,
-                        "prompt_id": prompt_id
-                    }
+                    return {"status": "error", "error": last_error, "prompt_id": prompt_id}
                 continue
-            
+
             # Download to local path if requested
             local_path = None
             if output_path:
                 try:
-                    import requests
                     import logging
-                    
+
+                    import requests
+
                     response = requests.get(image_url, timeout=30)
                     if response.status_code == 200:
                         # Ensure parent directory exists
                         output_dir = Path(output_path).parent
                         output_dir.mkdir(parents=True, exist_ok=True)
-                        
+
                         # Write file
-                        with open(output_path, 'wb') as f:
+                        with open(output_path, "wb") as f:
                             f.write(response.content)
                         local_path = str(output_path)
                     else:
@@ -367,35 +313,37 @@ async def generate_image(
                 except Exception as e:
                     # Log warning but continue - local save is optional
                     import logging
+
                     logging.warning(f"Failed to save image locally: {str(e)}")
-            
+
             # Run validation if requested
             if validate:
                 try:
-                    from comfy_gen.validation import validate_image as validate_image_fn
-                    
                     # Download image to temporary location for validation
                     import requests
+
+                    from comfy_gen.validation import validate_image as validate_image_fn
+
                     response = requests.get(image_url, timeout=30)
                     if response.status_code == 200:
                         with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp_file:
                             tmp_file.write(response.content)
                             tmp_path = tmp_file.name
-                        
+
                         try:
                             # Run validation
                             validation_result = validate_image_fn(
                                 tmp_path,
                                 original_prompt,  # Use original prompt for validation
                                 original_negative if original_negative else None,
-                                positive_threshold=positive_threshold
+                                positive_threshold=positive_threshold,
                             )
-                            
+
                             # Clean up temp file
                             os.unlink(tmp_path)
-                            
+
                             # Check if validation passed
-                            if validation_result.get('passed'):
+                            if validation_result.get("passed"):
                                 # Success! Return result
                                 return {
                                     "status": "success",
@@ -405,10 +353,10 @@ async def generate_image(
                                     "attempt": attempt,
                                     "validation": {
                                         "passed": True,
-                                        "positive_score": validation_result.get('positive_score', 0.0),
-                                        "negative_score": validation_result.get('negative_score'),
-                                        "score_delta": validation_result.get('score_delta'),
-                                        "reason": validation_result.get('reason', '')
+                                        "positive_score": validation_result.get("positive_score", 0.0),
+                                        "negative_score": validation_result.get("negative_score"),
+                                        "score_delta": validation_result.get("score_delta"),
+                                        "reason": validation_result.get("reason", ""),
                                     },
                                     "metadata": {
                                         "prompt": current_prompt,
@@ -422,8 +370,8 @@ async def generate_image(
                                         "sampler": sampler,
                                         "scheduler": scheduler,
                                         "seed": seed if seed != -1 else "random",
-                                        "loras": loras
-                                    }
+                                        "loras": loras,
+                                    },
                                 }
                             else:
                                 # Validation failed
@@ -437,11 +385,11 @@ async def generate_image(
                                         "attempt": attempt,
                                         "validation": {
                                             "passed": False,
-                                            "positive_score": validation_result.get('positive_score', 0.0),
-                                            "negative_score": validation_result.get('negative_score'),
-                                            "score_delta": validation_result.get('score_delta'),
-                                            "reason": validation_result.get('reason', ''),
-                                            "warning": f"Max retries ({retry_limit}) reached"
+                                            "positive_score": validation_result.get("positive_score", 0.0),
+                                            "negative_score": validation_result.get("negative_score"),
+                                            "score_delta": validation_result.get("score_delta"),
+                                            "reason": validation_result.get("reason", ""),
+                                            "warning": f"Max retries ({retry_limit}) reached",
                                         },
                                         "metadata": {
                                             "prompt": current_prompt,
@@ -455,8 +403,8 @@ async def generate_image(
                                             "sampler": sampler,
                                             "scheduler": scheduler,
                                             "seed": seed if seed != -1 else "random",
-                                            "loras": loras
-                                        }
+                                            "loras": loras,
+                                        },
                                     }
                                 # Continue to next retry
                                 continue
@@ -469,14 +417,9 @@ async def generate_image(
                         # Failed to download image for validation
                         last_error = f"Failed to download image for validation: HTTP {response.status_code}"
                         if attempt >= max_attempts:
-                            return {
-                                "status": "error",
-                                "error": last_error,
-                                "url": image_url,
-                                "prompt_id": prompt_id
-                            }
+                            return {"status": "error", "error": last_error, "url": image_url, "prompt_id": prompt_id}
                         continue
-                        
+
                 except ImportError:
                     # Validation not available, return without validation
                     return {
@@ -484,10 +427,7 @@ async def generate_image(
                         "url": image_url,
                         "local_path": local_path,
                         "prompt_id": prompt_id,
-                        "validation": {
-                            "passed": None,
-                            "reason": "CLIP validation dependencies not available"
-                        },
+                        "validation": {"passed": None, "reason": "CLIP validation dependencies not available"},
                         "metadata": {
                             "prompt": current_prompt,
                             "negative_prompt": current_negative,
@@ -499,8 +439,8 @@ async def generate_image(
                             "sampler": sampler,
                             "scheduler": scheduler,
                             "seed": seed if seed != -1 else "random",
-                            "loras": loras
-                        }
+                            "loras": loras,
+                        },
                     }
             else:
                 # Validation not requested, return success
@@ -520,25 +460,18 @@ async def generate_image(
                         "sampler": sampler,
                         "scheduler": scheduler,
                         "seed": seed if seed != -1 else "random",
-                        "loras": loras
-                    }
+                        "loras": loras,
+                    },
                 }
-                
+
         except Exception as e:
             last_error = str(e)
             if attempt >= max_attempts:
-                return {
-                    "status": "error",
-                    "error": last_error,
-                    "attempt": attempt
-                }
+                return {"status": "error", "error": last_error, "attempt": attempt}
             continue
-    
+
     # Should not reach here, but return error if we do
-    return {
-        "status": "error",
-        "error": last_error or "Unknown error during generation"
-    }
+    return {"status": "error", "error": last_error or "Unknown error during generation"}
 
 
 async def img2img(
@@ -553,7 +486,7 @@ async def img2img(
     loras: Optional[List[Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
     """Transform existing image with prompt guidance.
-    
+
     Args:
         input_image: URL or path to input image
         prompt: Positive text prompt
@@ -564,7 +497,7 @@ async def img2img(
         cfg: CFG scale
         seed: Random seed (-1 for random)
         loras: List of LoRAs with name and strength
-        
+
     Returns:
         Dictionary with status, url, and metadata
     """
@@ -572,35 +505,24 @@ async def img2img(
         # Get clients
         comfyui = _get_comfyui()
         workflow_mgr = _get_workflow_mgr()
-        
+
         # Check server availability
         if not comfyui.check_availability():
-            return {
-                "status": "error",
-                "error": "ComfyUI server is not available"
-            }
-        
+            return {"status": "error", "error": "ComfyUI server is not available"}
+
         # Load img2img workflow
         workflow = workflow_mgr.load_workflow("sd15-img2img.json")
         if not workflow:
-            return {
-                "status": "error",
-                "error": "Failed to load img2img workflow"
-            }
-        
+            return {"status": "error", "error": "Failed to load img2img workflow"}
+
         # TODO: Upload input image to ComfyUI if it's a local file
         # For now, assume image is already accessible
-        
+
         # Apply parameters
         workflow = workflow_mgr.set_prompt(workflow, prompt, negative_prompt)
         workflow = workflow_mgr.set_seed(workflow, seed)
-        workflow = workflow_mgr.set_sampler_params(
-            workflow,
-            steps=steps,
-            cfg=cfg,
-            denoise=denoise
-        )
-        
+        workflow = workflow_mgr.set_sampler_params(workflow, steps=steps, cfg=cfg, denoise=denoise)
+
         # Apply LoRAs if specified
         if loras:
             for lora_spec in loras:
@@ -608,33 +530,22 @@ async def img2img(
                 strength = lora_spec.get("strength", 1.0)
                 if lora_name:
                     workflow = workflow_mgr.inject_lora(workflow, lora_name, strength, strength)
-        
+
         # Queue workflow
         prompt_id = comfyui.queue_prompt(workflow)
         if not prompt_id:
-            return {
-                "status": "error",
-                "error": "Failed to queue workflow"
-            }
-        
+            return {"status": "error", "error": "Failed to queue workflow"}
+
         # Wait for completion
         result = comfyui.wait_for_completion(prompt_id, timeout=300)
         if not result:
-            return {
-                "status": "error",
-                "error": "Generation timed out or failed",
-                "prompt_id": prompt_id
-            }
-        
+            return {"status": "error", "error": "Generation timed out or failed", "prompt_id": prompt_id}
+
         # Extract output
         image_url = _extract_image_url(result)
         if not image_url:
-            return {
-                "status": "error",
-                "error": "Failed to get output image URL",
-                "prompt_id": prompt_id
-            }
-        
+            return {"status": "error", "error": "Failed to get output image URL", "prompt_id": prompt_id}
+
         return {
             "status": "success",
             "url": image_url,
@@ -646,15 +557,12 @@ async def img2img(
                 "model": model,
                 "steps": steps,
                 "cfg": cfg,
-                "seed": seed if seed != -1 else "random"
-            }
+                "seed": seed if seed != -1 else "random",
+            },
         }
-        
+
     except Exception as e:
-        return {
-            "status": "error",
-            "error": str(e)
-        }
+        return {"status": "error", "error": str(e)}
 
 
 async def inpaint(
@@ -666,7 +574,7 @@ async def inpaint(
     model: str = "sd15",
 ) -> Dict[str, Any]:
     """Inpaint masked region of image.
-    
+
     Args:
         input_image: URL or path to input image
         mask_image: URL or path to mask (white = inpaint area)
@@ -674,14 +582,11 @@ async def inpaint(
         negative_prompt: Negative text prompt
         denoise: Denoise strength (0.0-1.0)
         model: Model to use
-        
+
     Returns:
         Dictionary with status, url, and metadata
     """
-    return {
-        "status": "error",
-        "error": "Inpainting not yet implemented - requires custom workflow"
-    }
+    return {"status": "error", "error": "Inpainting not yet implemented - requires custom workflow"}
 
 
 async def upscale(
@@ -690,19 +595,16 @@ async def upscale(
     model: str = "RealESRGAN_x4plus",
 ) -> Dict[str, Any]:
     """AI upscale image.
-    
+
     Args:
         input_image: URL or path to input image
         scale: Upscale factor (2x or 4x)
         model: Upscale model to use
-        
+
     Returns:
         Dictionary with status, url, and metadata
     """
-    return {
-        "status": "error",
-        "error": "Upscaling not yet implemented - requires custom workflow"
-    }
+    return {"status": "error", "error": "Upscaling not yet implemented - requires custom workflow"}
 
 
 async def face_restore(
@@ -711,33 +613,30 @@ async def face_restore(
     strength: float = 0.8,
 ) -> Dict[str, Any]:
     """Restore/enhance faces in image.
-    
+
     Args:
         input_image: URL or path to input image
         model: Face restoration model (codeformer, GFPGAN)
         strength: Restoration strength (0.0-1.0)
-        
+
     Returns:
         Dictionary with status, url, and metadata
     """
-    return {
-        "status": "error",
-        "error": "Face restoration not yet implemented - requires custom workflow"
-    }
+    return {"status": "error", "error": "Face restoration not yet implemented - requires custom workflow"}
 
 
 def _extract_image_url(result: Dict[str, Any]) -> Optional[str]:
     """Extract image URL from workflow result.
-    
+
     Args:
         result: Workflow execution result
-        
+
     Returns:
         Image URL or None
     """
     minio = _get_minio()
     outputs = result.get("outputs", {})
-    for node_id, node_output in outputs.items():
+    for _node_id, node_output in outputs.items():
         if "images" in node_output:
             images = node_output["images"]
             if images:

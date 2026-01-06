@@ -5,15 +5,13 @@ Batch experiment runner for comfy-gen using the generate.py CLI.
 Runs stratified experiments across parameter space and logs to MLflow.
 """
 
-import subprocess
-import sys
 import json
 import random
-import itertools
+import subprocess
+import sys
 from pathlib import Path
-from datetime import datetime
+
 import mlflow
-from mlflow.tracking import MlflowClient
 
 # MLflow setup
 MLFLOW_URI = "http://192.168.1.215:5000"
@@ -76,7 +74,7 @@ def run_experiment(
     output_path: Path,
 ) -> dict:
     """Run a single generation experiment."""
-    
+
     cmd = [
         sys.executable, str(GENERATE_PY),
         "--workflow", "workflows/pony-realism.json",
@@ -87,13 +85,13 @@ def run_experiment(
         "--scheduler", scheduler,
         "--output", str(output_path),
     ]
-    
+
     if lora:
         lora_name, lora_strength = lora
         cmd.extend(["--lora", f"{lora_name}:{lora_strength}"])
-    
+
     print(f"[RUN] {sampler} cfg={cfg} steps={steps} sched={scheduler}")
-    
+
     result = subprocess.run(
         cmd,
         cwd=str(COMFY_GEN_DIR),
@@ -101,13 +99,13 @@ def run_experiment(
         text=True,
         timeout=300,  # 5 minute timeout
     )
-    
+
     # Parse output for MinIO URL and validation score
     output = result.stdout + result.stderr
     minio_url = None
     validation_score = None
     passed = False
-    
+
     for line in output.split("\n"):
         if "http://192.168.1.215:9000/comfy-gen/" in line and ".png" in line and ".json" not in line:
             # Extract URL
@@ -122,7 +120,7 @@ def run_experiment(
                 pass
         if "Validation: PASSED" in line:
             passed = True
-    
+
     return {
         "success": result.returncode == 0,
         "minio_url": minio_url,
@@ -134,9 +132,9 @@ def run_experiment(
 
 def generate_experiment_combinations(target_count: int = 200) -> list:
     """Generate stratified sample of experiments."""
-    
+
     experiments = []
-    
+
     # Ensure coverage of all samplers and CFG values
     for sampler in SAMPLERS:
         for cfg in CFG_VALUES:
@@ -146,7 +144,7 @@ def generate_experiment_combinations(target_count: int = 200) -> list:
             ethnicity = random.choice(ETHNICITIES)
             scenario_key, scenario_desc = random.choice(list(SCENARIOS.items()))
             lora = random.choice(LORAS)
-            
+
             experiments.append({
                 "sampler": sampler,
                 "cfg": cfg,
@@ -157,7 +155,7 @@ def generate_experiment_combinations(target_count: int = 200) -> list:
                 "scenario_desc": scenario_desc,
                 "lora": lora,
             })
-    
+
     # Add more random combinations to reach target
     while len(experiments) < target_count:
         experiments.append({
@@ -170,11 +168,11 @@ def generate_experiment_combinations(target_count: int = 200) -> list:
             "scenario_desc": SCENARIOS[random.choice(list(SCENARIOS.keys()))],
             "lora": random.choice(LORAS),
         })
-    
+
     # Fix scenario_desc for added experiments
     for exp in experiments:
         exp["scenario_desc"] = SCENARIOS[exp["scenario_key"]]
-    
+
     random.shuffle(experiments)
     return experiments[:target_count]
 
@@ -184,31 +182,31 @@ def main():
     parser.add_argument("--count", type=int, default=100, help="Number of experiments to run")
     parser.add_argument("--dry-run", action="store_true", help="Print experiments without running")
     args = parser.parse_args()
-    
+
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    
+
     # Generate experiments
     experiments = generate_experiment_combinations(args.count)
     print(f"[INFO] Generated {len(experiments)} experiments")
-    
+
     if args.dry_run:
         for i, exp in enumerate(experiments[:10]):
             print(f"  {i+1}. {exp['sampler']} cfg={exp['cfg']} steps={exp['steps']} {exp['ethnicity']} - {exp['scenario_key']}")
         print(f"  ... and {len(experiments) - 10} more")
         return
-    
+
     # Setup MLflow
     mlflow.set_tracking_uri(MLFLOW_URI)
     mlflow.set_experiment(EXPERIMENT_NAME)
-    
+
     results = []
-    
+
     for i, exp in enumerate(experiments):
         print(f"\n[EXPERIMENT {i+1}/{len(experiments)}]")
-        
+
         prompt = build_prompt(exp["ethnicity"], exp["scenario_key"], exp["scenario_desc"])
         output_path = OUTPUT_DIR / f"exp_{i:04d}.png"
-        
+
         try:
             with mlflow.start_run():
                 # Log parameters
@@ -221,7 +219,7 @@ def main():
                 mlflow.log_param("lora", exp["lora"][0] if exp["lora"] else "none")
                 mlflow.log_param("lora_strength", exp["lora"][1] if exp["lora"] else 0.0)
                 mlflow.log_param("prompt", prompt[:250])  # Truncate for display
-                
+
                 # Run experiment
                 result = run_experiment(
                     prompt=prompt,
@@ -232,27 +230,27 @@ def main():
                     lora=exp["lora"],
                     output_path=output_path,
                 )
-                
+
                 # Log metrics
                 mlflow.log_metric("success", 1 if result["success"] else 0)
                 mlflow.log_metric("validation_passed", 1 if result["validation_passed"] else 0)
                 if result["validation_score"]:
                     mlflow.log_metric("validation_score", result["validation_score"])
-                
+
                 # Log URL as tag
                 if result["minio_url"]:
                     mlflow.set_tag("minio_url", result["minio_url"])
-                
+
                 results.append({**exp, **result})
-                
+
                 status = "[OK]" if result["success"] else "[FAIL]"
                 score = f"score={result['validation_score']:.3f}" if result["validation_score"] else "no score"
                 print(f"  {status} {score}")
-                
+
         except Exception as e:
             print(f"  [ERROR] {e}")
             results.append({**exp, "success": False, "error": str(e)})
-    
+
     # Summary
     print("\n" + "="*60)
     print("SUMMARY")
@@ -260,7 +258,7 @@ def main():
     successes = sum(1 for r in results if r.get("success"))
     print(f"Total: {len(results)}")
     print(f"Success: {successes} ({100*successes/len(results):.1f}%)")
-    
+
     # Save results
     results_file = OUTPUT_DIR / "results.json"
     with open(results_file, "w") as f:

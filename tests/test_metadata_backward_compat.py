@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Test backward compatibility of gallery server metadata parsing."""
 
-import json
 
 
 def test_old_format_parsing():
@@ -21,7 +20,7 @@ def test_old_format_parsing():
         "validation_score": 0.85,
         "minio_url": "http://192.168.1.215:9000/comfy-gen/image.png"
     }
-    
+
     # Simulate gallery server parsing logic
     if old_meta.get("input"):
         # New nested format
@@ -39,12 +38,12 @@ def test_old_format_parsing():
             "loras": old_meta["loras"],
             "validation_score": old_meta["validation_score"]
         }
-    
+
     assert parsed["prompt"] == "a beautiful landscape"
     assert parsed["seed"] == 42
     assert len(parsed["loras"]) == 1
     assert parsed["validation_score"] == 0.85
-    
+
     print("[OK] Old flat format parsed correctly")
 
 
@@ -84,7 +83,7 @@ def test_new_format_parsing():
             "generation_time_seconds": 45.2
         }
     }
-    
+
     # Simulate gallery server parsing logic
     if new_meta.get("input"):
         # New nested format
@@ -106,7 +105,7 @@ def test_new_format_parsing():
             "loras": new_meta["loras"],
             "validation_score": new_meta["validation_score"]
         }
-    
+
     assert parsed["prompt"] == "a sleek sports car"
     assert parsed["seed"] == 1001
     assert len(parsed["loras"]) == 1
@@ -115,7 +114,7 @@ def test_new_format_parsing():
     assert parsed["resolution"] == [1024, 1024]
     assert parsed["generation_time"] == 45.2
     assert parsed["file_size"] == 2456789
-    
+
     print("[OK] New nested format parsed correctly with additional fields")
 
 

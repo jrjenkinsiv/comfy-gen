@@ -11,8 +11,7 @@ Usage:
 import argparse
 import json
 import sys
-from datetime import datetime
-from typing import List, Dict
+from typing import Dict, List
 
 try:
     from minio import Minio
@@ -28,55 +27,55 @@ BUCKET_NAME = "comfy-gen"
 
 def get_images(client: Minio, pattern: str = None) -> List[Dict]:
     """Get list of images from MinIO bucket.
-    
+
     Args:
         client: MinIO client instance
         pattern: Optional filename pattern to filter by
-        
+
     Returns:
         List of dictionaries containing image metadata
     """
     images = []
-    
+
     try:
         objects = client.list_objects(BUCKET_NAME, recursive=True)
-        
+
         for obj in objects:
             # Filter by pattern if provided
             if pattern and pattern.lower() not in obj.object_name.lower():
                 continue
-            
+
             # Filter to image/video files
             if '.' not in obj.object_name:
                 continue
             ext = obj.object_name.lower().rsplit('.', 1)[-1]
             if ext not in ['png', 'jpg', 'jpeg', 'gif', 'webp', 'mp4', 'webm']:
                 continue
-            
+
             images.append({
                 'filename': obj.object_name,
                 'size': obj.size,
                 'last_modified': obj.last_modified,
                 'url': f"http://{MINIO_ENDPOINT}/{BUCKET_NAME}/{obj.object_name}"
             })
-        
+
         # Sort by date, newest first
         images.sort(key=lambda x: x['last_modified'], reverse=True)
-        
+
     except S3Error as e:
         print(f"[ERROR] MinIO error: {e}")
         sys.exit(1)
-    
+
     return images
 
 def format_text(images: List[Dict]) -> str:
     """Format images as text output."""
     if not images:
         return "No images found."
-    
+
     output = []
     output.append(f"Found {len(images)} image(s):\n")
-    
+
     for img in images:
         # Format size
         size_kb = img['size'] / 1024
@@ -84,16 +83,16 @@ def format_text(images: List[Dict]) -> str:
             size_str = f"{size_kb/1024:.2f} MB"
         else:
             size_str = f"{size_kb:.2f} KB"
-        
+
         # Format date
         date_str = img['last_modified'].strftime("%Y-%m-%d %H:%M:%S")
-        
+
         output.append(f"  {img['filename']}")
         output.append(f"    Size: {size_str}")
         output.append(f"    Date: {date_str}")
         output.append(f"    URL:  {img['url']}")
         output.append("")
-    
+
     return "\n".join(output)
 
 def format_json(images: List[Dict]) -> str:
@@ -107,14 +106,14 @@ def format_json(images: List[Dict]) -> str:
             'last_modified': img['last_modified'].isoformat(),
             'url': img['url']
         })
-    
+
     return json.dumps(json_data, indent=2)
 
 def format_html(images: List[Dict]) -> str:
     """Format images as HTML table."""
     if not images:
         return "<html><body><p>No images found.</p></body></html>"
-    
+
     html = []
     html.append("<!DOCTYPE html>")
     html.append("<html>")
@@ -140,7 +139,7 @@ def format_html(images: List[Dict]) -> str:
     html.append("      <th>Date</th>")
     html.append("      <th>Link</th>")
     html.append("    </tr>")
-    
+
     for img in images:
         # Format size
         size_kb = img['size'] / 1024
@@ -148,21 +147,21 @@ def format_html(images: List[Dict]) -> str:
             size_str = f"{size_kb/1024:.2f} MB"
         else:
             size_str = f"{size_kb:.2f} KB"
-        
+
         # Format date
         date_str = img['last_modified'].strftime("%Y-%m-%d %H:%M:%S")
-        
+
         html.append("    <tr>")
         html.append(f"      <td>{img['filename']}</td>")
         html.append(f"      <td>{size_str}</td>")
         html.append(f"      <td>{date_str}</td>")
         html.append(f"      <td><a href='{img['url']}' target='_blank'>View</a></td>")
         html.append("    </tr>")
-    
+
     html.append("  </table>")
     html.append("</body>")
     html.append("</html>")
-    
+
     return "\n".join(html)
 
 def main():
@@ -181,7 +180,7 @@ def main():
         help="Filter by filename pattern (case-insensitive)"
     )
     args = parser.parse_args()
-    
+
     # Connect to MinIO
     try:
         client = Minio(
@@ -190,19 +189,19 @@ def main():
             secret_key=MINIO_SECRET_KEY,
             secure=False
         )
-        
+
         # Check if bucket exists
         if not client.bucket_exists(BUCKET_NAME):
             print(f"[ERROR] Bucket '{BUCKET_NAME}' does not exist")
             return 1
-        
+
     except Exception as e:
         print(f"[ERROR] Failed to connect to MinIO: {e}")
         return 1
-    
+
     # Get images
     images = get_images(client, args.pattern)
-    
+
     # Format output
     if args.format == "json":
         output = format_json(images)
@@ -210,7 +209,7 @@ def main():
         output = format_html(images)
     else:
         output = format_text(images)
-    
+
     print(output)
     return 0
 

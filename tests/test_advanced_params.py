@@ -2,10 +2,9 @@
 """Tests for advanced generation parameters."""
 
 import sys
-import json
 import tempfile
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import patch
 
 # Add parent directory to path to import generate
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -33,12 +32,12 @@ def test_validate_generation_params_invalid_steps():
     is_valid, error = generate.validate_generation_params(steps=0)
     assert is_valid is False
     assert "steps" in error.lower()
-    
+
     # Too high
     is_valid, error = generate.validate_generation_params(steps=200)
     assert is_valid is False
     assert "steps" in error.lower()
-    
+
     print("[OK] Invalid steps are rejected")
 
 
@@ -48,12 +47,12 @@ def test_validate_generation_params_invalid_cfg():
     is_valid, error = generate.validate_generation_params(cfg=0.5)
     assert is_valid is False
     assert "cfg" in error.lower()
-    
+
     # Too high
     is_valid, error = generate.validate_generation_params(cfg=25.0)
     assert is_valid is False
     assert "cfg" in error.lower()
-    
+
     print("[OK] Invalid CFG values are rejected")
 
 
@@ -63,12 +62,12 @@ def test_validate_generation_params_invalid_denoise():
     is_valid, error = generate.validate_generation_params(denoise=-0.1)
     assert is_valid is False
     assert "denoise" in error.lower()
-    
+
     # Too high
     is_valid, error = generate.validate_generation_params(denoise=1.5)
     assert is_valid is False
     assert "denoise" in error.lower()
-    
+
     print("[OK] Invalid denoise values are rejected")
 
 
@@ -78,15 +77,15 @@ def test_validate_generation_params_invalid_dimensions():
     is_valid, error = generate.validate_generation_params(width=513)
     assert is_valid is False
     assert "divisible by 8" in error.lower()
-    
+
     # Too small
     is_valid, error = generate.validate_generation_params(height=32)
     assert is_valid is False
-    
+
     # Too large
     is_valid, error = generate.validate_generation_params(width=3000)
     assert is_valid is False
-    
+
     print("[OK] Invalid dimensions are rejected")
 
 
@@ -104,7 +103,7 @@ def test_modify_sampler_params():
             }
         }
     }
-    
+
     # Modify all parameters
     result = generate.modify_sampler_params(
         workflow,
@@ -114,7 +113,7 @@ def test_modify_sampler_params():
         sampler_name="dpmpp_2m_sde",
         scheduler="karras"
     )
-    
+
     assert result["1"]["inputs"]["steps"] == 30
     assert result["1"]["inputs"]["cfg"] == 8.5
     assert result["1"]["inputs"]["seed"] == 12345
@@ -137,14 +136,14 @@ def test_modify_sampler_params_partial():
             }
         }
     }
-    
+
     # Modify only steps and cfg
     result = generate.modify_sampler_params(
         workflow,
         steps=50,
         cfg=7.5
     )
-    
+
     assert result["1"]["inputs"]["steps"] == 50
     assert result["1"]["inputs"]["cfg"] == 7.5
     # Others should remain unchanged
@@ -166,9 +165,9 @@ def test_modify_dimensions():
             }
         }
     }
-    
+
     result = generate.modify_dimensions(workflow, width=768, height=1024)
-    
+
     assert result["1"]["inputs"]["width"] == 768
     assert result["1"]["inputs"]["height"] == 1024
     assert result["1"]["inputs"]["batch_size"] == 1  # Should not change
@@ -187,12 +186,12 @@ def test_modify_dimensions_partial():
             }
         }
     }
-    
+
     # Modify only width
     result = generate.modify_dimensions(workflow, width=768)
     assert result["1"]["inputs"]["width"] == 768
     assert result["1"]["inputs"]["height"] == 512
-    
+
     # Create a fresh workflow for second test
     workflow2 = {
         "1": {
@@ -204,7 +203,7 @@ def test_modify_dimensions_partial():
             }
         }
     }
-    
+
     # Modify only height
     result = generate.modify_dimensions(workflow2, height=1024)
     assert result["1"]["inputs"]["width"] == 512  # Original value
@@ -227,15 +226,14 @@ presets:
     cfg: 6.0
 """)
         temp_path = f.name
-    
+
     try:
         # Temporarily replace the presets path
-        original_file = generate.__file__
         with patch.object(Path, 'parent', Path(temp_path).parent):
             with patch('generate.Path') as mock_path:
                 mock_path.return_value.parent = Path(temp_path).parent
                 mock_path.return_value.__truediv__.return_value = Path(temp_path)
-                
+
                 # This test validates the structure, actual loading tested in integration
                 print("[OK] Preset loading structure is correct")
     finally:
@@ -250,7 +248,7 @@ def test_no_ksampler_node():
             "inputs": {}
         }
     }
-    
+
     # Should not crash, just do nothing
     result = generate.modify_sampler_params(workflow, steps=30)
     assert result == workflow
@@ -265,7 +263,7 @@ def test_no_empty_latent_node():
             "inputs": {}
         }
     }
-    
+
     # Should not crash, just do nothing
     result = generate.modify_dimensions(workflow, width=768)
     assert result == workflow
@@ -286,5 +284,5 @@ if __name__ == "__main__":
     test_load_presets()
     test_no_ksampler_node()
     test_no_empty_latent_node()
-    
+
     print("\n[OK] All advanced parameter tests passed!")

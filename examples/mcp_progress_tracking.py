@@ -17,9 +17,9 @@ async def example_json_progress():
     print("\n" + "=" * 60)
     print("Example: JSON Progress Tracking")
     print("=" * 60)
-    
+
     from comfygen.tools import generation
-    
+
     # Generate with JSON progress enabled
     # Note: When json_progress=True, progress updates are collected in result['progress_updates']
     # If you also provide progress_callback, updates are sent to both
@@ -34,14 +34,14 @@ async def example_json_progress():
         # progress_callback can be omitted when using json_progress
         # or provided to get real-time updates in addition to collection
     )
-    
+
     print(f"\nGeneration Status: {result['status']}")
     print(f"MinIO URL: {result.get('url', 'N/A')}")
-    
+
     # Display progress summary if available
     if 'progress_updates' in result:
         print(f"\nTotal Progress Updates: {len(result['progress_updates'])}")
-        
+
         # Show sampling progress
         progress_updates = [u for u in result['progress_updates'] if u['type'] == 'progress']
         if progress_updates:
@@ -57,13 +57,14 @@ async def example_local_file_output():
     print("\n" + "=" * 60)
     print("Example: Local File Output")
     print("=" * 60)
-    
-    from comfygen.tools import generation
+
     import tempfile
-    
+
+    from comfygen.tools import generation
+
     # Create temporary output path
     output_path = Path(tempfile.gettempdir()) / "comfygen_example.png"
-    
+
     result = await generation.generate_image(
         prompt="a cat sitting on a windowsill, morning light",
         negative_prompt="blurry, low quality",
@@ -73,11 +74,11 @@ async def example_local_file_output():
         output_path=str(output_path),  # Save to local file
         validate=False  # Skip validation for example
     )
-    
+
     print(f"\nGeneration Status: {result['status']}")
     print(f"MinIO URL: {result.get('url', 'N/A')}")
     print(f"Local File: {result.get('local_path', 'N/A')}")
-    
+
     if result.get('local_path'):
         local_file = Path(result['local_path'])
         if local_file.exists():
@@ -91,49 +92,50 @@ async def example_workflow_validation():
     print("\n" + "=" * 60)
     print("Example: Workflow Validation (Dry Run)")
     print("=" * 60)
-    
-    from comfygen.workflows import WorkflowManager
-    from comfygen.comfyui_client import ComfyUIClient
+
     import os
-    
+
+    from comfygen.comfyui_client import ComfyUIClient
+    from comfygen.workflows import WorkflowManager
+
     # Get clients
     comfyui = ComfyUIClient(
         host=os.getenv("COMFYUI_HOST", "http://192.168.1.215:8188")
     )
     workflow_mgr = WorkflowManager()
-    
+
     # Check server availability
     if not comfyui.check_availability():
         print("[ERROR] ComfyUI server is not available")
         return
-    
+
     # Load workflow
     workflow = workflow_mgr.load_workflow("flux-dev.json")
     if not workflow:
         print("[ERROR] Failed to load workflow")
         return
-    
+
     # Validate workflow
     print("\nValidating workflow...")
     validation = workflow_mgr.validate_workflow(workflow, comfyui)
-    
+
     print(f"\nValidation Result: {'✓ VALID' if validation['is_valid'] else '✗ INVALID'}")
-    
+
     if validation['errors']:
         print("\nErrors:")
         for error in validation['errors']:
             print(f"  - {error}")
-    
+
     if validation['warnings']:
         print("\nWarnings:")
         for warning in validation['warnings']:
             print(f"  - {warning}")
-    
+
     if validation['missing_models']:
         print("\nMissing Models:")
         for model in validation['missing_models']:
             print(f"  - {model['type']}: {model['name']}")
-    
+
     if validation['is_valid']:
         print("\n✓ Workflow is valid and ready for generation")
     else:
@@ -145,12 +147,12 @@ async def example_progress_polling():
     print("\n" + "=" * 60)
     print("Example: Progress Polling")
     print("=" * 60)
-    
-    from comfygen.tools import generation, control
-    import time
-    
+
+
+    from comfygen.tools import control, generation
+
     print("\nStarting generation...")
-    
+
     # Start generation without JSON progress
     result = await generation.generate_image(
         prompt="a spaceship in orbit, sci-fi, detailed",
@@ -161,25 +163,25 @@ async def example_progress_polling():
         json_progress=False,  # Don't use built-in progress
         validate=False
     )
-    
+
     prompt_id = result.get('prompt_id')
     if not prompt_id:
         print("[ERROR] No prompt_id returned")
         return
-    
+
     print(f"Prompt ID: {prompt_id}")
     print("\nPolling for progress...")
-    
+
     # Poll for progress (in real usage, this would be in a loop)
     # For this example, we just show how to call it
     progress = await control.get_progress(prompt_id)
-    
+
     print(f"\nProgress Status: {progress.get('status', 'unknown')}")
     if progress.get('position'):
         print(f"Queue Position: {progress['position']}")
     if progress.get('queue_length') is not None:
         print(f"Queue Length: {progress['queue_length']}")
-    
+
     print(f"\nFinal Generation Status: {result['status']}")
     print(f"MinIO URL: {result.get('url', 'N/A')}")
 
@@ -194,14 +196,14 @@ async def main():
     print("  2. Saving images to local files")
     print("  3. Dry-run workflow validation")
     print("  4. Polling for progress using get_progress")
-    
+
     examples = [
         ("Workflow Validation", example_workflow_validation),
         ("Local File Output", example_local_file_output),
         ("JSON Progress Tracking", example_json_progress),
         ("Progress Polling", example_progress_polling),
     ]
-    
+
     for name, example_func in examples:
         try:
             await example_func()
@@ -209,7 +211,7 @@ async def main():
             print(f"\n[ERROR] Example '{name}' failed: {e}")
             import traceback
             traceback.print_exc()
-    
+
     print("\n" + "=" * 60)
     print("Examples complete!")
     print("=" * 60)

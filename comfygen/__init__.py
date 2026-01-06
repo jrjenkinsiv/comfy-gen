@@ -9,9 +9,9 @@ This package provides:
 
 __version__ = "0.2.0"
 
+from comfygen.civitai_client import CivitAIClient
 from comfygen.comfyui_client import ComfyUIClient
 from comfygen.minio_client import MinIOClient
-from comfygen.civitai_client import CivitAIClient
 
 __all__ = [
     "ComfyUIClient",

@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """Tests for quality-based iterative refinement."""
 
-import sys
 import random
-import re
+import sys
 from pathlib import Path
 
 # Add parent directory to path
@@ -20,7 +19,7 @@ def get_retry_params(
     base_negative: str = ""
 ) -> dict:
     """Get adjusted parameters for retry attempt based on strategy.
-    
+
     NOTE: This is copied from generate.py to avoid importing the whole module
     with its heavy dependencies (websocket, etc.) which are not needed for testing.
     """
@@ -31,7 +30,7 @@ def get_retry_params(
         base_cfg = 7.0
     if base_seed is None:
         base_seed = random.randint(0, 2**31 - 1)
-    
+
     params = {
         'steps': base_steps,
         'cfg': base_cfg,
@@ -39,28 +38,28 @@ def get_retry_params(
         'positive_prompt': base_prompt,
         'negative_prompt': base_negative
     }
-    
+
     if attempt == 1:
         # First attempt - use base parameters
         return params
-    
+
     # Subsequent attempts - apply strategy
     if strategy == 'progressive':
         # Progressive enhancement: increase steps and CFG
         step_multipliers = [1.0, 1.67, 2.67]
         cfg_increases = [0.0, 0.5, 1.0]
-        
+
         idx = min(attempt - 1, len(step_multipliers) - 1)
         params['steps'] = int(base_steps * step_multipliers[idx])
         params['cfg'] = min(20.0, base_cfg + cfg_increases[idx])
         params['seed'] = random.randint(0, 2**31 - 1)
-        
+
     elif strategy == 'seed_search':
         # Seed search: keep params same, try different seeds
         seed_offsets = [0, 1000, 5000]
         idx = min(attempt - 1, len(seed_offsets) - 1)
         params['seed'] = min(2**31 - 1, base_seed + seed_offsets[idx])
-        
+
     elif strategy == 'prompt_enhance':
         # Prompt enhancement: add quality boosters progressively
         quality_boosters = [
@@ -68,19 +67,19 @@ def get_retry_params(
             ["highly detailed", "sharp focus"],
             ["masterpiece", "best quality", "8K", "ultra detailed"]
         ]
-        
+
         idx = min(attempt - 1, len(quality_boosters) - 1)
         boosters = quality_boosters[idx]
-        
+
         if boosters:
             enhanced_prompt = base_prompt
             for booster in boosters:
                 if booster.lower() not in enhanced_prompt.lower():
                     enhanced_prompt = f"{enhanced_prompt}, {booster}"
             params['positive_prompt'] = enhanced_prompt
-        
+
         params['seed'] = random.randint(0, 2**31 - 1)
-    
+
     return params
 
 
@@ -95,7 +94,7 @@ def test_progressive_strategy_first_attempt():
         base_prompt="a cat",
         base_negative="ugly"
     )
-    
+
     assert params['steps'] == 30, f"Expected steps=30, got {params['steps']}"
     assert params['cfg'] == 7.0, f"Expected cfg=7.0, got {params['cfg']}"
     assert params['seed'] == 42, f"Expected seed=42, got {params['seed']}"
@@ -115,7 +114,7 @@ def test_progressive_strategy_second_attempt():
         base_prompt="a cat",
         base_negative="ugly"
     )
-    
+
     # Second attempt: steps=30*1.67=50, cfg=7.0+0.5=7.5
     assert params['steps'] == int(30 * 1.67), f"Expected steps={int(30*1.67)}, got {params['steps']}"
     assert params['cfg'] == 7.5, f"Expected cfg=7.5, got {params['cfg']}"
@@ -135,7 +134,7 @@ def test_progressive_strategy_third_attempt():
         base_prompt="a cat",
         base_negative="ugly"
     )
-    
+
     # Third attempt: steps=30*2.67=80, cfg=7.0+1.0=8.0
     assert params['steps'] == int(30 * 2.67), f"Expected steps={int(30*2.67)}, got {params['steps']}"
     assert params['cfg'] == 8.0, f"Expected cfg=8.0, got {params['cfg']}"
@@ -153,7 +152,7 @@ def test_seed_search_strategy():
         base_prompt="a dog",
         base_negative=""
     )
-    
+
     params2 = get_retry_params(
         attempt=2,
         strategy='seed_search',
@@ -163,7 +162,7 @@ def test_seed_search_strategy():
         base_prompt="a dog",
         base_negative=""
     )
-    
+
     params3 = get_retry_params(
         attempt=3,
         strategy='seed_search',
@@ -173,16 +172,16 @@ def test_seed_search_strategy():
         base_prompt="a dog",
         base_negative=""
     )
-    
+
     # Should use deterministic seed offsets
-    assert params1['seed'] == 1000, f"First attempt should use base seed"
-    assert params2['seed'] == 2000, f"Second attempt should use base+1000"
-    assert params3['seed'] == 6000, f"Third attempt should use base+5000"
-    
+    assert params1['seed'] == 1000, "First attempt should use base seed"
+    assert params2['seed'] == 2000, "Second attempt should use base+1000"
+    assert params3['seed'] == 6000, "Third attempt should use base+5000"
+
     # Steps and CFG should remain constant
     assert params1['steps'] == params2['steps'] == params3['steps'] == 50
     assert params1['cfg'] == params2['cfg'] == params3['cfg'] == 7.5
-    
+
     print("[OK] Seed search strategy uses different seeds")
 
 
@@ -197,7 +196,7 @@ def test_prompt_enhance_strategy():
         base_prompt="a sunset",
         base_negative="blurry"
     )
-    
+
     params2 = get_retry_params(
         attempt=2,
         strategy='prompt_enhance',
@@ -207,7 +206,7 @@ def test_prompt_enhance_strategy():
         base_prompt="a sunset",
         base_negative="blurry"
     )
-    
+
     params3 = get_retry_params(
         attempt=3,
         strategy='prompt_enhance',
@@ -217,24 +216,24 @@ def test_prompt_enhance_strategy():
         base_prompt="a sunset",
         base_negative="blurry"
     )
-    
+
     # First attempt: no changes
     assert params1['positive_prompt'] == "a sunset"
-    
+
     # Second attempt: should add quality boosters
     assert "highly detailed" in params2['positive_prompt']
     assert "sharp focus" in params2['positive_prompt']
     assert params2['positive_prompt'].startswith("a sunset, ")
-    
+
     # Third attempt: should add more boosters
     assert "masterpiece" in params3['positive_prompt']
     assert "best quality" in params3['positive_prompt']
     assert "8K" in params3['positive_prompt']
-    
+
     # Steps and CFG should remain constant
     assert params1['steps'] == params2['steps'] == params3['steps'] == 40
     assert params1['cfg'] == params2['cfg'] == params3['cfg'] == 7.0
-    
+
     print("[OK] Prompt enhance strategy adds quality boosters")
 
 
@@ -249,7 +248,7 @@ def test_cfg_cap_at_20():
         base_prompt="test",
         base_negative=""
     )
-    
+
     # Should cap at 20.0 (19.5 + 1.0 = 20.5, but capped)
     assert params['cfg'] <= 20.0, f"CFG should be capped at 20.0, got {params['cfg']}"
     print("[OK] Progressive strategy caps CFG at 20.0")
@@ -266,7 +265,7 @@ def test_defaults_when_none():
         base_prompt="",
         base_negative=""
     )
-    
+
     assert params['steps'] == 30, f"Expected default steps=30, got {params['steps']}"
     assert params['cfg'] == 7.0, f"Expected default cfg=7.0, got {params['cfg']}"
     assert params['seed'] is not None, "Should generate a seed"
@@ -278,7 +277,7 @@ def run_all_tests():
     """Run all refinement tests."""
     print("Running refinement tests...")
     print("")
-    
+
     test_progressive_strategy_first_attempt()
     test_progressive_strategy_second_attempt()
     test_progressive_strategy_third_attempt()
@@ -286,7 +285,7 @@ def run_all_tests():
     test_prompt_enhance_strategy()
     test_cfg_cap_at_20()
     test_defaults_when_none()
-    
+
     print("")
     print("[OK] All refinement tests passed!")
 

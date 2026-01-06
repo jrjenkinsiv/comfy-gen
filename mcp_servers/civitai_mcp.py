@@ -20,6 +20,7 @@ parent_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(parent_dir))
 
 from mcp.server import FastMCP
+
 from comfygen.civitai_client import CivitAIClient
 
 # Initialize FastMCP server
@@ -49,7 +50,7 @@ async def civitai_search_models(
     limit: int = 10,
 ) -> dict:
     """Search CivitAI for models by query with filters.
-    
+
     Args:
         query: Search query (e.g., "battleship", "anime style", "portrait")
         model_type: Filter by type - Checkpoint, LORA, VAE, etc. (optional)
@@ -57,7 +58,7 @@ async def civitai_search_models(
         sort: Sort method - "Most Downloaded", "Highest Rated", "Newest" (default: Most Downloaded)
         nsfw: Include NSFW results (default: True)
         limit: Maximum results to return (default: 10, max: 100)
-    
+
     Returns:
         Dictionary with status and search results including:
         - id: CivitAI model ID
@@ -84,7 +85,7 @@ async def civitai_search_models(
             nsfw=nsfw,
             limit=min(limit, 100)  # Cap at 100
         )
-        
+
         return {
             "status": "success",
             "results": results,
@@ -101,10 +102,10 @@ async def civitai_search_models(
 @mcp.tool()
 async def civitai_get_model(model_id: int) -> dict:
     """Get detailed information about a specific CivitAI model.
-    
+
     Args:
         model_id: CivitAI model ID (e.g., 4384, 112902)
-    
+
     Returns:
         Dictionary with detailed model information including:
         - id: Model ID
@@ -120,13 +121,13 @@ async def civitai_get_model(model_id: int) -> dict:
     try:
         client = _get_civitai_client()
         model = client.get_model(model_id)
-        
+
         if not model:
             return {
                 "status": "error",
                 "error": f"Model not found: {model_id}"
             }
-        
+
         return {
             "status": "success",
             "model": model
@@ -141,19 +142,19 @@ async def civitai_get_model(model_id: int) -> dict:
 @mcp.tool()
 async def civitai_lookup_hash(file_hash: str) -> dict:
     """Look up model version by SHA256 file hash - CRITICAL for LoRA verification.
-    
+
     This is the AUTHORITATIVE way to identify what base model a LoRA or checkpoint
     is designed for. Use this instead of guessing by file size or filename.
-    
+
     Example workflow:
     1. Get SHA256 hash of .safetensors file on moira:
        ssh moira "powershell -Command \\"(Get-FileHash -Algorithm SHA256 'path').Hash\\""
     2. Call this tool with the hash
     3. Check returned 'base_model' field (SD 1.5, SDXL, Wan Video 14B t2v/i2v, etc.)
-    
+
     Args:
         file_hash: SHA256 hash of the .safetensors file (64 hex characters)
-    
+
     Returns:
         Dictionary with model version details:
         - status: "success" or "error"
@@ -165,7 +166,7 @@ async def civitai_lookup_hash(file_hash: str) -> dict:
         - trained_words: Trigger words/activation phrases
         - download_url: Download URL
         - files: List of file information
-    
+
     Example:
         hash_result = await civitai_lookup_hash("abc123...")
         if hash_result["status"] == "success":
@@ -179,23 +180,23 @@ async def civitai_lookup_hash(file_hash: str) -> dict:
                 "status": "error",
                 "error": "Invalid SHA256 hash. Must be 64 hexadecimal characters."
             }
-        
+
         client = _get_civitai_client()
         result = client.get_model_by_hash(file_hash)
-        
+
         if not result:
             return {
                 "status": "error",
                 "error": "Hash lookup failed - no response from CivitAI"
             }
-        
+
         # Check if it's an error response
         if "error" in result:
             return {
                 "status": "error",
                 "error": result["error"]
             }
-        
+
         return {
             "status": "success",
             **result
@@ -213,11 +214,11 @@ async def civitai_get_download_url(
     version_id: Optional[int] = None
 ) -> dict:
     """Get authenticated download URL for a CivitAI model.
-    
+
     Args:
         model_id: CivitAI model ID
         version_id: Optional specific version ID (uses latest if not provided)
-    
+
     Returns:
         Dictionary with download URL:
         - status: "success" or "error"
@@ -225,7 +226,7 @@ async def civitai_get_download_url(
         - model_id: Model ID
         - version_id: Version ID used
         - requires_auth: Whether authentication is required for this model
-    
+
     Note:
         - Some models require CIVITAI_API_KEY for download
         - NSFW content always requires authentication
@@ -233,7 +234,7 @@ async def civitai_get_download_url(
     """
     try:
         client = _get_civitai_client()
-        
+
         # Get the model to validate it exists
         model = client.get_model(model_id)
         if not model:
@@ -241,25 +242,25 @@ async def civitai_get_download_url(
                 "status": "error",
                 "error": f"Model not found: {model_id}"
             }
-        
+
         # Get download URL
         download_url = client.get_download_url(model_id, version_id)
-        
+
         if not download_url:
             return {
                 "status": "error",
                 "error": "Failed to get download URL. Model may not have downloadable files."
             }
-        
+
         # Determine which version was used
         versions = model.get("modelVersions", [])
         if version_id:
             version = next((v for v in versions if v.get("id") == version_id), None)
         else:
             version = versions[0] if versions else None
-        
+
         actual_version_id = version.get("id") if version else None
-        
+
         return {
             "status": "success",
             "download_url": download_url,

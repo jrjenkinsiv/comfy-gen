@@ -7,7 +7,7 @@ into workflows without modifying the workflow JSON files.
 """
 
 import subprocess
-import sys
+
 
 def run_command(description, command):
     """Run a command and display output."""
@@ -15,7 +15,7 @@ def run_command(description, command):
     print(f"{description}")
     print(f"{'='*60}")
     print(f"Command: {' '.join(command)}\n")
-    
+
     result = subprocess.run(command, capture_output=True, text=True)
     print(result.stdout)
     if result.stderr:

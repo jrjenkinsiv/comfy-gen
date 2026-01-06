@@ -5,11 +5,10 @@ Categories: Asian + South Asian/Middle Eastern women
 Scenarios: nude poses, oral, facials, etc.
 """
 
-import subprocess
 import random
-import time
+import subprocess
 import sys
-from pathlib import Path
+import time
 
 # Unbuffered output
 sys.stdout.reconfigure(line_buffering=True)
@@ -18,9 +17,9 @@ sys.stderr.reconfigure(line_buffering=True)
 # Ethnicities - expanded to include browner skin tones
 ETHNICITIES = [
     # East Asian
-    "japanese", "korean", "chinese", "vietnamese", "thai", "filipino", 
+    "japanese", "korean", "chinese", "vietnamese", "thai", "filipino",
     "taiwanese", "singaporean", "malaysian", "indonesian",
-    # South Asian  
+    # South Asian
     "indian", "pakistani", "bangladeshi", "sri lankan", "nepali",
     # Middle Eastern
     "persian", "arab", "jordanian", "lebanese", "turkish", "egyptian",
@@ -129,18 +128,18 @@ def generate_image(idx: int, ethnicity: str, scenario: dict, lora_config, resolu
     prompt = scenario["prompt"].format(ethnicity=ethnicity)
     negative = scenario["negative"]
     scenario_name = scenario["name"]
-    
+
     width, height = resolution
-    
+
     # Build filename
     eth_short = ethnicity.replace(" ", "_")[:10]
     lora_name = "none"
     if lora_config:
         lora_name = lora_config[0][0].replace(".safetensors", "")[:12]
-    
+
     output_name = f"explicit_{idx:03d}_{eth_short}_{scenario_name}_{lora_name}"
     output_path = f"/tmp/{output_name}.png"
-    
+
     # Build command
     cmd = [
         "python3", "generate.py",
@@ -154,17 +153,17 @@ def generate_image(idx: int, ethnicity: str, scenario: dict, lora_config, resolu
         "--height", str(height),
         "--output", output_path,
     ]
-    
+
     # Add LoRAs if configured
     if lora_config:
         for lora_file, strength in lora_config:
             cmd.extend(["--lora", f"{lora_file}:{strength}"])
-    
+
     print(f"\n[{idx:03d}/100] {ethnicity} - {scenario_name}")
     print(f"  Resolution: {resolution}, Seed: {seed}")
     if lora_config:
         print(f"  LoRAs: {lora_config}")
-    
+
     try:
         result = subprocess.run(
             cmd,
@@ -173,16 +172,16 @@ def generate_image(idx: int, ethnicity: str, scenario: dict, lora_config, resolu
             timeout=300,
             cwd="/Users/jrjenkinsiv/Development/comfy-gen"
         )
-        
+
         if result.returncode == 0:
-            print(f"  [OK] Generated successfully")
+            print("  [OK] Generated successfully")
             return True
         else:
             print(f"  [ERROR] {result.stderr[-200:] if result.stderr else 'Unknown error'}")
             return False
-            
+
     except subprocess.TimeoutExpired:
-        print(f"  [TIMEOUT] Generation took too long")
+        print("  [TIMEOUT] Generation took too long")
         return False
     except Exception as e:
         print(f"  [ERROR] {e}")
@@ -193,11 +192,11 @@ def main():
     print("=" * 60)
     print("Explicit NSFW Batch Generation - 100 Images")
     print("=" * 60)
-    
+
     total = 100
     success = 0
     failed = 0
-    
+
     for i in range(1, total + 1):
         # Random selections
         ethnicity = random.choice(ETHNICITIES)
@@ -205,15 +204,15 @@ def main():
         lora_config = random.choice(LORA_CONFIGS)
         resolution = random.choice(RESOLUTIONS)
         seed = random.randint(1, 999999999)
-        
+
         if generate_image(i, ethnicity, scenario, lora_config, resolution, seed):
             success += 1
         else:
             failed += 1
-        
+
         # Small delay between generations
         time.sleep(2)
-    
+
     print("\n" + "=" * 60)
     print(f"COMPLETE: {success} successful, {failed} failed out of {total}")
     print("=" * 60)

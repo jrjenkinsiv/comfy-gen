@@ -15,12 +15,12 @@ Usage:
 """
 
 import argparse
-import json
 import os
 import random
 import subprocess
 import sys
 from pathlib import Path
+
 from PIL import Image
 
 # Paths
@@ -63,7 +63,7 @@ Examples:
     --output-dir /tmp/lora_tests
         """
     )
-    
+
     parser.add_argument(
         "--workflow",
         required=True,
@@ -146,19 +146,19 @@ Examples:
         action="store_true",
         help="Suppress progress output from generation"
     )
-    
+
     return parser.parse_args()
 
 
 def parse_strengths(strengths_str):
     """Parse comma-separated strength values.
-    
+
     Args:
         strengths_str: String like "0.4,0.6,0.8,1.0"
-        
+
     Returns:
         List of float values
-        
+
     Raises:
         ValueError: If parsing fails
     """
@@ -188,7 +188,7 @@ def generate_image(
     quiet=False
 ):
     """Generate a single image with specified LoRA strengths.
-    
+
     Args:
         workflow: Path to workflow JSON
         prompt: Positive prompt text
@@ -201,7 +201,7 @@ def generate_image(
         sampler: Sampler name (optional)
         scheduler: Scheduler name (optional)
         quiet: Suppress output (optional)
-        
+
     Returns:
         bool: True if generation succeeded, False otherwise
     """
@@ -212,15 +212,15 @@ def generate_image(
         "--prompt", prompt,
         "--output", str(output_path)
     ]
-    
+
     # Add negative prompt if provided
     if negative_prompt:
         cmd.extend(["--negative-prompt", negative_prompt])
-    
+
     # Add LoRAs with strengths
     for lora_name, strength in lora_specs:
         cmd.extend(["--lora", f"{lora_name}:{strength}"])
-    
+
     # Add optional parameters
     if seed is not None:
         cmd.extend(["--seed", str(seed)])
@@ -234,7 +234,7 @@ def generate_image(
         cmd.extend(["--scheduler", scheduler])
     if quiet:
         cmd.append("--quiet")
-    
+
     # Run generation
     result = subprocess.run(
         cmd,
@@ -242,33 +242,33 @@ def generate_image(
         capture_output=True,
         text=True
     )
-    
+
     if result.returncode != 0:
         print(f"[ERROR] Generation failed: {result.stderr}")
         return False
-    
+
     return True
 
 
 def create_comparison_grid(image_paths, labels, output_path, cols=None):
     """Create a comparison grid from multiple images.
-    
+
     Note: Text labels are not currently rendered in the grid. Images are arranged
     in the grid and can be identified by their position and filename.
-    
+
     Args:
         image_paths: List of paths to images
         labels: List of label strings for each image (currently unused)
         output_path: Path for output grid image
         cols: Number of columns (None for auto-calculate)
-        
+
     Returns:
         bool: True if grid creation succeeded, False otherwise
     """
     if not image_paths:
         print("[ERROR] No images to create grid")
         return False
-    
+
     try:
         # Load all images
         images = []
@@ -277,11 +277,11 @@ def create_comparison_grid(image_paths, labels, output_path, cols=None):
                 print(f"[WARN] Image not found: {path}")
                 continue
             images.append(Image.open(path))
-        
+
         if not images:
             print("[ERROR] No valid images found for grid")
             return False
-        
+
         # Calculate grid dimensions
         n_images = len(images)
         if cols is None:
@@ -289,32 +289,32 @@ def create_comparison_grid(image_paths, labels, output_path, cols=None):
             sqrt_n = n_images ** 0.5
             cols = int(sqrt_n) + (1 if sqrt_n % 1 > 0 else 0)
             cols = max(1, min(cols, n_images))
-        
+
         rows = (n_images + cols - 1) // cols
-        
+
         # Get image dimensions (assume all same size)
         img_width, img_height = images[0].size
-        
+
         # Create grid canvas
         grid_width = cols * img_width + (cols + 1) * GRID_PADDING
         grid_height = rows * (img_height + GRID_LABEL_HEIGHT) + (rows + 1) * GRID_PADDING
         grid = Image.new('RGB', (grid_width, grid_height), (255, 255, 255))
-        
+
         # Paste images into grid
         for idx, img in enumerate(images):
             row = idx // cols
             col = idx % cols
-            
+
             x = col * img_width + (col + 1) * GRID_PADDING
             y = row * (img_height + GRID_LABEL_HEIGHT) + (row + 1) * GRID_PADDING
-            
+
             grid.paste(img, (x, y))
-        
+
         # Save grid
         grid.save(output_path)
         print(f"[OK] Comparison grid saved to: {output_path}")
         return True
-        
+
     except Exception as e:
         print(f"[ERROR] Failed to create grid: {e}")
         return False
@@ -323,30 +323,30 @@ def create_comparison_grid(image_paths, labels, output_path, cols=None):
 def main():
     """Main entry point."""
     args = parse_args()
-    
+
     # Parse strength values
     try:
         strengths = parse_strengths(args.strengths)
     except ValueError as e:
         print(f"[ERROR] {e}")
         sys.exit(EXIT_CONFIG_ERROR)
-    
+
     # Validate workflow exists
     if not os.path.exists(args.workflow):
         print(f"[ERROR] Workflow file not found: {args.workflow}")
         sys.exit(EXIT_CONFIG_ERROR)
-    
+
     # Create output directory
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-    
+
     # Generate random seed if not provided
     if args.seed is None:
         args.seed = random.randint(0, 2**32 - 1)
         print(f"[OK] Generated random seed: {args.seed}")
-    
+
     # Display test configuration
-    print(f"\n[OK] LoRA Strength Test Configuration:")
+    print("\n[OK] LoRA Strength Test Configuration:")
     print(f"  Workflow: {args.workflow}")
     print(f"  Prompt: {args.prompt}")
     if args.negative_prompt:
@@ -360,22 +360,22 @@ def main():
     if args.cfg:
         print(f"  CFG: {args.cfg}")
     print()
-    
+
     # Generate images for each strength
     generated_images = []
     labels = []
-    
+
     for strength in strengths:
         # Build LoRA specs (all LoRAs use the same strength for this test)
         lora_specs = [(lora_name, strength) for lora_name in args.lora]
-        
+
         # Build output filename
         strength_str = f"{strength:.1f}".replace('.', '_')
         output_filename = f"{args.prefix}_strength_{strength_str}.png"
         output_path = output_dir / output_filename
-        
+
         print(f"[INFO] Generating with strength {strength}...")
-        
+
         success = generate_image(
             workflow=args.workflow,
             prompt=args.prompt,
@@ -389,32 +389,32 @@ def main():
             scheduler=args.scheduler,
             quiet=args.quiet
         )
-        
+
         if success:
             print(f"[OK] Generated: {output_path}")
             generated_images.append(output_path)
             labels.append(f"Strength: {strength}")
         else:
             print(f"[ERROR] Failed to generate image with strength {strength}")
-    
+
     # Summary
     print(f"\n[OK] Generated {len(generated_images)}/{len(strengths)} images")
     print(f"[OK] Output directory: {output_dir}")
-    
+
     # Create comparison grid if requested
     if args.grid and generated_images:
         grid_path = output_dir / f"{args.prefix}_comparison_grid.png"
-        print(f"\n[INFO] Creating comparison grid...")
+        print("\n[INFO] Creating comparison grid...")
         if create_comparison_grid(generated_images, labels, grid_path, cols=args.grid_cols):
             print(f"[OK] Grid dimensions: {len(labels)} images")
         else:
-            print(f"[WARN] Grid creation failed, but individual images are available")
-    
+            print("[WARN] Grid creation failed, but individual images are available")
+
     # Exit with appropriate code
     if len(generated_images) == 0:
         sys.exit(EXIT_FAILURE)
     elif len(generated_images) < len(strengths):
-        print(f"[WARN] Some generations failed")
+        print("[WARN] Some generations failed")
         sys.exit(EXIT_SUCCESS)
     else:
         sys.exit(EXIT_SUCCESS)

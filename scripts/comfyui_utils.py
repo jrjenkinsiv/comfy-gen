@@ -1,22 +1,22 @@
 """Common utilities for ComfyUI service management scripts."""
 
-import subprocess
 import platform
+import subprocess
 
 
 def find_comfyui_process():
     """Find ComfyUI process ID.
-    
+
     Returns:
         str or None: Process ID if found, None otherwise
     """
     system = platform.system()
-    
+
     if system == "Windows":
         # Find python.exe running main.py
         cmd = ['tasklist', '/FI', 'IMAGENAME eq python.exe', '/FO', 'CSV', '/NH']
         result = subprocess.run(cmd, capture_output=True, text=True)
-        
+
         # Parse output to find ComfyUI process
         for line in result.stdout.strip().split('\n'):
             if 'python.exe' in line:
@@ -34,5 +34,5 @@ def find_comfyui_process():
         result = subprocess.run(cmd, capture_output=True, text=True)
         if result.returncode == 0 and result.stdout.strip():
             return result.stdout.strip().split('\n')[0]
-    
+
     return None

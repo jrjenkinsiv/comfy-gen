@@ -17,20 +17,20 @@ from pathlib import Path
 def main() -> int:
     """Validate all workflow JSON files."""
     workflows_dir = Path("workflows")
-    
+
     if not workflows_dir.exists():
         print("[WARN] No workflows directory found")
         return 0
-    
+
     workflow_files = list(workflows_dir.glob("*.json"))
-    
+
     if not workflow_files:
         print("[WARN] No workflow JSON files found")
         return 0
-    
+
     print(f"Validating {len(workflow_files)} workflow file(s)...")
     print()
-    
+
     errors = []
     for wf in workflow_files:
         try:
@@ -40,9 +40,9 @@ def main() -> int:
         except json.JSONDecodeError as e:
             print(f"[ERROR] {wf.name}: {e}")
             errors.append(wf.name)
-    
+
     print()
-    
+
     if errors:
         print(f"[ERROR] {len(errors)} workflow(s) have invalid JSON:")
         for name in errors:

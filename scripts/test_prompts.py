@@ -11,7 +11,6 @@ import json
 import os
 import random
 import subprocess
-import sys
 from datetime import datetime
 from pathlib import Path
 
@@ -77,7 +76,7 @@ def run_generation(prompt, negative, steps, cfg, seed, output_path):
         "--seed", str(seed),
         "--output", output_path,
     ]
-    
+
     try:
         result = subprocess.run(
             cmd,
@@ -86,7 +85,7 @@ def run_generation(prompt, negative, steps, cfg, seed, output_path):
             timeout=300,  # 5 minute timeout
             cwd=str(Path(__file__).parent.parent)
         )
-        
+
         # Parse validation score from output
         score = None
         for line in result.stdout.split("\n"):
@@ -100,7 +99,7 @@ def run_generation(prompt, negative, steps, cfg, seed, output_path):
                     score = float(line.split(":")[-1].strip())
                 except ValueError:
                     pass
-        
+
         passed = "PASSED" in result.stdout
         return {
             "success": result.returncode == 0,
@@ -119,17 +118,17 @@ def main():
     """Run randomized prompt engineering tests."""
     print(f"[INFO] Starting {NUM_TESTS} randomized prompt tests")
     print(f"[INFO] Output directory: {OUTPUT_DIR}")
-    
+
     # Create output directory
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-    
+
     results = []
     start_time = datetime.now()
-    
+
     for i in range(NUM_TESTS):
         test_id = f"{i+1:03d}"
         seed = random.randint(1, 999999)
-        
+
         # Random selections
         subject = random.choice(SUBJECTS)
         quality_booster = random.choice(QUALITY_BOOSTERS)
@@ -137,20 +136,20 @@ def main():
         negative = NEGATIVE_PRESETS[negative_key]
         steps = random.choice(STEPS_OPTIONS)
         cfg = random.choice(CFG_OPTIONS)
-        
+
         # Generate prompt
         prompt = generate_test_prompt(subject, quality_booster)
         output_path = f"{OUTPUT_DIR}/test_{test_id}_seed{seed}.png"
-        
+
         print(f"\n[TEST {test_id}/{NUM_TESTS}]")
         print(f"  Subject: {subject}")
         print(f"  Quality: {quality_booster or '(none)'}")
         print(f"  Negative: {negative_key}")
         print(f"  Steps: {steps}, CFG: {cfg}, Seed: {seed}")
-        
+
         # Run generation
         gen_result = run_generation(prompt, negative, steps, cfg, seed, output_path)
-        
+
         # Record result
         test_result = {
             "test_id": test_id,
@@ -167,7 +166,7 @@ def main():
             **gen_result
         }
         results.append(test_result)
-        
+
         # Print result
         if gen_result.get("success"):
             score = gen_result.get("validation_score", "N/A")
@@ -175,20 +174,20 @@ def main():
             print(f"  Result: {passed} Score: {score}")
         else:
             print(f"  Result: [ERROR] {gen_result.get('error', 'unknown')}")
-    
+
     # Save results
     results_path = f"{OUTPUT_DIR}/{RESULTS_FILE}"
     with open(results_path, "w") as f:
         json.dump(results, f, indent=2)
-    
+
     # Summary
     elapsed = datetime.now() - start_time
     successful = sum(1 for r in results if r.get("success"))
     passed = sum(1 for r in results if r.get("validation_passed"))
     scores = [r.get("validation_score") for r in results if r.get("validation_score") is not None]
-    
+
     print(f"\n{'='*50}")
-    print(f"TEST SUMMARY")
+    print("TEST SUMMARY")
     print(f"{'='*50}")
     print(f"Total tests: {NUM_TESTS}")
     print(f"Successful generations: {successful}")
@@ -199,7 +198,7 @@ def main():
         print(f"Max score: {max(scores):.3f}")
     print(f"Elapsed time: {elapsed}")
     print(f"Results saved to: {results_path}")
-    
+
     # Analyze by quality booster
     print(f"\n{'='*50}")
     print("ANALYSIS BY QUALITY BOOSTER")
@@ -212,11 +211,11 @@ def main():
             if booster not in booster_scores:
                 booster_scores[booster] = []
             booster_scores[booster].append(score)
-    
+
     for booster, scores in sorted(booster_scores.items(), key=lambda x: -sum(x[1])/len(x[1]) if x[1] else 0):
         avg = sum(scores) / len(scores) if scores else 0
         print(f"  {booster[:40]:40} avg: {avg:.3f} (n={len(scores)})")
-    
+
     # Analyze by negative preset
     print(f"\n{'='*50}")
     print("ANALYSIS BY NEGATIVE PRESET")
@@ -229,7 +228,7 @@ def main():
             if neg not in neg_scores:
                 neg_scores[neg] = []
             neg_scores[neg].append(score)
-    
+
     for neg, scores in sorted(neg_scores.items(), key=lambda x: -sum(x[1])/len(x[1]) if x[1] else 0):
         avg = sum(scores) / len(scores) if scores else 0
         print(f"  {neg:20} avg: {avg:.3f} (n={len(scores)})")

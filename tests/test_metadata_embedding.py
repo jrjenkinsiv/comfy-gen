@@ -2,9 +2,9 @@
 """Tests for PNG metadata embedding functionality."""
 
 import sys
-import json
 import tempfile
 from pathlib import Path
+
 from PIL import Image
 
 # Add parent directory to path
@@ -12,9 +12,9 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from comfy_gen.metadata import (
     embed_metadata_in_png,
-    read_metadata_from_png,
     format_civitai_parameters,
-    format_metadata_for_display
+    format_metadata_for_display,
+    read_metadata_from_png,
 )
 
 
@@ -63,30 +63,30 @@ def test_embed_and_read_metadata():
             "generation_time_seconds": 45.2
         }
     }
-    
+
     # Create temporary PNG
     with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as f:
         temp_path = f.name
-    
+
     try:
         create_test_png(temp_path)
-        
+
         # Embed metadata
         success = embed_metadata_in_png(temp_path, metadata)
         assert success, "Failed to embed metadata"
-        
+
         # Read metadata back
         read_meta = read_metadata_from_png(temp_path)
-        
+
         assert read_meta is not None, "Failed to read metadata"
         assert read_meta["generation_id"] == "test-123"
         assert read_meta["input"]["prompt"] == "a beautiful sunset"
         assert read_meta["parameters"]["seed"] == 42
         assert read_meta["parameters"]["steps"] == 30
         assert read_meta["workflow"]["model"] == "flux1-dev-fp8.safetensors"
-        
+
         print("[OK] embed_and_read_metadata test passed")
-        
+
     finally:
         if Path(temp_path).exists():
             Path(temp_path).unlink()
@@ -114,9 +114,9 @@ def test_civitai_format():
             ]
         }
     }
-    
+
     params = format_civitai_parameters(metadata)
-    
+
     # Check that key fields are present
     assert "a beautiful landscape" in params
     assert "Negative prompt: ugly, bad quality" in params
@@ -127,7 +127,7 @@ def test_civitai_format():
     assert "Size: 1024x768" in params
     assert "Model: flux1-dev-fp8.safetensors" in params
     assert "Lora: style.safetensors:0.8" in params
-    
+
     print("[OK] civitai_format test passed")
 
 
@@ -136,13 +136,13 @@ def test_read_individual_fields():
     # Create PNG with only individual fields (no full metadata)
     with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as f:
         temp_path = f.name
-    
+
     try:
         from PIL.PngImagePlugin import PngInfo
-        
+
         img = Image.new('RGB', (100, 100), color='blue')
         png_info = PngInfo()
-        
+
         # Add individual fields (no comfygen_metadata)
         png_info.add_text("prompt", "test prompt")
         png_info.add_text("negative_prompt", "test negative")
@@ -151,12 +151,12 @@ def test_read_individual_fields():
         png_info.add_text("steps", "30")
         png_info.add_text("cfg", "7.5")
         png_info.add_text("sampler", "euler")
-        
+
         img.save(temp_path, "PNG", pnginfo=png_info)
-        
+
         # Read metadata
         metadata = read_metadata_from_png(temp_path)
-        
+
         assert metadata is not None
         assert metadata["input"]["prompt"] == "test prompt"
         assert metadata["input"]["negative_prompt"] == "test negative"
@@ -165,9 +165,9 @@ def test_read_individual_fields():
         assert metadata["parameters"]["steps"] == 30
         assert metadata["parameters"]["cfg"] == 7.5
         assert metadata["parameters"]["sampler"] == "euler"
-        
+
         print("[OK] read_individual_fields test passed")
-        
+
     finally:
         if Path(temp_path).exists():
             Path(temp_path).unlink()
@@ -199,9 +199,9 @@ def test_format_for_display():
             "generation_time_seconds": 30.5
         }
     }
-    
+
     display = format_metadata_for_display(metadata)
-    
+
     assert "Generation Metadata" in display
     assert "test-123" in display
     assert "a sunset" in display
@@ -210,7 +210,7 @@ def test_format_for_display():
     assert "Resolution: 512x512" in display
     assert "1.00 MB" in display
     assert "30.5s" in display
-    
+
     print("[OK] format_for_display test passed")
 
 
@@ -218,17 +218,17 @@ def test_non_png_file():
     """Test that non-PNG files return None."""
     with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as f:
         temp_path = f.name
-    
+
     try:
         # Create a JPEG using PIL
         img = Image.new('RGB', (100, 100), color='green')
         img.save(temp_path, 'JPEG')
-        
+
         metadata = read_metadata_from_png(temp_path)
         assert metadata is None, "Should return None for non-PNG files"
-        
+
         print("[OK] non_png_file test passed")
-        
+
     finally:
         if Path(temp_path).exists():
             Path(temp_path).unlink()
@@ -238,30 +238,30 @@ def test_embed_preserves_image():
     """Test that embedding metadata doesn't corrupt the image."""
     with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as f:
         temp_path = f.name
-    
+
     try:
         # Create test image
         original = Image.new('RGB', (200, 150), color='purple')
         original.save(temp_path, 'PNG')
-        
+
         # Get original size
         original_size = original.size
-        
+
         # Embed metadata
         metadata = {
             "input": {"prompt": "test"},
             "parameters": {"seed": 123}
         }
-        
+
         embed_metadata_in_png(temp_path, metadata)
-        
+
         # Reload image and check it's still valid
         reloaded = Image.open(temp_path)
         assert reloaded.size == original_size
         assert reloaded.mode == original.mode
-        
+
         print("[OK] embed_preserves_image test passed")
-        
+
     finally:
         if Path(temp_path).exists():
             Path(temp_path).unlink()
@@ -275,5 +275,5 @@ if __name__ == "__main__":
     test_format_for_display()
     test_non_png_file()
     test_embed_preserves_image()
-    
+
     print("\n[OK] All metadata embedding tests passed!")

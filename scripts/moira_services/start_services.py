@@ -9,11 +9,10 @@ Usage:
     python start_services.py --status # Check status
 """
 
-import subprocess
-import sys
-import os
 import argparse
 import socket
+import subprocess
+import sys
 import time
 from pathlib import Path
 
@@ -59,25 +58,25 @@ def start_service(name: str) -> bool:
     if name not in SERVICES:
         print(f"[ERROR] Unknown service: {name}")
         return False
-    
+
     config = SERVICES[name]
     port = config["port"]
-    
+
     if is_port_in_use(port):
         print(f"[SKIP] {name} already running on port {port}")
         return True
-    
+
     script = SCRIPT_DIR / config["script"]
     if not script.exists():
         print(f"[ERROR] Script not found: {script}")
         return False
-    
+
     print(f"[....] Starting {name} on port {port}...")
-    
+
     # Start in background
     CREATE_NEW_PROCESS_GROUP = 0x00000200
     DETACHED_PROCESS = 0x00000008
-    
+
     subprocess.Popen(
         [sys.executable, str(script), "--port", str(port)],
         creationflags=DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP,
@@ -85,14 +84,14 @@ def start_service(name: str) -> bool:
         stderr=subprocess.DEVNULL,
         cwd=str(SCRIPT_DIR),
     )
-    
+
     # Wait for service to start
     for _ in range(10):
         time.sleep(0.5)
         if is_port_in_use(port):
             print(f"[OK] {name} started on http://192.168.1.215:{port}")
             return True
-    
+
     print(f"[WARN] {name} may not have started - check manually")
     return False
 
@@ -100,7 +99,7 @@ def start_service(name: str) -> bool:
 def stop_services():
     """Stop all services by killing Python processes on service ports."""
     print("[....] Stopping services...")
-    
+
     for name, config in SERVICES.items():
         port = config["port"]
         if is_port_in_use(port):
@@ -116,7 +115,7 @@ def stop_services():
                     if parts:
                         pid = parts[-1]
                         try:
-                            subprocess.run(["taskkill", "/F", "/PID", pid], 
+                            subprocess.run(["taskkill", "/F", "/PID", pid],
                                          capture_output=True)
                             print(f"[OK] Stopped {name} (PID {pid})")
                         except:
@@ -130,7 +129,7 @@ def print_status():
     print("\n" + "=" * 50)
     print("ComfyGen Services Status")
     print("=" * 50)
-    
+
     status = get_service_status()
     for name, info in status.items():
         config = SERVICES[name]
@@ -140,7 +139,7 @@ def print_status():
         print(f"  Port:   {info['port']}")
         if info["url"]:
             print(f"  URL:    {info['url']}")
-    
+
     print("\n" + "=" * 50)
 
 
@@ -150,26 +149,26 @@ def main():
     parser.add_argument("--status", action="store_true", help="Show service status")
     parser.add_argument("--service", type=str, help="Start specific service only")
     args = parser.parse_args()
-    
+
     if args.status:
         print_status()
         return
-    
+
     if args.stop:
         stop_services()
         print_status()
         return
-    
+
     # Start services
     print("\n[....] Starting ComfyGen services on moira...")
     print("=" * 50)
-    
+
     if args.service:
         start_service(args.service)
     else:
         for name in SERVICES:
             start_service(name)
-    
+
     print_status()
 
 

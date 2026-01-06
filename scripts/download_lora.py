@@ -7,19 +7,17 @@ Usage:
     python3 scripts/download_lora.py --search <query>         # Search CivitAI
     python3 scripts/download_lora.py --list-popular           # List popular CivitAI LoRAs
     python3 scripts/download_lora.py --list-hf                # List ComfyUI-Manager LoRAs (HF)
-    
+
 Examples:
     python3 scripts/download_lora.py 804967                   # Download Hands LoRA
-    python3 scripts/download_lora.py --search anime           # Search for anime LoRAs  
+    python3 scripts/download_lora.py --search anime           # Search for anime LoRAs
     python3 scripts/download_lora.py --list-popular           # List top CivitAI LoRAs
     python3 scripts/download_lora.py --url "https://huggingface.co/XLabs-AI/flux-lora-collection/resolve/main/realism_lora.safetensors"
 """
 
 import argparse
-import json
 import subprocess
 import sys
-from pathlib import Path
 
 try:
     import requests
@@ -44,7 +42,7 @@ def search_loras(query="", base_model="Flux.1 D", nsfw=False, limit=15):
         params["baseModels"] = base_model
     if query:
         params["query"] = query
-    
+
     url = f"{CIVITAI_API}/models"
     r = requests.get(url, params=params)
     r.raise_for_status()
@@ -62,13 +60,13 @@ def get_model_version(version_id):
 def list_loras(query="", base_model="Flux.1 D"):
     """List available LoRAs."""
     items = search_loras(query=query, base_model=base_model)
-    
-    title = f"Top Flux LoRAs"
+
+    title = "Top Flux LoRAs"
     if query:
         title += f" for '{query}'"
     print(f"\n{title}:\n")
     print("-" * 80)
-    
+
     for m in items:
         # Find Flux version
         flux_ver = None
@@ -76,20 +74,20 @@ def list_loras(query="", base_model="Flux.1 D"):
             if base_model in v.get("baseModel", ""):
                 flux_ver = v
                 break
-        
+
         if flux_ver:
             name = m["name"][:50]
             dls = m["stats"]["downloadCount"]
             vid = flux_ver["id"]
             words = flux_ver.get("trainedWords", [])[:3]
-            
+
             print(f"  Version ID: {vid}")
             print(f"  Name: {name}")
             print(f"  Downloads: {dls:,}")
             if words:
                 print(f"  Triggers: {', '.join(words)}")
             print()
-    
+
     print("-" * 80)
     print("\nTo download: python3 scripts/download_lora.py <version_id>")
 
@@ -98,15 +96,15 @@ def download_url(url, filename=None):
     """Download a file from URL to moira using curl."""
     if not filename:
         filename = url.split("/")[-1]
-    
+
     print(f"[INFO] Downloading: {filename}")
     print(f"[INFO] From: {url[:80]}...")
-    
+
     target = f'{LORA_PATH}\\{filename}'
-    
+
     # Use curl which is more reliable for large files
     cmd = ["ssh", "moira", f'curl -L -o "{target}" "{url}"']
-    
+
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
         if result.returncode == 0:
@@ -119,12 +117,12 @@ def download_url(url, filename=None):
                 print(f"[OK] Downloaded: {filename}")
                 print(f"[OK] Use: --lora \"{filename}:0.8\"")
                 return True
-        
-        print(f"[ERROR] Download failed")
+
+        print("[ERROR] Download failed")
         if result.stderr:
             print(result.stderr)
         return False
-        
+
     except subprocess.TimeoutExpired:
         print("[ERROR] Download timed out after 10 minutes")
         return False
@@ -136,40 +134,40 @@ def download_url(url, filename=None):
 def download_lora(version_id):
     """Download a LoRA from CivitAI to moira."""
     print(f"[INFO] Fetching version {version_id} info from CivitAI...")
-    
+
     try:
         data = get_model_version(version_id)
     except Exception as e:
         print(f"[ERROR] Failed to get model info: {e}")
         return False
-    
+
     # Get download URL and filename
     files = data.get("files", [])
     if not files:
         print("[ERROR] No files found for this version")
         return False
-    
+
     # Find safetensor file
     download_file = None
     for f in files:
         if f.get("name", "").endswith(".safetensors"):
             download_file = f
             break
-    
+
     if not download_file:
         download_file = files[0]
-    
+
     filename = download_file["name"]
     download_url = data.get("downloadUrl")
     model_name = data.get("model", {}).get("name", "Unknown")
     trained_words = data.get("trainedWords", [])
-    
+
     print(f"[OK] Model: {model_name}")
     print(f"[OK] File: {filename}")
     print(f"[OK] Size: {download_file.get('sizeKB', 0) / 1024:.1f} MB")
     if trained_words:
         print(f"[OK] Trigger words: {', '.join(trained_words[:5])}")
-    
+
     # Download using curl
     return download_url(download_url, filename)
 
@@ -225,12 +223,12 @@ def list_hf_loras():
     """List HuggingFace LoRAs from ComfyUI-Manager."""
     print("\nHuggingFace Flux LoRAs (from XLabs-AI & ByteDance):\n")
     print("-" * 80)
-    
+
     for i, lora in enumerate(HF_LORAS):
         print(f"  [{i+1}] {lora['name']}")
         print(f"      {lora['description']} ({lora['size']})")
         print()
-    
+
     print("-" * 80)
     print("\nTo download: python3 scripts/download_lora.py --url <url>")
     print("Or use number: python3 scripts/download_lora.py --hf 1")
@@ -241,11 +239,11 @@ def download_hf_lora(index):
     if index < 1 or index > len(HF_LORAS):
         print(f"[ERROR] Invalid index. Use 1-{len(HF_LORAS)}")
         return False
-    
+
     lora = HF_LORAS[index - 1]
     print(f"[INFO] Downloading: {lora['name']}")
     print(f"[INFO] {lora['description']}")
-    
+
     return download_url(lora["url"])
 
 
@@ -258,9 +256,9 @@ def main():
     parser.add_argument("--list-popular", "-l", action="store_true", help="List popular CivitAI Flux LoRAs")
     parser.add_argument("--list-hf", action="store_true", help="List HuggingFace LoRAs")
     parser.add_argument("--base-model", default="Flux.1 D", help="Base model filter (default: Flux.1 D)")
-    
+
     args = parser.parse_args()
-    
+
     if args.list_hf:
         list_hf_loras()
     elif args.list_popular or args.search:

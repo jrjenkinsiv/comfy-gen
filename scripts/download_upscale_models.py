@@ -17,15 +17,15 @@ UPSCALE_MODELS = {
 def download_model(name: str, url: str, dest_dir: Path):
     """Download upscale model"""
     dest_path = dest_dir / name
-    
+
     if dest_path.exists():
         print(f"[SKIP] {name} already exists")
         return
-    
+
     print(f"[DOWNLOAD] {name}")
     print(f"  From: {url}")
     print(f"  To: {dest_path}")
-    
+
     try:
         urllib.request.urlretrieve(url, dest_path)
         print(f"[OK] Downloaded {name}")
@@ -34,24 +34,24 @@ def download_model(name: str, url: str, dest_dir: Path):
 
 def main():
     import sys
-    
+
     if len(sys.argv) < 2:
         print("Usage: python download_upscale_models.py <upscale_models_dir>")
         print("Example: python download_upscale_models.py C:\\Users\\jrjen\\comfy\\models\\upscale_models")
         sys.exit(1)
-    
+
     dest_dir = Path(sys.argv[1])
     dest_dir.mkdir(parents=True, exist_ok=True)
-    
+
     print(f"\n{'='*60}")
     print("DOWNLOADING UPSCALE MODELS")
     print(f"{'='*60}")
     print(f"Destination: {dest_dir}\n")
-    
+
     for name, url in UPSCALE_MODELS.items():
         download_model(name, url, dest_dir)
         print()
-    
+
     print(f"{'='*60}")
     print("DOWNLOAD COMPLETE")
     print(f"{'='*60}")

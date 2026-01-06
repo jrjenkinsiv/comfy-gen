@@ -9,10 +9,9 @@ Usage:
     python start_mlflow.py --background
 """
 
+import argparse
 import subprocess
 import sys
-import os
-import argparse
 from pathlib import Path
 
 # Configuration
@@ -24,11 +23,11 @@ BACKEND_STORE = f"sqlite:///{MLFLOW_DIR / 'mlflow.db'}"
 
 def start_mlflow(port: int = DEFAULT_PORT, background: bool = False):
     """Start MLflow tracking server."""
-    
+
     # Ensure directories exist
     MLFLOW_DIR.mkdir(parents=True, exist_ok=True)
     ARTIFACT_ROOT.mkdir(parents=True, exist_ok=True)
-    
+
     cmd = [
         sys.executable, "-m", "mlflow", "server",
         "--host", "0.0.0.0",
@@ -36,12 +35,12 @@ def start_mlflow(port: int = DEFAULT_PORT, background: bool = False):
         "--backend-store-uri", BACKEND_STORE,
         "--default-artifact-root", str(ARTIFACT_ROOT),
     ]
-    
+
     print(f"[OK] Starting MLflow server on port {port}")
     print(f"     Backend: {BACKEND_STORE}")
     print(f"     Artifacts: {ARTIFACT_ROOT}")
     print(f"     URL: http://192.168.1.215:{port}")
-    
+
     if background:
         # Run detached (Windows)
         CREATE_NEW_PROCESS_GROUP = 0x00000200
@@ -66,7 +65,7 @@ def main():
     parser.add_argument("--port", type=int, default=DEFAULT_PORT, help="Port to run on")
     parser.add_argument("--background", action="store_true", help="Run in background")
     args = parser.parse_args()
-    
+
     start_mlflow(port=args.port, background=args.background)
 
 

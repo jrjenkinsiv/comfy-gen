@@ -15,7 +15,7 @@ import sys
 def test_imports() -> int:
     """Test that all core modules can be imported."""
     errors = []
-    
+
     # Core modules that should always import
     core_modules = [
         ("comfy_gen", "Main package"),
@@ -25,18 +25,18 @@ def test_imports() -> int:
         ("comfy_gen.quality", "Quality assessment"),
         ("comfy_gen.prompt_enhancer", "Prompt enhancement"),
     ]
-    
+
     # Optional modules that may require extra dependencies
     optional_modules = [
         ("comfy_gen.pose_validation", "Pose validation (requires mediapipe)"),
         ("comfy_gen.content_validator", "Content validation (requires transformers)"),
     ]
-    
+
     print("=" * 60)
     print("Comfy-Gen Smoke Test")
     print("=" * 60)
     print()
-    
+
     # Test core modules
     print("Core Modules:")
     print("-" * 40)
@@ -48,9 +48,9 @@ def test_imports() -> int:
             print(f"[ERROR] {module_name} - {description}")
             print(f"        Import error: {e}")
             errors.append(module_name)
-    
+
     print()
-    
+
     # Test optional modules
     print("Optional Modules (may require extra dependencies):")
     print("-" * 40)
@@ -62,10 +62,10 @@ def test_imports() -> int:
             print(f"[WARN] {module_name} - {description}")
             print(f"        Not available: {e}")
             # Optional modules don't count as errors
-    
+
     print()
     print("=" * 60)
-    
+
     if errors:
         print(f"[ERROR] {len(errors)} core module(s) failed to import:")
         for mod in errors:
@@ -81,10 +81,10 @@ def test_cli_entrypoint() -> int:
     print()
     print("CLI Entrypoint:")
     print("-" * 40)
-    
+
     try:
         from comfy_gen.cli import main
-        print(f"[OK] CLI entrypoint 'main' is importable")
+        print("[OK] CLI entrypoint 'main' is importable")
         return 0
     except ImportError as e:
         print(f"[ERROR] CLI entrypoint import failed: {e}")
@@ -94,16 +94,16 @@ def test_cli_entrypoint() -> int:
 def main() -> int:
     """Run all smoke tests."""
     result = 0
-    
+
     result += test_imports()
     result += test_cli_entrypoint()
-    
+
     print()
     if result == 0:
         print("[OK] All smoke tests passed!")
     else:
         print(f"[ERROR] {result} test(s) failed")
-    
+
     return min(result, 1)  # Return 0 or 1
 
 

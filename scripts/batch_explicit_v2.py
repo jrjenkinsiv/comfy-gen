@@ -17,10 +17,9 @@ The key insight: SD 1.5 cannot reliably generate two distinct human bodies.
 POV shots hide the male body entirely - the cock becomes "the viewer's cock".
 """
 
-import subprocess
 import random
+import subprocess
 import sys
-from pathlib import Path
 from datetime import datetime
 
 # Unbuffered output
@@ -30,9 +29,9 @@ sys.stderr.reconfigure(line_buffering=True)
 # Ethnicities - Asian focus as requested
 ETHNICITIES = [
     # East Asian
-    "japanese", "korean", "chinese", "vietnamese", "thai", "filipino", 
+    "japanese", "korean", "chinese", "vietnamese", "thai", "filipino",
     "taiwanese", "singaporean", "malaysian", "indonesian",
-    # South Asian  
+    # South Asian
     "indian", "pakistani", "bangladeshi", "sri lankan", "nepali",
     # Middle Eastern
     "persian", "arab", "lebanese", "turkish",
@@ -118,7 +117,7 @@ SCENARIOS = [
         "loras": [("realora_skin.safetensors", 0.5), ("more_details.safetensors", 0.3)],
         "uses_penis_lora": False
     },
-    
+
     # -----------------------------------------
     # POV ORAL - Cock visible, no male body
     # Key: Camera is the viewer, cock enters from bottom of frame
@@ -190,7 +189,7 @@ SCENARIOS = [
         "loras": [("erect_penis_epoch_80.safetensors", 0.55), ("polyhedron_skin.safetensors", 0.4)],
         "uses_penis_lora": True
     },
-    
+
     # -----------------------------------------
     # POV HANDJOB/TITJOB - Same POV principle
     # -----------------------------------------
@@ -236,7 +235,7 @@ SCENARIOS = [
         "loras": [("airoticart_penis.safetensors", 0.5), ("polyhedron_skin.safetensors", 0.4)],
         "uses_penis_lora": True
     },
-    
+
     # -----------------------------------------
     # POST-ACT CUM SHOTS - No male in frame at all
     # The cum is already there, male has stepped away
@@ -304,7 +303,7 @@ SCENARIOS = [
         "loras": [("polyhedron_skin.safetensors", 0.5), ("more_details.safetensors", 0.4)],
         "uses_penis_lora": False
     },
-    
+
     # -----------------------------------------
     # SOLO POSES - "WAITING" positions (no male)
     # -----------------------------------------
@@ -387,16 +386,16 @@ def generate_image(idx: int, ethnicity: str, scenario: dict, resolution: tuple, 
     negative = scenario["negative"]
     scenario_name = scenario["name"]
     loras = scenario.get("loras", [])
-    
+
     width, height = resolution
-    
+
     # Build filename
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     eth_short = ethnicity.replace(" ", "_")[:10]
-    
+
     output_name = f"{timestamp}_explicit_v2_{idx:03d}_{eth_short}_{scenario_name}"
     output_path = f"/tmp/{output_name}.png"
-    
+
     # Build command
     cmd = [
         "python3", "generate.py",
@@ -410,16 +409,16 @@ def generate_image(idx: int, ethnicity: str, scenario: dict, resolution: tuple, 
         "--height", str(height),
         "--output", output_path,
     ]
-    
+
     # Add LoRAs from scenario
     for lora_file, strength in loras:
         cmd.extend(["--lora", f"{lora_file}:{strength}"])
-    
+
     print(f"\n[{idx:03d}] {ethnicity} - {scenario_name}")
     print(f"  Resolution: {width}x{height}, Seed: {seed}")
     print(f"  Category: {scenario['category']}")
     print(f"  LoRAs: {loras}")
-    
+
     try:
         result = subprocess.run(
             cmd,
@@ -428,7 +427,7 @@ def generate_image(idx: int, ethnicity: str, scenario: dict, resolution: tuple, 
             timeout=600,
             cwd="/Users/jrjenkinsiv/Development/comfy-gen"
         )
-        
+
         if result.returncode == 0:
             # Extract URL from output
             url = None
@@ -440,9 +439,9 @@ def generate_image(idx: int, ethnicity: str, scenario: dict, resolution: tuple, 
         else:
             print(f"  [ERROR] {result.stderr[-300:] if result.stderr else 'Unknown error'}")
             return False, None
-            
+
     except subprocess.TimeoutExpired:
-        print(f"  [TIMEOUT] Generation took too long")
+        print("  [TIMEOUT] Generation took too long")
         return False, None
     except Exception as e:
         print(f"  [ERROR] {e}")
@@ -458,14 +457,14 @@ def main():
     parser.add_argument("--category", type=str, help="Only generate specific category (solo, pov_oral, pov_touch, cum, solo_pose)")
     parser.add_argument("--list", action="store_true", help="List all scenarios")
     args = parser.parse_args()
-    
+
     if args.list:
         print("Available scenarios:")
         print("-" * 60)
         for s in SCENARIOS:
             print(f"  {s['name']:20s} [{s['category']}] penis_lora={s['uses_penis_lora']}")
         return
-    
+
     print("=" * 60)
     print("Explicit NSFW Batch Generation - V2 (Improved Prompts)")
     print("=" * 60)
@@ -474,17 +473,17 @@ def main():
     print("  - Single subject emphasis for all scenes")
     print("  - Post-act cum shots (no male in frame)")
     print("=" * 60)
-    
+
     # Filter scenarios if category specified
     scenarios = SCENARIOS
     if args.category:
         scenarios = [s for s in SCENARIOS if s['category'] == args.category]
         print(f"Filtered to category: {args.category} ({len(scenarios)} scenarios)")
-    
+
     # Build generation queue
     queue = []
     idx = args.start
-    
+
     # Cycle through ethnicities and scenarios
     while len(queue) < args.count:
         for scenario in scenarios:
@@ -495,21 +494,21 @@ def main():
             seed = random.randint(1, 999999)
             queue.append((idx, ethnicity, scenario, resolution, seed))
             idx += 1
-    
+
     print(f"\nGenerating {len(queue)} images...")
     print(f"Estimated time: {len(queue) * 1.5:.0f} minutes")
-    
+
     success = 0
     failed = 0
     urls = []
-    
+
     for item in queue:
         idx, ethnicity, scenario, resolution, seed = item
-        
+
         if args.dry_run:
             print(f"\n[DRY RUN] {idx}: {ethnicity} - {scenario['name']}")
             continue
-            
+
         ok, url = generate_image(idx, ethnicity, scenario, resolution, seed)
         if ok:
             success += 1
@@ -517,15 +516,15 @@ def main():
                 urls.append(url)
         else:
             failed += 1
-    
+
     print("\n" + "=" * 60)
     print("BATCH COMPLETE")
     print("=" * 60)
     print(f"Success: {success}")
     print(f"Failed: {failed}")
-    
+
     if urls:
-        print(f"\nGenerated URLs (last 10):")
+        print("\nGenerated URLs (last 10):")
         for url in urls[-10:]:
             print(f"  {url}")
 

@@ -78,25 +78,25 @@ def print_example_commands():
     print("   python3 generate.py --workflow workflows/flux-dev.json \\")
     print("       --prompt 'a sunset over mountains' \\")
     print("       --output /tmp/sunset.png")
-    
+
     print("\n2. Quiet mode (no progress):")
     print("   python3 generate.py --workflow workflows/flux-dev.json \\")
     print("       --prompt 'a sunset over mountains' \\")
     print("       --output /tmp/sunset.png \\")
     print("       --quiet")
-    
+
     print("\n3. JSON progress (for scripts/agents):")
     print("   python3 generate.py --workflow workflows/flux-dev.json \\")
     print("       --prompt 'a sunset over mountains' \\")
     print("       --output /tmp/sunset.png \\")
     print("       --json-progress")
-    
+
     print("\n4. Combined with validation:")
     print("   python3 generate.py --workflow workflows/flux-dev.json \\")
     print("       --prompt 'a sunset over mountains' \\")
     print("       --output /tmp/sunset.png \\")
     print("       --validate --auto-retry")
-    
+
     print("\n" + "="*60)
 
 if __name__ == "__main__":
@@ -106,12 +106,12 @@ if __name__ == "__main__":
     print("\nNOTE: These are simulated demonstrations showing expected behavior.")
     print("For real testing, ComfyUI must be running at http://192.168.1.215:8188")
     print()
-    
+
     test_basic_progress()
     test_quiet_mode()
     test_json_progress()
     test_cached_execution()
     print_example_commands()
-    
+
     print("\nAll demonstrations completed!")
     print("="*60 + "\n")

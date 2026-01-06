@@ -17,18 +17,17 @@ Key learnings applied:
 
 Usage:
     python3 scripts/batch_asian_nsfw.py [--dry-run] [--count N]
-    
+
     # Run 50 generations in background
     nohup python3 scripts/batch_asian_nsfw.py --count 50 > /tmp/batch_asian_output.log 2>&1 &
 """
 
-import subprocess
-import sys
+import argparse
 import json
 import random
-import argparse
-from pathlib import Path
+import subprocess
 from datetime import datetime
+from pathlib import Path
 
 # Base settings
 COMFY_GEN_DIR = Path(__file__).parent.parent
@@ -191,12 +190,12 @@ full body, legs, feet, below waist
 """.strip().replace("\n", " ")
 
 
-def build_prompt(ethnicity: str, body_type: str, age: str, hair: str, 
+def build_prompt(ethnicity: str, body_type: str, age: str, hair: str,
                  scenario: str, breasts: str, expression: str) -> str:
     """Build a detailed prompt from components."""
-    
+
     eth_data = ETHNICITIES[ethnicity]
-    
+
     prompt = f"""extremely detailed RAW photograph, professional glamour photography,
 portrait of one single beautiful {ethnicity} woman in her {age},
 {eth_data['skin']} skin, {eth_data['features']},
@@ -206,14 +205,14 @@ upper body shot from waist up, one person only, solo portrait, no other people,
 detailed skin texture, skin pores visible, photorealistic, natural lighting,
 shot on Canon EOS R5, 85mm f/1.4 lens, shallow depth of field,
 professional studio quality, high resolution""".strip().replace("\n", " ")
-    
+
     return prompt
 
 
 def generate_test_batch(count: int) -> list:
     """Generate a diverse batch of test configurations."""
     tests = []
-    
+
     for i in range(count):
         # Random selections
         ethnicity = random.choice(list(ETHNICITIES.keys()))
@@ -226,15 +225,15 @@ def generate_test_batch(count: int) -> list:
         model_key = random.choice(list(MODELS.keys()))
         lora_key = random.choice(list(LORAS.keys()))
         resolution = random.choice(RESOLUTIONS)
-        
+
         model_config = MODELS[model_key]
         lora_config = LORAS[lora_key]
-        
+
         # Random values within ranges
         cfg = round(random.uniform(*model_config["cfg_range"]), 1)
         steps = random.randint(*model_config["steps_range"])
         lora_strength = round(random.uniform(*lora_config["strength_range"]), 2) if lora_config["file"] else 0
-        
+
         tests.append({
             "id": i + 1,
             "ethnicity": ethnicity,
@@ -254,13 +253,13 @@ def generate_test_batch(count: int) -> list:
             "width": resolution[0],
             "height": resolution[1],
         })
-    
+
     return tests
 
 
 def run_generation(test: dict, dry_run: bool = False) -> dict:
     """Run a single generation."""
-    
+
     prompt = build_prompt(
         ethnicity=test["ethnicity"],
         body_type=test["body_type"],
@@ -270,12 +269,12 @@ def run_generation(test: dict, dry_run: bool = False) -> dict:
         breasts=test["breasts"],
         expression=test["expression"],
     )
-    
+
     # Build output filename
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     filename = f"asian_{test['id']:03d}_{test['ethnicity']}_{test['lora']}_{timestamp}.png"
     output_path = f"/tmp/{filename}"
-    
+
     # Build command - NO SEED SPECIFIED (enables randomness)
     cmd = [
         "python3", str(GENERATE_SCRIPT),
@@ -288,23 +287,23 @@ def run_generation(test: dict, dry_run: bool = False) -> dict:
         "--height", str(test["height"]),
         "--output", output_path,
     ]
-    
+
     # Add LoRA if specified
     if test["lora_file"]:
         cmd.extend(["--lora", f"{test['lora_file']}:{test['lora_strength']}"])
-    
+
     print(f"\n{'='*70}")
     print(f"Test {test['id']}: {test['ethnicity'].upper()} woman - {test['age']}")
     print(f"Body: {test['body_type'][:30]}...")
     print(f"Model: {test['model']}, LoRA: {test['lora']} @ {test['lora_strength']}")
     print(f"Resolution: {test['width']}x{test['height']}, CFG: {test['cfg']}, Steps: {test['steps']}")
     print(f"{'='*70}")
-    
+
     if dry_run:
-        print(f"[DRY RUN] Would execute generation")
+        print("[DRY RUN] Would execute generation")
         print(f"  Prompt: {prompt[:100]}...")
         return {"status": "dry_run", "test": test}
-    
+
     try:
         result = subprocess.run(
             cmd,
@@ -313,12 +312,12 @@ def run_generation(test: dict, dry_run: bool = False) -> dict:
             text=True,
             timeout=600  # 10 minute timeout per image
         )
-        
+
         # Parse output for score and URL
         score = None
         url = None
         validation_passed = False
-        
+
         for line in result.stdout.split("\n"):
             if "Score:" in line:
                 try:
@@ -329,14 +328,14 @@ def run_generation(test: dict, dry_run: bool = False) -> dict:
                 url = line.split("at:")[-1].strip()
             if "Validation: PASSED" in line:
                 validation_passed = True
-        
+
         success = result.returncode == 0
         status = "success" if success else "failed"
-        
+
         print(f"[{status.upper()}] Score: {score}, Validation: {'PASSED' if validation_passed else 'FAILED'}")
         if url:
             print(f"  URL: {url}")
-        
+
         return {
             "status": status,
             "test": test,
@@ -348,9 +347,9 @@ def run_generation(test: dict, dry_run: bool = False) -> dict:
             "stdout": result.stdout[-500:] if result.stdout else "",  # Last 500 chars
             "stderr": result.stderr[-500:] if result.stderr else "",
         }
-        
+
     except subprocess.TimeoutExpired:
-        print(f"[TIMEOUT] Generation took too long (>10 min)")
+        print("[TIMEOUT] Generation took too long (>10 min)")
         return {"status": "timeout", "test": test}
     except Exception as e:
         print(f"[ERROR] {e}")
@@ -363,7 +362,7 @@ def main():
     parser.add_argument("--count", type=int, default=50, help="Number of images to generate")
     parser.add_argument("--list", action="store_true", help="List all tests without running")
     args = parser.parse_args()
-    
+
     print("=" * 70)
     print("BATCH ASIAN NSFW GENERATION")
     print("=" * 70)
@@ -371,60 +370,60 @@ def main():
     print(f"Ethnicities: {len(ETHNICITIES)}")
     print(f"Models: {len(MODELS)}")
     print(f"LoRAs: {len(LORAS)}")
-    print(f"NOTE: Seeds are RANDOM (not fixed) for variety")
+    print("NOTE: Seeds are RANDOM (not fixed) for variety")
     print("=" * 70)
-    
+
     tests = generate_test_batch(args.count)
-    
+
     if args.list:
         print("\nTest Matrix:")
         print("-" * 80)
         for test in tests:
             print(f"{test['id']:3d}. {test['ethnicity']:12s} {test['lora']:15s} @ {test['lora_strength']:.2f} | {test['width']}x{test['height']} CFG:{test['cfg']}")
         return
-    
+
     print(f"\nRunning {len(tests)} generations...")
     print(f"Estimated time: {len(tests) * 2:.0f} minutes (2 min/image average)")
     print("=" * 70)
-    
+
     results = []
     start_time = datetime.now()
-    
+
     for test in tests:
         result = run_generation(test, dry_run=args.dry_run)
         results.append(result)
-        
+
         # Progress update every 10 images
         if test["id"] % 10 == 0:
             elapsed = (datetime.now() - start_time).total_seconds() / 60
             remaining = elapsed / test["id"] * (len(tests) - test["id"])
             print(f"\n[PROGRESS] {test['id']}/{len(tests)} complete. Elapsed: {elapsed:.1f}m, ETA: {remaining:.1f}m\n")
-    
+
     # Summary
     print("\n" + "=" * 70)
     print("BATCH COMPLETE")
     print("=" * 70)
-    
+
     success = [r for r in results if r["status"] == "success"]
     failed = [r for r in results if r["status"] == "failed"]
     timeout = [r for r in results if r["status"] == "timeout"]
-    
+
     print(f"Success: {len(success)}")
     print(f"Failed: {len(failed)}")
     print(f"Timeout: {len(timeout)}")
-    
+
     if success:
         scores = [r["score"] for r in success if r.get("score")]
         validation_passed = [r for r in success if r.get("validation_passed")]
-        
+
         if scores:
-            print(f"\nScore Statistics:")
+            print("\nScore Statistics:")
             print(f"  Average: {sum(scores)/len(scores):.3f}")
             print(f"  Range: {min(scores):.3f} - {max(scores):.3f}")
             print(f"  Validation passed: {len(validation_passed)}/{len(success)}")
-        
+
         # Breakdown by ethnicity
-        print(f"\nBy Ethnicity:")
+        print("\nBy Ethnicity:")
         eth_scores = {}
         for r in success:
             eth = r["test"]["ethnicity"]
@@ -432,13 +431,13 @@ def main():
                 eth_scores[eth] = []
             if r.get("score"):
                 eth_scores[eth].append(r["score"])
-        
+
         for eth, scores in sorted(eth_scores.items()):
             if scores:
                 print(f"  {eth:12s}: {len(scores):2d} images, avg score: {sum(scores)/len(scores):.3f}")
-        
+
         # Breakdown by LoRA
-        print(f"\nBy LoRA:")
+        print("\nBy LoRA:")
         lora_scores = {}
         for r in success:
             lora = r["test"]["lora"]
@@ -446,14 +445,14 @@ def main():
                 lora_scores[lora] = []
             if r.get("score"):
                 lora_scores[lora].append(r["score"])
-        
+
         for lora, scores in sorted(lora_scores.items()):
             if scores:
                 print(f"  {lora:15s}: {len(scores):2d} images, avg score: {sum(scores)/len(scores):.3f}")
-    
+
     # Save detailed results
     elapsed_total = (datetime.now() - start_time).total_seconds() / 60
-    
+
     results_data = {
         "timestamp": datetime.now().isoformat(),
         "elapsed_minutes": elapsed_total,
@@ -463,12 +462,12 @@ def main():
         "timeout_count": len(timeout),
         "results": results,
     }
-    
+
     results_file = COMFY_GEN_DIR / "batch_asian_results.json"
     with open(results_file, "w") as f:
         json.dump(results_data, f, indent=2, default=str)
     print(f"\nDetailed results saved to: {results_file}")
-    
+
     # List all generated URLs for easy viewing
     print(f"\n{'='*70}")
     print("GENERATED IMAGES (view in browser):")

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Example demonstrating the enhanced metadata JSON schema."""
 
-import sys
 import json
+import sys
 import tempfile
 from pathlib import Path
 
@@ -14,7 +14,7 @@ import generate
 
 def demonstrate_metadata_schema():
     """Demonstrate the new nested metadata structure."""
-    
+
     # Create a sample workflow
     workflow = {
         "1": {
@@ -48,17 +48,17 @@ def demonstrate_metadata_schema():
             }
         }
     }
-    
+
     # Extract workflow parameters
     workflow_params = generate.extract_workflow_params(workflow)
     loras = generate.extract_loras_from_workflow(workflow)
-    
+
     # Create a temporary file to simulate output
     with tempfile.NamedTemporaryFile(mode='wb', suffix='.png', delete=False) as f:
         # Write some fake image data
         f.write(b"PNG fake image content" * 100000)
         temp_output_path = f.name
-    
+
     try:
         # Generate metadata with all new features
         metadata = generate.create_metadata_json(
@@ -74,27 +74,27 @@ def demonstrate_metadata_schema():
             output_path=temp_output_path,
             generation_time_seconds=45.2
         )
-        
+
         # Display the metadata structure
         print("=" * 80)
         print("ENHANCED METADATA JSON SCHEMA EXAMPLE")
         print("=" * 80)
         print(json.dumps(metadata, indent=2))
         print("=" * 80)
-        
+
         # Verify all expected fields are present
         print("\nField Verification:")
         print(f"  ✓ generation_id: {metadata['generation_id']}")
         print(f"  ✓ timestamp: {metadata['timestamp']}")
-        print(f"\n  Input:")
+        print("\n  Input:")
         print(f"    ✓ prompt: {metadata['input']['prompt'][:50]}...")
         print(f"    ✓ negative_prompt: {metadata['input']['negative_prompt'][:30]}...")
         print(f"    ✓ preset: {metadata['input']['preset']}")
-        print(f"\n  Workflow:")
+        print("\n  Workflow:")
         print(f"    ✓ name: {metadata['workflow']['name']}")
         print(f"    ✓ model: {metadata['workflow']['model']}")
         print(f"    ✓ vae: {metadata['workflow']['vae']}")
-        print(f"\n  Parameters:")
+        print("\n  Parameters:")
         print(f"    ✓ seed: {metadata['parameters']['seed']}")
         print(f"    ✓ steps: {metadata['parameters']['steps']}")
         print(f"    ✓ cfg: {metadata['parameters']['cfg']}")
@@ -102,22 +102,22 @@ def demonstrate_metadata_schema():
         print(f"    ✓ scheduler: {metadata['parameters']['scheduler']}")
         print(f"    ✓ resolution: {metadata['parameters']['resolution']}")
         print(f"    ✓ loras: {len(metadata['parameters']['loras'])} LoRA(s)")
-        print(f"\n  Quality:")
+        print("\n  Quality:")
         print(f"    ✓ prompt_adherence.clip: {metadata['quality']['prompt_adherence']['clip']}")
         print(f"    ✓ composite_score: {metadata['quality']['composite_score']} (placeholder)")
         print(f"    ✓ grade: {metadata['quality']['grade']} (placeholder)")
-        print(f"\n  Storage:")
+        print("\n  Storage:")
         print(f"    ✓ minio_url: {metadata['storage']['minio_url']}")
         print(f"    ✓ file_size_bytes: {metadata['storage']['file_size_bytes']:,}")
         print(f"    ✓ format: {metadata['storage']['format']}")
         print(f"    ✓ generation_time_seconds: {metadata['storage']['generation_time_seconds']}")
-        print(f"\n  Refinement:")
+        print("\n  Refinement:")
         print(f"    ✓ attempt: {metadata['refinement']['attempt']} (placeholder)")
         print(f"    ✓ max_attempts: {metadata['refinement']['max_attempts']} (placeholder)")
-        
+
         print("\n[OK] All fields present in nested metadata structure!")
         print("[OK] Metadata is ready for experiment tracking and reproducibility!")
-        
+
     finally:
         # Clean up temp file
         if Path(temp_output_path).exists():

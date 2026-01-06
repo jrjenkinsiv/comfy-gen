@@ -8,8 +8,8 @@ Usage:
 """
 
 import argparse
-import json
 import sys
+
 import requests
 
 COMFYUI_HOST = "http://192.168.1.215:8188"
@@ -45,7 +45,7 @@ def interrupt_generation():
 
 def delete_from_queue(prompt_ids):
     """Delete specific prompts from queue.
-    
+
     Args:
         prompt_ids: List of prompt IDs to delete
     """
@@ -68,17 +68,17 @@ def list_queue(queue_data):
     if not queue_data:
         print("[ERROR] No queue data available")
         return
-    
+
     # Queue has two sections: queue_running and queue_pending
     running = queue_data.get("queue_running", [])
     pending = queue_data.get("queue_pending", [])
-    
+
     if not running and not pending:
         print("[INFO] Queue is empty")
         return
-    
+
     print("\n=== Current Queue ===\n")
-    
+
     if running:
         print("Running:")
         for idx, item in enumerate(running):
@@ -88,7 +88,7 @@ def list_queue(queue_data):
                 prompt_id = item[1]
                 print(f"  [{idx+1}] Queue #{queue_num} - Prompt ID: {prompt_id}")
         print()
-    
+
     if pending:
         print("Pending:")
         for idx, item in enumerate(pending):
@@ -97,7 +97,7 @@ def list_queue(queue_data):
                 prompt_id = item[1]
                 print(f"  [{idx+1}] Queue #{queue_num} - Prompt ID: {prompt_id}")
         print()
-    
+
     total = len(running) + len(pending)
     print(f"Total: {total} job(s) in queue")
 
@@ -106,30 +106,30 @@ def cancel_all():
     queue_data = get_queue()
     if not queue_data:
         return False
-    
+
     running = queue_data.get("queue_running", [])
     pending = queue_data.get("queue_pending", [])
-    
+
     if not running and not pending:
         print("[INFO] Queue is already empty")
         return True
-    
+
     # First interrupt any running job
     if running:
         interrupt_generation()
-    
+
     # Then delete all pending jobs
     if pending:
         prompt_ids = [item[1] for item in pending if len(item) >= 2]
         if prompt_ids:
             delete_from_queue(prompt_ids)
-    
+
     # Also delete running jobs from queue
     if running:
         prompt_ids = [item[1] for item in running if len(item) >= 2]
         if prompt_ids:
             delete_from_queue(prompt_ids)
-    
+
     print("[OK] All jobs cancelled")
     return True
 
@@ -138,22 +138,22 @@ def cancel_specific(prompt_id):
     queue_data = get_queue()
     if not queue_data:
         return False
-    
+
     running = queue_data.get("queue_running", [])
     pending = queue_data.get("queue_pending", [])
-    
+
     # Check if prompt is in running queue
     is_running = any(item[1] == prompt_id for item in running if len(item) >= 2)
     is_pending = any(item[1] == prompt_id for item in pending if len(item) >= 2)
-    
+
     if not is_running and not is_pending:
         print(f"[ERROR] Prompt ID {prompt_id} not found in queue")
         return False
-    
+
     # If running, interrupt it
     if is_running:
         interrupt_generation()
-    
+
     # Delete from queue
     delete_from_queue([prompt_id])
     print(f"[OK] Cancelled prompt {prompt_id}")
@@ -174,7 +174,7 @@ def main():
         help="Cancel specific prompt by ID"
     )
     args = parser.parse_args()
-    
+
     # List queue
     if args.list:
         queue_data = get_queue()
@@ -182,13 +182,13 @@ def main():
             list_queue(queue_data)
             return 0
         return 1
-    
+
     # Cancel specific prompt
     if args.prompt_id:
         if cancel_specific(args.prompt_id):
             return 0
         return 1
-    
+
     # Cancel all (default behavior)
     if cancel_all():
         return 0

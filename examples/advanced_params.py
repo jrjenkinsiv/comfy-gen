@@ -5,8 +5,6 @@ Example script demonstrating advanced generation parameters.
 This script shows how to use the new parameters for different use cases.
 """
 
-import subprocess
-import sys
 
 def run_command(description, args):
     """Run a generate.py command with description."""
@@ -15,7 +13,7 @@ def run_command(description, args):
     print(f"{'='*60}")
     cmd = ["python3", "generate.py"] + args
     print(f"Command: {' '.join(cmd)}\n")
-    
+
     # For demonstration, we'll just show the command
     # In a real environment with ComfyUI running, you would execute it
     print("[INFO] This would execute:")
@@ -26,14 +24,14 @@ def run_command(description, args):
 
 def main():
     """Demonstrate various parameter combinations."""
-    
+
     print("Advanced Generation Parameters - Examples")
     print("=" * 60)
     print("These examples show different use cases for the new parameters.")
     print("Note: ComfyUI server must be running for actual execution.\n")
-    
+
     examples = []
-    
+
     # Example 1: Using a preset
     examples.append({
         "description": "Quick draft with preset",
@@ -45,7 +43,7 @@ def main():
         ],
         "expected": "Fast generation with 10 steps, CFG 5.0, euler sampler"
     })
-    
+
     # Example 2: High quality with custom parameters
     examples.append({
         "description": "High quality with custom settings",
@@ -60,7 +58,7 @@ def main():
         ],
         "expected": "Slow, high-quality generation with 50 steps and karras scheduler"
     })
-    
+
     # Example 3: Reproducible generation with seed
     examples.append({
         "description": "Reproducible generation with fixed seed",
@@ -73,7 +71,7 @@ def main():
         ],
         "expected": "Same output every time with seed 12345"
     })
-    
+
     # Example 4: Custom dimensions
     examples.append({
         "description": "Wide panoramic image",
@@ -87,7 +85,7 @@ def main():
         ],
         "expected": "768x512 image (3:2 aspect ratio)"
     })
-    
+
     # Example 5: Preset with overrides
     examples.append({
         "description": "Preset with parameter overrides",
@@ -101,7 +99,7 @@ def main():
         ],
         "expected": "High-quality preset but with custom seed and width"
     })
-    
+
     # Example 6: Fast sampler for iteration
     examples.append({
         "description": "Fast iteration for prompt testing",
@@ -115,14 +113,14 @@ def main():
         ],
         "expected": "Quick results for testing different prompts"
     })
-    
+
     # Print all examples
     for i, example in enumerate(examples, 1):
         print(f"\n{'='*60}")
         print(f"Example {i}: {example['description']}")
         print(f"{'='*60}")
-        print(f"Command:")
-        print(f"  python3 generate.py \\")
+        print("Command:")
+        print("  python3 generate.py \\")
         for j, arg in enumerate(example['args']):
             if j < len(example['args']) - 1:
                 if not arg.startswith('--'):
@@ -136,7 +134,7 @@ def main():
             else:
                 print(f"    {arg}")
         print(f"\nExpected: {example['expected']}")
-    
+
     print("\n" + "="*60)
     print("Parameter Quick Reference")
     print("="*60)
@@ -171,7 +169,7 @@ Presets (--preset):
   fast:         15 steps, quick quality
   ultra:        100 steps, maximum quality
 """)
-    
+
     print("="*60)
     print("For more information, see docs/USAGE.md")
     print("="*60)

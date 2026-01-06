@@ -12,7 +12,7 @@ Key Metrics Tracked:
 
 Usage:
     from log_experiments import log_generation, setup_mlflow
-    
+
     setup_mlflow()
     log_generation(
         image_url="http://...",
@@ -27,12 +27,12 @@ Usage:
     )
 """
 
-import mlflow
-import requests
-import tempfile
 import os
 from datetime import datetime
-from typing import Optional, List, Dict, Any
+from typing import Dict, List, Optional
+
+import mlflow
+import requests
 
 # MLflow server on moira (migrated from cerebro 2026-01-05)
 MLFLOW_URI = "http://192.168.1.215:5000"
@@ -42,7 +42,7 @@ EXPERIMENT_NAME = "comfygen-pony-realism"
 def setup_mlflow() -> str:
     """Initialize MLflow tracking."""
     mlflow.set_tracking_uri(MLFLOW_URI)
-    
+
     experiment = mlflow.get_experiment_by_name(EXPERIMENT_NAME)
     if experiment is None:
         experiment_id = mlflow.create_experiment(
@@ -58,7 +58,7 @@ def setup_mlflow() -> str:
     else:
         experiment_id = experiment.experiment_id
         print(f"[OK] Using existing experiment: {EXPERIMENT_NAME} (ID: {experiment_id})")
-    
+
     mlflow.set_experiment(EXPERIMENT_NAME)
     return experiment_id
 
@@ -86,102 +86,102 @@ def log_generation(
     steps: int,
     cfg: float,
     sampler: str,
-    
+
     # Generation settings
     scheduler: str = "karras",
     width: int = 1024,
     height: int = 1024,
     seed: int = None,
     denoise: float = None,
-    
+
     # Model info
     checkpoint: str = "ponyRealism_V22.safetensors",
     vae: str = "default",
-    
+
     # LoRAs - list of tuples (name, strength) or list of strings
     loras: List = None,
-    
+
     # Validation scores (from CLIP evaluator)
     clip_score: float = None,
     positive_score: float = None,
     negative_score: float = None,
     delta_score: float = None,
-    
+
     # Human feedback
     human_rating: int = None,  # 1-5 stars
     feedback: str = None,
     feedback_category: str = None,  # "good", "overprocessed", "artifacts", "anatomy_issue"
-    
+
     # Metadata
     generation_type: str = "txt2img",  # "txt2img", "img2img", "inpaint"
     source_image_url: str = None,  # For img2img/inpaint
     session_id: str = None,
     run_name: str = None,
     tags: Dict[str, str] = None,
-    
+
     # Options
     log_image_artifact: bool = True,
-    
+
     # Legacy aliases (for backward compatibility)
     score: float = None,  # Alias for clip_score
     rating: int = None,   # Alias for human_rating
 ) -> str:
     """
     Log a comprehensive generation run to MLflow.
-    
+
     Captures:
     - Parameters: All generation settings for reproducibility
     - Metrics: CLIP scores and human ratings
     - Tags: Feedback, categories, session info
     - Artifacts: Full prompts (txt) and generated images (png)
-    
+
     Returns:
         run_id: The MLflow run ID for reference
     """
-    
+
     # Handle legacy aliases
     if clip_score is None and score is not None:
         clip_score = score
     if human_rating is None and rating is not None:
         human_rating = rating
-    
+
     if run_name is None:
         run_name = f"gen_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-    
+
     with mlflow.start_run(run_name=run_name) as run:
         run_id = run.info.run_id
-        
+
         # === PARAMETERS (for reproducibility) ===
-        
+
         # Prompts (truncated for MLflow's 500 char limit)
         mlflow.log_param("prompt", prompt[:490] if len(prompt) > 490 else prompt)
         mlflow.log_param("prompt_length", len(prompt))
         mlflow.log_param("negative_prompt", negative_prompt[:490] if len(negative_prompt) > 490 else negative_prompt)
         mlflow.log_param("negative_prompt_length", len(negative_prompt))
-        
+
         # Sampling parameters
         mlflow.log_param("steps", steps)
         mlflow.log_param("cfg", cfg)
         mlflow.log_param("sampler", sampler)
         mlflow.log_param("scheduler", scheduler)
-        
+
         # Image dimensions
         mlflow.log_param("width", width)
         mlflow.log_param("height", height)
         mlflow.log_param("resolution", f"{width}x{height}")
         mlflow.log_param("megapixels", round(width * height / 1_000_000, 2))
-        
+
         # Reproducibility
         if seed is not None:
             mlflow.log_param("seed", seed)
         if denoise is not None:
             mlflow.log_param("denoise", denoise)
-        
+
         # Model info
         mlflow.log_param("checkpoint", checkpoint)
         mlflow.log_param("vae", vae)
         mlflow.log_param("generation_type", generation_type)
-        
+
         # LoRAs (critical for reproducibility)
         if loras:
             mlflow.log_param("lora_count", len(loras))
@@ -199,13 +199,13 @@ def log_generation(
         else:
             mlflow.log_param("lora_count", 0)
             mlflow.log_param("loras_summary", "none")
-        
+
         # Source image (for img2img workflows)
         if source_image_url:
             mlflow.log_param("source_image_url", source_image_url)
-        
+
         # === METRICS (for comparison/sorting) ===
-        
+
         if clip_score is not None:
             mlflow.log_metric("clip_score", clip_score)
         if positive_score is not None:
@@ -216,31 +216,31 @@ def log_generation(
             mlflow.log_metric("delta_score", delta_score)
         if human_rating is not None:
             mlflow.log_metric("human_rating", human_rating)
-        
+
         # === TAGS (for filtering/searching) ===
-        
+
         mlflow.set_tag("image_url", image_url)
         mlflow.set_tag("image_filename", image_url.split("/")[-1])
-        
+
         if feedback:
             mlflow.set_tag("human_feedback", feedback[:500])
         if feedback_category:
             mlflow.set_tag("feedback_category", feedback_category)
         if session_id:
             mlflow.set_tag("session_id", session_id)
-        
+
         # Custom tags
         if tags:
             for k, v in tags.items():
                 mlflow.set_tag(k, str(v)[:500])
-        
+
         # === ARTIFACTS ===
         # Note: Artifact logging disabled when using remote MLflow with local artifact store
         # The artifact root is on moira's local disk which isn't accessible from magneto
         # Images are accessible via MinIO URLs stored in image_url tag
-        
+
         # Full prompt stored in params (truncated) - full prompt viewable via MinIO image metadata
-        
+
         print(f"[OK] Run logged: {run_id[:8]}... ({run_name})")
         return run_id
 
@@ -257,9 +257,9 @@ def log_batch_feedback(runs_data: List[Dict]) -> List[str]:
 def main():
     """Log today's experiments with comprehensive detail."""
     setup_mlflow()
-    
+
     session_id = "20260105_asian_hq"
-    
+
     # Comprehensive experiment data with all fields
     experiments = [
         # === Initial 150-step variations ===
@@ -433,30 +433,30 @@ def main():
             "tags": {"approach": "optimized", "based_on": "feedback_analysis", "iteration": "1"}
         },
     ]
-    
+
     print(f"\n{'='*60}")
     print(f"Logging {len(experiments)} experiments with comprehensive data")
-    print(f"(Image URLs logged as tags - images viewable in MinIO)")
+    print("(Image URLs logged as tags - images viewable in MinIO)")
     print(f"{'='*60}\n")
-    
+
     for i, exp in enumerate(experiments, 1):
         print(f"[{i}/{len(experiments)}] {exp.get('run_name', 'unnamed')}")
         # Disable image artifact upload since MLflow artifacts are on moira's local disk
         # Images are accessible via MinIO URLs stored in tags
         log_generation(**exp, log_image_artifact=False)
-    
+
     print(f"\n{'='*60}")
-    print(f"[OK] All experiments logged successfully!")
-    print(f"")
-    print(f"View experiments: http://192.168.1.215:5000/#/experiments")
+    print("[OK] All experiments logged successfully!")
+    print("")
+    print("View experiments: http://192.168.1.215:5000/#/experiments")
     print(f"Experiment name:  {EXPERIMENT_NAME}")
     print(f"Session ID:       {session_id}")
-    print(f"")
-    print(f"Key findings logged:")
-    print(f"  - RECOMMENDED: dpmpp_2m_sde, euler_ancestral")
-    print(f"  - AVOID: dpmpp_2m (non-SDE), heun")
-    print(f"  - CFG sweet spot: 5.5-6.0")
-    print(f"  - LoRA strength: 0.3-0.4 (light touch)")
+    print("")
+    print("Key findings logged:")
+    print("  - RECOMMENDED: dpmpp_2m_sde, euler_ancestral")
+    print("  - AVOID: dpmpp_2m (non-SDE), heun")
+    print("  - CFG sweet spot: 5.5-6.0")
+    print("  - LoRA strength: 0.3-0.4 (light touch)")
     print(f"{'='*60}")
 
 

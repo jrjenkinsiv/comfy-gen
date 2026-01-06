@@ -12,8 +12,6 @@ Then access MinIO at:
 
 import subprocess
 import sys
-import signal
-import os
 
 MOIRA_HOST = "moira"  # Uses SSH config
 LOCAL_PORT = 9000
@@ -40,7 +38,7 @@ def main():
     try:
         process = subprocess.Popen(cmd)
         print(f"[OK] Tunnel established (PID: {process.pid})")
-        
+
         # Wait for Ctrl+C
         process.wait()
     except KeyboardInterrupt:

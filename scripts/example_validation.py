@@ -12,8 +12,8 @@ The script shows:
 3. Validation threshold tuning
 """
 
-import sys
 import os
+import sys
 
 print("="*70)
 print("ComfyGen Validation & Auto-Retry Examples")

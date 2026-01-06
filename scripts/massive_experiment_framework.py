@@ -14,15 +14,16 @@ Goals:
 Estimated runtime: 250 images × ~90 seconds = ~6 hours
 """
 
+import hashlib
+import json
+import random
 import subprocess
 import sys
-import random
-import json
-import hashlib
-from pathlib import Path
+from dataclasses import asdict, dataclass
 from datetime import datetime
-from dataclasses import dataclass, asdict
+from pathlib import Path
 from typing import List, Optional, Tuple
+
 import mlflow
 
 # ============================================================================
@@ -41,8 +42,8 @@ QUALITY_PREFIX = "score_9, score_8_up, score_7_up, source_photo, raw photo, phot
 QUALITY_SUFFIX = "8k uhd, high resolution, professional photography, sharp focus, intricate details"
 
 # Enhanced negative prompt
-BASE_NEGATIVE = """score_6, score_5, score_4, blurry, low quality, jpeg artifacts, pixelated, grainy, 
-bad anatomy, deformed, disfigured, mutation, extra limbs, missing limbs, 
+BASE_NEGATIVE = """score_6, score_5, score_4, blurry, low quality, jpeg artifacts, pixelated, grainy,
+bad anatomy, deformed, disfigured, mutation, extra limbs, missing limbs,
 watermark, signature, text, logo, cartoon, anime, illustration, drawing, painting, 3d render, cgi,
 trans, transgender, futanari, futa, hermaphrodite, shemale, dickgirl"""
 
@@ -194,12 +195,12 @@ LESBIAN_SCENARIOS = [
 
 # Combine all scenarios
 ALL_SCENARIOS = (
-    SOLO_FEMALE_SCENARIOS + 
-    SOLO_MALE_SCENARIOS + 
-    COUPLE_ORAL_SCENARIOS + 
-    COUPLE_HANDJOB_SCENARIOS + 
-    COUPLE_SEX_SCENARIOS + 
-    COUPLE_TITJOB_SCENARIOS + 
+    SOLO_FEMALE_SCENARIOS +
+    SOLO_MALE_SCENARIOS +
+    COUPLE_ORAL_SCENARIOS +
+    COUPLE_HANDJOB_SCENARIOS +
+    COUPLE_SEX_SCENARIOS +
+    COUPLE_TITJOB_SCENARIOS +
     CUMSHOT_SCENARIOS +
     THREESOME_SCENARIOS +
     LESBIAN_SCENARIOS
@@ -208,7 +209,7 @@ ALL_SCENARIOS = (
 # --- TECHNICAL PARAMETERS ---
 SAMPLERS = [
     "dpmpp_2m_sde",
-    "dpmpp_2m", 
+    "dpmpp_2m",
     "euler_ancestral",
     "euler",
     "dpmpp_sde",
@@ -219,7 +220,7 @@ SAMPLERS = [
 
 SCHEDULERS = [
     "karras",
-    "normal", 
+    "normal",
     "exponential",
     "sgm_uniform",
 ]
@@ -306,22 +307,22 @@ class ExperimentConfig:
     """Complete configuration for a single experiment."""
     experiment_id: str
     timestamp: str
-    
+
     # Subject details
     ethnicity: str
     body_type: str
     age_range: str
     subject_prompt: str
-    
+
     # Scenario details
     scenario_name: str
     scenario_category: str
     scenario_prompt_template: str
-    
+
     # Setting
     setting_name: str
     setting_description: str
-    
+
     # Technical parameters
     sampler: str
     scheduler: str
@@ -329,22 +330,22 @@ class ExperimentConfig:
     steps_category: str
     cfg: float
     cfg_category: str
-    
+
     # LoRA configuration
     lora_preset_name: str
     loras: List[Tuple[str, float]]
-    
+
     # Final prompts
     full_positive_prompt: str
     full_negative_prompt: str
-    
+
     # Output
     output_filename: str
     workflow_file: str = "workflows/pony-realism.json"
-    
+
     def to_dict(self):
         return asdict(self)
-    
+
     def generate_hash(self) -> str:
         """Generate unique hash for this configuration."""
         key_params = f"{self.scenario_name}_{self.ethnicity}_{self.sampler}_{self.steps}_{self.cfg}_{self.lora_preset_name}"
@@ -377,7 +378,7 @@ def build_full_prompt(scenario: dict, subject: str, setting: dict) -> str:
     base_prompt = scenario["prompt"]
     base_prompt = base_prompt.replace("{subject}", subject)
     base_prompt = base_prompt.replace("{setting}", setting["desc"])
-    
+
     return f"{QUALITY_PREFIX}, {base_prompt}, {QUALITY_SUFFIX}"
 
 
@@ -385,10 +386,10 @@ def generate_experiment_configs(count: int, seed: int = None) -> List[Experiment
     """Generate a diverse set of experiment configurations."""
     if seed:
         random.seed(seed)
-    
+
     configs = []
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    
+
     # Ensure we cover all scenario categories proportionally
     scenario_weights = {
         "solo_female": 0.15,
@@ -401,45 +402,45 @@ def generate_experiment_configs(count: int, seed: int = None) -> List[Experiment
         "threesome": 0.05,
         "lesbian": 0.05,
     }
-    
+
     # Generate target counts per category
     category_counts = {cat: int(count * weight) for cat, weight in scenario_weights.items()}
-    
+
     # Fill remaining slots
     remaining = count - sum(category_counts.values())
     for _ in range(remaining):
         cat = random.choice(list(scenario_weights.keys()))
         category_counts[cat] += 1
-    
+
     exp_num = 0
     for category, cat_count in category_counts.items():
         # Get scenarios for this category
         category_scenarios = [s for s in ALL_SCENARIOS if s.get("category") == category]
         if not category_scenarios:
             continue
-            
-        for i in range(cat_count):
+
+        for _i in range(cat_count):
             scenario = random.choice(category_scenarios)
             ethnicity = random.choice(ETHNICITIES)
             body_type = random.choice(BODY_TYPES)
             age = random.choice(AGES)
             setting = random.choice(SETTINGS)
-            
+
             # Technical parameters with some bias toward proven good values
             sampler = random.choice(SAMPLERS)
             scheduler = random.choice(SCHEDULERS)
             steps, steps_cat = random.choice(STEP_RANGES)
             cfg, cfg_cat = random.choice(CFG_RANGES)
-            
+
             # LoRA preset based on category
             available_presets = CATEGORY_LORA_MAPPING.get(category, ["realism_basic"])
             lora_preset_name = random.choice(available_presets)
             loras = LORA_PRESETS[lora_preset_name]
-            
+
             # Build prompts
             subject_prompt = build_subject_prompt(ethnicity, body_type, age)
             full_prompt = build_full_prompt(scenario, subject_prompt, setting)
-            
+
             # Create config
             config = ExperimentConfig(
                 experiment_id=f"exp_{exp_num:04d}",
@@ -465,13 +466,13 @@ def generate_experiment_configs(count: int, seed: int = None) -> List[Experiment
                 full_negative_prompt=BASE_NEGATIVE,
                 output_filename=f"{timestamp}_exp_{exp_num:04d}_{scenario['name']}_{ethnicity['name']}.png",
             )
-            
+
             configs.append(config)
             exp_num += 1
-    
+
     # Shuffle to mix categories
     random.shuffle(configs)
-    
+
     return configs
 
 
@@ -481,13 +482,13 @@ def generate_experiment_configs(count: int, seed: int = None) -> List[Experiment
 
 def run_single_experiment(config: ExperimentConfig) -> ExperimentResult:
     """Run a single experiment and return results."""
-    import time
     import re
-    
+    import time
+
     start_time = time.time()
-    
+
     output_path = OUTPUT_DIR / config.output_filename
-    
+
     cmd = [
         sys.executable, str(GENERATE_PY),
         "--workflow", config.workflow_file,
@@ -499,11 +500,11 @@ def run_single_experiment(config: ExperimentConfig) -> ExperimentResult:
         "--scheduler", config.scheduler,
         "--output", str(output_path),
     ]
-    
+
     # Add LoRAs
     for lora_name, lora_strength in config.loras:
         cmd.extend(["--lora", f"{lora_name}:{lora_strength}"])
-    
+
     try:
         result = subprocess.run(
             cmd,
@@ -512,15 +513,15 @@ def run_single_experiment(config: ExperimentConfig) -> ExperimentResult:
             text=True,
             timeout=900,
         )
-        
+
         elapsed = time.time() - start_time
-        
+
         # Parse output
         output = result.stdout + result.stderr
         minio_url = None
         validation_score = None
         passed = False
-        
+
         for line in output.split("\n"):
             if "http://192.168.1.215:9000/comfy-gen/" in line and ".png" in line and ".json" not in line:
                 match = re.search(r'(http://192\.168\.1\.215:9000/comfy-gen/[^\s]+\.png)', line)
@@ -533,7 +534,7 @@ def run_single_experiment(config: ExperimentConfig) -> ExperimentResult:
                     pass
             if "Validation: PASSED" in line:
                 passed = True
-        
+
         return ExperimentResult(
             config=config,
             success=result.returncode == 0,
@@ -543,7 +544,7 @@ def run_single_experiment(config: ExperimentConfig) -> ExperimentResult:
             generation_time_seconds=elapsed,
             error_message=result.stderr[-300:] if result.returncode != 0 else None,
         )
-        
+
     except subprocess.TimeoutExpired:
         return ExperimentResult(
             config=config,
@@ -569,7 +570,7 @@ def run_single_experiment(config: ExperimentConfig) -> ExperimentResult:
 def save_experiment_metadata(config: ExperimentConfig, result: ExperimentResult):
     """Save complete metadata for an experiment."""
     METADATA_DIR.mkdir(parents=True, exist_ok=True)
-    
+
     metadata = {
         "config": config.to_dict(),
         "result": {
@@ -581,7 +582,7 @@ def save_experiment_metadata(config: ExperimentConfig, result: ExperimentResult)
             "error_message": result.error_message,
         }
     }
-    
+
     metadata_path = METADATA_DIR / f"{config.experiment_id}.json"
     with open(metadata_path, "w") as f:
         json.dump(metadata, f, indent=2)
@@ -607,17 +608,17 @@ def log_to_mlflow(config: ExperimentConfig, result: ExperimentResult):
         mlflow.log_param("lora_preset", config.lora_preset_name)
         mlflow.log_param("loras", str([l[0] for l in config.loras]))
         mlflow.log_param("workflow", config.workflow_file)
-        
+
         # Log prompts (truncated for MLflow limits)
         mlflow.log_param("prompt_preview", config.full_positive_prompt[:500])
-        
+
         # Log results as metrics
         mlflow.log_metric("success", 1 if result.success else 0)
         mlflow.log_metric("generation_time", result.generation_time_seconds)
         if result.validation_score is not None:
             mlflow.log_metric("validation_score", result.validation_score)
         mlflow.log_metric("validation_passed", 1 if result.validation_passed else 0)
-        
+
         # Log URL and metadata as tags
         if result.minio_url:
             mlflow.set_tag("minio_url", result.minio_url)
@@ -631,72 +632,72 @@ def log_to_mlflow(config: ExperimentConfig, result: ExperimentResult):
 
 def main():
     import argparse
-    
+
     parser = argparse.ArgumentParser(description="Massive experiment framework")
     parser.add_argument("--count", type=int, default=250, help="Number of experiments")
     parser.add_argument("--seed", type=int, default=42, help="Random seed for reproducibility")
     parser.add_argument("--dry-run", action="store_true", help="Preview without running")
     parser.add_argument("--start-from", type=int, default=0, help="Start from experiment N")
     args = parser.parse_args()
-    
+
     print("=" * 70)
     print("MASSIVE EXPERIMENT FRAMEWORK")
     print("=" * 70)
-    
+
     # Generate experiment configs
     print(f"\n[INFO] Generating {args.count} experiment configurations...")
     configs = generate_experiment_configs(args.count, seed=args.seed)
-    
+
     # Print statistics
     categories = {}
     ethnicities = {}
     settings = {}
     lora_presets = {}
-    
+
     for c in configs:
         categories[c.scenario_category] = categories.get(c.scenario_category, 0) + 1
         ethnicities[c.ethnicity] = ethnicities.get(c.ethnicity, 0) + 1
         settings[c.setting_name] = settings.get(c.setting_name, 0) + 1
         lora_presets[c.lora_preset_name] = lora_presets.get(c.lora_preset_name, 0) + 1
-    
-    print(f"\n[STATS] Category distribution:")
+
+    print("\n[STATS] Category distribution:")
     for cat, count in sorted(categories.items(), key=lambda x: -x[1]):
         print(f"  {cat}: {count} ({100*count/len(configs):.1f}%)")
-    
-    print(f"\n[STATS] Top ethnicities:")
+
+    print("\n[STATS] Top ethnicities:")
     for eth, count in sorted(ethnicities.items(), key=lambda x: -x[1])[:10]:
         print(f"  {eth}: {count}")
-    
-    print(f"\n[STATS] LoRA presets:")
+
+    print("\n[STATS] LoRA presets:")
     for preset, count in sorted(lora_presets.items(), key=lambda x: -x[1]):
         print(f"  {preset}: {count}")
-    
+
     estimated_time = len(configs) * 90 / 3600  # ~90 seconds per image
     print(f"\n[INFO] Estimated runtime: {estimated_time:.1f} hours")
-    
+
     if args.dry_run:
         print("\n[DRY RUN] Sample experiments:")
         for i, c in enumerate(configs[:20]):
             loras = "+".join([l[0].split(".")[0][:10] for l in c.loras])
             print(f"  {i+1}. {c.scenario_name} | {c.ethnicity} | {c.setting_name} | {c.sampler} s={c.steps} | {loras}")
         return
-    
+
     # Setup
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     METADATA_DIR.mkdir(parents=True, exist_ok=True)
-    
+
     mlflow.set_tracking_uri(MLFLOW_URI)
     mlflow.set_experiment(EXPERIMENT_NAME)
-    
+
     # Run experiments
     results = []
     start_idx = args.start_from
-    
+
     print(f"\n[INFO] Starting from experiment {start_idx}")
     print(f"[INFO] Output directory: {OUTPUT_DIR}")
     print(f"[INFO] Metadata directory: {METADATA_DIR}")
     print("-" * 70)
-    
+
     for i, config in enumerate(configs[start_idx:], start=start_idx):
         print(f"\n[{i+1}/{len(configs)}] {config.experiment_id}: {config.scenario_name}")
         print(f"  Subject: {config.ethnicity} {config.body_type} {config.age_range}")
@@ -704,19 +705,19 @@ def main():
         print(f"  Tech: {config.sampler} s={config.steps} cfg={config.cfg} sched={config.scheduler}")
         lora_str = "+".join([f"{l[0].split('.')[0][:12]}@{l[1]}" for l in config.loras])
         print(f"  LoRAs: {lora_str}")
-        
+
         result = run_single_experiment(config)
         results.append(result)
-        
+
         # Save metadata immediately
         save_experiment_metadata(config, result)
-        
+
         # Log to MLflow
         try:
             log_to_mlflow(config, result)
         except Exception as e:
             print(f"  [WARN] MLflow logging failed: {e}")
-        
+
         # Print result
         status = "[OK]" if result.success else "[FAIL]"
         time_str = f"{result.generation_time_seconds:.1f}s"
@@ -726,7 +727,7 @@ def main():
             print(f"  URL: {result.minio_url}")
         if result.error_message:
             print(f"  Error: {result.error_message[:100]}")
-        
+
         # Progress update every 25 images
         if (i + 1) % 25 == 0:
             success_count = sum(1 for r in results if r.success)
@@ -734,36 +735,36 @@ def main():
             remaining = len(configs) - i - 1
             eta_hours = (remaining * avg_time) / 3600
             print(f"\n  >>> Progress: {i+1}/{len(configs)} | Success: {success_count}/{len(results)} | ETA: {eta_hours:.1f}h <<<\n")
-    
+
     # Final summary
     print("\n" + "=" * 70)
     print("MASSIVE EXPERIMENT COMPLETE")
     print("=" * 70)
-    
+
     total = len(results)
     successes = sum(1 for r in results if r.success)
     scores = [r.validation_score for r in results if r.validation_score]
     total_time = sum(r.generation_time_seconds for r in results)
-    
+
     print(f"\nTotal experiments: {total}")
     print(f"Successful: {successes} ({100*successes/total:.1f}%)")
     print(f"Failed: {total - successes}")
     print(f"Total time: {total_time/3600:.2f} hours")
     print(f"Average time per image: {total_time/total:.1f} seconds")
-    
+
     if scores:
-        print(f"\nValidation scores:")
+        print("\nValidation scores:")
         print(f"  Average: {sum(scores)/len(scores):.3f}")
         print(f"  Best: {max(scores):.3f}")
         print(f"  Worst: {min(scores):.3f}")
-    
+
     # Category breakdown
-    print(f"\nSuccess by category:")
+    print("\nSuccess by category:")
     for cat in sorted(set(c.scenario_category for c in configs)):
         cat_results = [r for r in results if r.config.scenario_category == cat]
         cat_success = sum(1 for r in cat_results if r.success)
         print(f"  {cat}: {cat_success}/{len(cat_results)} ({100*cat_success/len(cat_results):.0f}%)")
-    
+
     print(f"\nMetadata saved to: {METADATA_DIR}")
     print(f"MLflow experiment: {EXPERIMENT_NAME}")
     print(f"MLflow UI: {MLFLOW_URI}")
