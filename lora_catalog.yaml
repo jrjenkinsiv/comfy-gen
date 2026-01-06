@@ -589,6 +589,79 @@ loras:
     civitai_verified: true
     notes: "Use 'povfellatio' trigger for POV oral shots."
 
+  # ========================================
+  # SDXL/Pony NSFW LoRAs (2026-01 Update)
+  # ========================================
+  # These LoRAs work with SDXL-based models: Pony Diffusion V6, Pony Realism V2.2
+  # CRITICAL: These are INCOMPATIBLE with SD 1.5 and Wan 2.2 Video models!
+  # 
+  # WINNING COMBO DISCOVERED 2026-01-05:
+  #   Checkpoint: ponyRealism_V22.safetensors
+  #   LoRA 1: zy_AmateurStyle_v2.safetensors (0.6-1.0)
+  #   LoRA 2: realcumv6.55.safetensors (0.7-0.8) - for cumshots only
+  #   Settings: Steps 25-50, CFG 6, dpmpp_2m_sde, karras
+  #
+  # Quality tags for Pony: score_9, score_8_up, score_7_up, rating_explicit
+  # Style tags for Amateur: photo, grainy, amateur, 2000s nostalgia, webcam photo
+  
+  - filename: "zy_AmateurStyle_v2.safetensors"
+    tags: ["nsfw", "adult", "pony", "sdxl", "amateur", "photo", "realistic", "style", "image"]
+    base_model: "Pony"  # CivitAI ID 480835
+    compatible_with: ["ponyRealism_V22.safetensors", "ponyDiffusionV6XL_v6StartWithThisOne.safetensors"]
+    recommended_strength: 0.8  # Range: 0.6-1.0, vary for diversity
+    description: "Amateur webcam/photo aesthetic - BEST combo with Pony Realism for photorealistic NSFW"
+    trigger_words: ["photo", "grainy", "amateur", "lowres", "2000s nostalgia", "webcam photo", "flash"]
+    category: "nsfw"
+    civitai_id: 480835
+    civitai_verified: true
+    notes: |
+      BEST RESULTS: Combine with Pony Realism V2.2 checkpoint.
+      Use strength 0.6-1.0 and vary for diversity.
+      Include trigger words in positive prompt: "photo, grainy, amateur, 2000s nostalgia, webcam photo"
+      Quality tags: "score_9, score_8_up, score_7_up, rating_explicit"
+      Settings: Steps 25-50, CFG 6, sampler: dpmpp_2m_sde, scheduler: karras
+      
+  - filename: "realcumv6.55.safetensors"
+    tags: ["nsfw", "adult", "sdxl", "pony", "cum", "cumshot", "facial", "ejaculation", "image"]
+    base_model: "SDXL 1.0"  # CivitAI ID 326320, works with Pony (SDXL-based)
+    compatible_with: ["ponyRealism_V22.safetensors", "ponyDiffusionV6XL_v6StartWithThisOne.safetensors"]
+    recommended_strength: 0.7  # Range: 0.6-0.8
+    description: "Realistic cum/ejaculation for SDXL/Pony - enhances cumshot scenes"
+    trigger_words: []  # No specific triggers - just enhances cum rendering
+    category: "nsfw"
+    civitai_id: 326320
+    civitai_version_id: 2162733
+    civitai_verified: true
+    notes: |
+      Use for cumshot/facial/creampie scenes.
+      Stack with Amateur LoRA: zy_AmateurStyle_v2.safetensors:0.8 + realcumv6.55.safetensors:0.7
+      Prompt additions: "(cum on face:1.5), (facial:1.4), (thick cum:1.3), (cum dripping:1.2)"
+      
+  - filename: "Pale_Skin_SDXL_v1.0.safetensors"
+    tags: ["skin", "pale", "sdxl", "pony", "enhancement", "image"]
+    base_model: "SDXL 1.0"  # CivitAI ID 408526
+    compatible_with: ["ponyRealism_V22.safetensors", "ponyDiffusionV6XL_v6StartWithThisOne.safetensors"]
+    recommended_strength: 0.4  # Range: 0.3-0.5 - subtle enhancement
+    description: "Pale skin enhancement for variety in skin tones"
+    trigger_words: ["pale skin"]
+    category: "enhancement"
+    civitai_id: 408526
+    civitai_verified: true
+    notes: |
+      Use sparingly (0.3-0.5) for subtle skin tone variation.
+      Stack with Amateur LoRA for realistic pale skin look.
+
+  - filename: "ruined_orgasm_pony.safetensors"
+    tags: ["nsfw", "adult", "pony", "sdxl", "orgasm", "image"]
+    base_model: "Pony"
+    compatible_with: ["ponyRealism_V22.safetensors", "ponyDiffusionV6XL_v6StartWithThisOne.safetensors"]
+    recommended_strength: 0.7  # Range: 0.5-0.8
+    description: "Orgasm expressions for Pony models"
+    trigger_words: ["ruined_orgasm"]
+    category: "nsfw"
+    civitai_verified: false
+    notes: "Use trigger word 'ruined_orgasm' for effect."
+
   # --- Flux.1 NSFW LoRAs ---
   # Flux models are censored by default - these LoRAs unlock NSFW generation
   
