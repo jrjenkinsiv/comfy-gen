@@ -83,6 +83,18 @@ magneto (git push) --> GitHub --> ant-man (runner) --> moira (ComfyUI)
 | moira | ComfyUI + MinIO + GPU (RTX 5090) | 192.168.1.215 |
 | ant-man | GitHub Actions runner (ARM64) | 192.168.1.253 |
 
+**Machine Credentials (for sudo operations):**
+| Machine | User | Sudo Password |
+|---------|------|---------------|
+| cerebro | jrjenkinsiv | `babyseal` |
+| moira | jrjen | N/A (Windows) |
+
+**Cerebro Server Configuration:**
+Cerebro is a headless server - it must NOT sleep. If MLflow becomes unreachable, SSH in and run:
+```bash
+ssh cerebro 'printf "babyseal\n" | sudo -S pmset -a displaysleep 0 sleep 0 disksleep 0 powernap 0'
+```
+
 **Service Ports on cerebro:**
 | Service | Port | URL |
 |---------|------|-----|
