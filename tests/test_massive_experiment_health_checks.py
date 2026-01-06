@@ -7,6 +7,7 @@ import sys
 import unittest
 from unittest.mock import patch, MagicMock
 from pathlib import Path
+from requests.exceptions import RequestException
 
 # Add scripts directory to path
 scripts_dir = Path(__file__).parent.parent / "scripts"
@@ -52,7 +53,6 @@ class TestHealthCheckFunctions(unittest.TestCase):
     @patch('massive_experiment_framework.requests.get')
     def test_check_comfyui_health_failure(self, mock_get):
         """Test ComfyUI health check returns False when not healthy."""
-        from requests.exceptions import RequestException
         mock_get.side_effect = RequestException("Connection refused")
         
         result = massive_experiment_framework.check_comfyui_health()
@@ -76,7 +76,6 @@ class TestHealthCheckFunctions(unittest.TestCase):
     @patch('massive_experiment_framework.requests.get')
     def test_check_minio_health_failure(self, mock_get):
         """Test MinIO health check returns False when not healthy."""
-        from requests.exceptions import RequestException
         mock_get.side_effect = RequestException("Connection refused")
         
         result = massive_experiment_framework.check_minio_health()
@@ -127,7 +126,7 @@ class TestHealthCheckFunctions(unittest.TestCase):
     ):
         """Test health check with retry succeeds on second attempt."""
         # First call fails, second succeeds
-        mock_comfyui.side_effect = [False, True, True]
+        mock_comfyui.side_effect = [False, True]
         mock_minio.return_value = True
         
         success, message = massive_experiment_framework.run_health_checks_with_retry()

@@ -40,7 +40,9 @@ METADATA_DIR = OUTPUT_DIR / "metadata"
 
 # Health check configuration
 COMFYUI_URL = "http://192.168.1.215:8188"
+COMFYUI_HEALTH_ENDPOINT = "/system_stats"
 MINIO_URL = "http://192.168.1.215:9000"
+MINIO_HEALTH_ENDPOINT = "/minio/health/live"
 HEALTH_CHECK_TIMEOUT = 5
 HEALTH_CHECK_RETRIES = 3
 HEALTH_CHECK_RETRY_DELAY = 30
@@ -318,7 +320,7 @@ def check_comfyui_health() -> bool:
         True if server is healthy, False otherwise
     """
     try:
-        response = requests.get(f"{COMFYUI_URL}/system_stats", timeout=HEALTH_CHECK_TIMEOUT)
+        response = requests.get(f"{COMFYUI_URL}{COMFYUI_HEALTH_ENDPOINT}", timeout=HEALTH_CHECK_TIMEOUT)
         return response.status_code == 200
     except requests.RequestException:
         return False
@@ -331,7 +333,7 @@ def check_minio_health() -> bool:
         True if server is healthy, False otherwise
     """
     try:
-        response = requests.get(f"{MINIO_URL}/minio/health/live", timeout=HEALTH_CHECK_TIMEOUT)
+        response = requests.get(f"{MINIO_URL}{MINIO_HEALTH_ENDPOINT}", timeout=HEALTH_CHECK_TIMEOUT)
         return response.status_code == 200
     except requests.RequestException:
         return False
@@ -754,8 +756,8 @@ def main():
             print(f"[ERROR] {message}")
             print("[ERROR] Cannot start experiments with services down")
             print("[INFO] Please ensure ComfyUI and MinIO are running:")
-            print(f"[INFO]   ComfyUI: {COMFYUI_URL}/system_stats")
-            print(f"[INFO]   MinIO:   {MINIO_URL}/minio/health/live")
+            print(f"[INFO]   ComfyUI: {COMFYUI_URL}{COMFYUI_HEALTH_ENDPOINT}")
+            print(f"[INFO]   MinIO:   {MINIO_URL}{MINIO_HEALTH_ENDPOINT}")
             sys.exit(1)
         
         print("-" * 70)
@@ -806,14 +808,6 @@ def main():
     
     mlflow.set_tracking_uri(MLFLOW_URI)
     mlflow.set_experiment(EXPERIMENT_NAME)
-    
-    # Log initial health check if pre-flight was run
-    if args.pre_flight:
-        try:
-            with mlflow.start_run(run_name=f"health_check_{datetime.now().strftime('%Y%m%d_%H%M%S')}"):
-                log_health_check_to_mlflow(True, "Pre-flight checks passed")
-        except Exception as e:
-            print(f"  [WARN] Failed to log pre-flight check to MLflow: {e}")
     
     # Run experiments
     results = []
