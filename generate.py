@@ -1987,6 +1987,7 @@ def main():
     parser.add_argument("--no-validate", action="store_true", help="Disable validation even if config enables it")
     parser.add_argument("--validate-person-count", action="store_true", help="Validate person count using YOLO (requires --validate)")
     parser.add_argument("--validate-pose", action="store_true", help="Validate pose estimation (skeleton coherence) using MediaPipe (requires --validate)")
+    parser.add_argument("--validate-content", action="store_true", help="Validate image content against prompt using vision model (BLIP-2)")
     parser.add_argument("--auto-retry", action="store_true", help="Automatically retry if validation fails (default: from config)")
     parser.add_argument("--retry-limit", type=int, default=None, help="Maximum retry attempts (default: from config or 3)")
     parser.add_argument("--positive-threshold", type=float, default=None, help="Minimum CLIP score for positive prompt (default: from config or 0.25)")
@@ -2021,12 +2022,17 @@ def main():
     
     args = parser.parse_args()
     
-    # Enforce --validate when --validate-person-count or --validate-pose is used
-    if (args.validate_person_count or args.validate_pose) and not args.validate:
+    # Enforce --validate when --validate-person-count, --validate-pose, or --validate-content is used
+    if (args.validate_person_count or args.validate_pose or args.validate_content) and not args.validate:
         # Automatically enable validation when specialized validation is requested
         args.validate = True
         if not args.quiet:
-            flag_name = "--validate-person-count" if args.validate_person_count else "--validate-pose"
+            if args.validate_person_count:
+                flag_name = "--validate-person-count"
+            elif args.validate_pose:
+                flag_name = "--validate-pose"
+            else:
+                flag_name = "--validate-content"
             print(f"[INFO] Auto-enabling --validate because {flag_name} was specified")
     
     # Load configuration for defaults
@@ -2730,6 +2736,34 @@ def main():
                     except ImportError as e:
                         print(f"[WARN] Pose validation unavailable: {e}")
                         print(f"[WARN] Install with: pip install mediapipe opencv-python")
+                
+                # Run content validation if requested
+                if args.validate_content:
+                    try:
+                        from comfy_gen.content_validator import validate_content
+                        
+                        content_result = validate_content(args.output, args.prompt)
+                        
+                        print(f"[INFO] Content validation: {content_result['reason']}")
+                        if content_result.get('caption'):
+                            print(f"[INFO] Image caption: {content_result['caption']}")
+                        if content_result.get('issues'):
+                            for issue in content_result['issues']:
+                                print(f"[WARN] Content issue: {issue}")
+                        
+                        # Add content results to main validation result
+                        validation_result['content_valid'] = content_result.get('valid', True)
+                        validation_result['content_caption'] = content_result.get('caption')
+                        validation_result['content_issues'] = content_result.get('issues', [])
+                        validation_result['content_reason'] = content_result.get('reason')
+                        
+                        # Fail validation if content validation fails
+                        if not content_result.get('valid', True):
+                            validation_result['passed'] = False
+                            validation_result['reason'] = f"Content validation failed: {content_result.get('reason', 'Unknown')}"
+                    except ImportError as e:
+                        print(f"[WARN] Content validation unavailable: {e}")
+                        print(f"[WARN] Install with: pip install transformers torch")
                 
                 if validation_result['passed']:
                     if not args.quiet:

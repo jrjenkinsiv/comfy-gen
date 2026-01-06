@@ -542,6 +542,86 @@ python3 comfy_gen/pose_validation.py /path/to/image.png 2 --visualize annotated.
 
 ---
 
+### Content Validation
+
+Content validation uses a vision-language model (BLIP) to verify that generated images match the prompt semantically. This catches issues that CLIP similarity scores alone cannot detect:
+- Subject count mismatches (expected 2 people, got 1)
+- Missing colors (expected "red dress", dress is actually blue)
+- Missing attributes (expected "standing", person is sitting)
+
+**How It Works:**
+1. Extracts key elements from prompt (subject count, colors, attributes)
+2. Generates a caption of the image using BLIP
+3. Asks specific VQA questions about expected elements
+4. Reports which elements match/mismatch
+
+```bash
+# Basic content validation
+python3 generate.py \
+    --workflow workflows/flux-dev.json \
+    --prompt "two women in red dresses standing in a garden" \
+    --output /tmp/women.png \
+    --validate-content
+
+# Combine with other validations
+python3 generate.py \
+    --workflow workflows/flux-dev.json \
+    --prompt "solo woman standing, full body, blue dress" \
+    --output /tmp/test.png \
+    --validate --validate-pose --validate-content --auto-retry
+```
+
+**Installation:**
+```bash
+pip install transformers torch
+```
+
+Note: BLIP models (~1-1.5GB each) are downloaded on first use. The captioning model and VQA model are cached separately.
+
+**Elements Validated:**
+| Element | How It's Checked |
+|---------|------------------|
+| Subject count | VQA: "How many people are in this image?" |
+| Colors | VQA: "Is there anything {color} in this image?" |
+| Attributes | VQA: "Is there {attribute} in this image?" |
+
+**Supported Prompt Elements:**
+- **Counts:** solo, single, one, two, pair, couple, three, group, many
+- **Subject types:** woman, man, person, people, girl, boy, figure
+- **Colors:** red, blue, green, yellow, orange, purple, pink, black, white, brown, gray, golden, silver
+- **Attributes:** standing, sitting, lying, walking, running, dancing, dress, shirt, pants, etc.
+
+**Example Output:**
+```
+[INFO] Loading BLIP caption model on cpu...
+[OK] BLIP caption model loaded
+[INFO] Loading BLIP VQA model on cpu...
+[OK] BLIP VQA model loaded
+[INFO] Content validation: Valid: True
+[INFO] Caption: a woman in a blue dress standing in a garden
+[INFO] Checks passed: subject_count (1), colors (blue), attributes (standing)
+```
+
+**Mismatch Example:**
+```
+[INFO] Content validation: Valid: False
+[INFO] Caption: a man with a white shirt
+[INFO] Issues: Subject count mismatch: expected 2, detected 1
+[INFO] Issues: Expected color 'red' not clearly visible
+```
+
+**Standalone Testing:**
+```bash
+# Test content validation directly
+python3 -c "
+from comfy_gen.content_validator import validate_content
+result = validate_content('/path/to/image.png', 'your prompt here')
+print(result)
+"
+```
+
+---
+
 ### Quality Scoring
 
 ComfyGen includes multi-dimensional quality assessment using pyiqa for comprehensive image quality analysis.
