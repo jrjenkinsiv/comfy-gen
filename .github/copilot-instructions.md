@@ -371,24 +371,122 @@ MLflow Server: http://192.168.1.162:5001
 - `lora_catalog.yaml` - LoRA metadata ONLY (tags, compatibility, triggers)
 - `prompt_catalog.yaml` - Prompt templates ONLY (no test results)
 
-**DO** log experiments to MLflow:
-- Use `mlflow.log_param()` for: checkpoint, LoRAs, strengths, CFG, steps
-- Use `mlflow.log_metric()` for: validation_score, user_rating (1-5)
-- Use `mlflow.log_artifact()` for: generated image file
-- Tag with: `user_feedback` for qualitative notes
+#### Using the Standardized Logger (REQUIRED)
 
-**Quick MLflow logging (Python):**
+**ALWAYS use `comfy_gen/mlflow_logger.py` for logging experiments.** This ensures comprehensive parameter capture.
+
 ```python
-import mlflow
-mlflow.set_tracking_uri("http://192.168.1.162:5001")
-mlflow.set_experiment("comfy-gen-nsfw")
+from comfy_gen.mlflow_logger import log_experiment, log_favorite, log_batch
 
-with mlflow.start_run(run_name="redhead_handjob_v1"):
-    mlflow.log_params({"checkpoint": "pornmasterProPony", "loras": "add_detail:0.4,realcum:0.6"})
-    mlflow.log_metric("validation_score", 0.67)
-    mlflow.log_metric("user_rating", 4)
-    mlflow.set_tag("user_feedback", "Cock looks real, expression good")
-    mlflow.log_artifact("/tmp/output.png")
+# Log a single experiment with COMPLETE params
+log_experiment(
+    run_name="redhead_handjob_v1",
+    image_url="http://192.168.1.215:9000/comfy-gen/20260106_123456_output.png",
+    params={
+        # REQUIRED params (will warn if missing)
+        "checkpoint": "pornmasterProPony_realismV1",
+        "workflow": "pornmaster-pony-stacked-realism.json",
+        "steps": 70,
+        "cfg": 9.0,
+        "width": 768,
+        "height": 1280,
+        "sampler": "euler_ancestral",
+        "scheduler": "normal",
+        "seed": 12345,  # -1 if random
+        
+        # LoRAs (will auto-parse into individual params)
+        "loras": "add_detail:0.4,more_details:0.3,Pale_Skin_SDXL:0.4,realcumv6.55:0.6,airoticart_penis:0.5",
+        
+        # Subject params
+        "ethnicity": "redhead",
+        "hair_color": "auburn",
+        "cup_size": "DD",
+        "expression": "seductive",
+        "body_type": "athletic",
+        
+        # Scene params
+        "scene": "handjob_pov",
+        "setting": "bedroom",
+        "lighting": "soft natural",
+        "camera_angle": "pov",
+        
+        # Session metadata
+        "session": "2026-01-06",
+        
+        # FULL prompts (CRITICAL - not truncated!)
+        "prompt": "score_9, score_8_up, (beautiful redhead woman:1.4), ...",
+        "negative_prompt": "score_6, bad quality, extra fingers, ...",
+    },
+    validation_score=0.67,
+    user_rating=4,
+    feedback="Cock looks real, expression good, lighting matches scene",
+)
+
+# Log a favorite (auto-sets 5/5 rating, goes to favorites experiment)
+log_favorite(
+    run_name="best_redhead_v1",
+    image_url="http://192.168.1.215:9000/comfy-gen/...",
+    params={...},
+    feedback="Benchmark reference - best realism achieved so far",
+)
+
+# Batch log multiple experiments
+experiments = [
+    {"run_name": "v1", "image_url": "...", "params": {...}, "user_rating": 3, "feedback": "..."},
+    {"run_name": "v2", "image_url": "...", "params": {...}, "user_rating": 4, "feedback": "..."},
+]
+log_batch(experiments, experiment_name="comfy-gen-nsfw-handjob")
+```
+
+#### Complete Parameter Schema
+
+The logger captures these params (see `comfy_gen/mlflow_logger.py` for full schema):
+
+| Category | Parameters | Notes |
+|----------|------------|-------|
+| **Model** | checkpoint, workflow | REQUIRED |
+| **Sampling** | steps, cfg, sampler, scheduler, seed | sampler/scheduler REQUIRED |
+| **Image** | width, height | REQUIRED |
+| **LoRAs** | loras (comma-separated), lora_count | Auto-parses individual strengths |
+| **Prompts** | prompt, negative_prompt, prompt_length | FULL text, not truncated |
+| **Subject** | ethnicity, hair_color, cup_size, expression, body_type, age_range | |
+| **Scene** | scene, setting, lighting, camera_angle | |
+| **Technical** | vae, clip_skip, denoise | |
+| **Metadata** | session, batch_id | |
+
+**Individual LoRA params:** When you pass `loras="add_detail:0.4,realcum:0.6"`, the logger auto-creates:
+- `lora_add_detail: 0.4`
+- `lora_realcum: 0.6`
+- `lora_count: 2`
+
+#### Metrics & Tags
+
+| Type | Field | Purpose |
+|------|-------|---------|
+| **Metric** | validation_score | Automated score 0-1 |
+| **Metric** | user_rating | Human rating 1-5 |
+| **Tag** | user_feedback | Qualitative notes |
+| **Tag** | image_url | MinIO URL |
+| **Tag** | image_filename | Filename only |
+| **Tag** | checkpoint | For filtering |
+| **Tag** | ethnicity | For filtering |
+| **Tag** | scene | For filtering |
+| **Tag** | favorite | "true" if marked favorite |
+
+#### MLflow Experiments
+
+| Experiment | Purpose |
+|------------|---------|
+| `comfy-gen-nsfw` | Default for general experiments |
+| `comfy-gen-nsfw-handjob` | Handjob-specific testing |
+| `comfy-gen-nsfw-favorites` | Favorites (auto-used by `log_favorite()`) |
+
+#### Health Check
+
+The logger auto-checks MLflow health. If it fails:
+```bash
+# Wake up cerebro (Mac mini tends to sleep)
+ssh cerebro 'printf "babyseal\n" | sudo -S pmset -a displaysleep 0 sleep 0 disksleep 0 powernap 0'
 ```
 
 **Why MLflow:**
@@ -396,6 +494,7 @@ with mlflow.start_run(run_name="redhead_handjob_v1"):
 - Compare runs side-by-side
 - Track what works across sessions
 - Single source of truth for feedback
+- Individual LoRA tracking for A/B testing
 
 **Directory Structure on moira:**
 ```
