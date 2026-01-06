@@ -768,9 +768,11 @@ curl http://192.168.1.215:9000/minio/health/live
 
 ### Credentials
 
-**Default credentials (local development):**
+**Default credentials (local development only):**
 - **Username:** `minioadmin`
 - **Password:** `minioadmin`
+
+**⚠️ WARNING:** These are the default MinIO credentials and should ONLY be used for local development. For production deployments, these credentials MUST be changed immediately using the `MINIO_ROOT_USER` and `MINIO_ROOT_PASSWORD` environment variables.
 
 These credentials are used by:
 - MinIO Console login (http://192.168.1.215:9001)
