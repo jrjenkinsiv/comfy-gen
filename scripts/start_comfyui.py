@@ -19,6 +19,22 @@ COMFYUI_PORT = 8188
 COMFYUI_URL = f"http://{COMFYUI_HOST}:{COMFYUI_PORT}"
 STARTUP_TIMEOUT = 60  # seconds
 
+
+def print_log_tail(log_file_path: str, num_lines: int = 20):
+    """Print last N lines of log file for debugging.
+
+    Args:
+        log_file_path: Path to log file
+        num_lines: Number of lines to print (default: 20)
+    """
+    print(f"[INFO] Last {num_lines} lines of {log_file_path}:")
+    print("-" * 60)
+    last_lines = read_last_n_lines(log_file_path, num_lines)
+    for line in last_lines:
+        print(line.rstrip())
+    print("-" * 60)
+
+
 def check_comfyui_health():
     """Check if ComfyUI API is responding.
 
@@ -41,22 +57,20 @@ def main():
     # Change to ComfyUI directory
     os.chdir(COMFYUI_PATH)
 
-    # Open log file
-    log_file = open(LOG_FILE, "w")
-
     # Start ComfyUI as a detached subprocess
     # DETACHED_PROCESS = 0x00000008
     # CREATE_NEW_PROCESS_GROUP = 0x00000200
     # CREATE_NO_WINDOW = 0x08000000
     creation_flags = 0x00000008 | 0x00000200 | 0x08000000
 
-    process = subprocess.Popen(
-        [PYTHON_PATH, "main.py", "--listen", "0.0.0.0", "--port", str(COMFYUI_PORT)],
-        stdout=log_file,
-        stderr=subprocess.STDOUT,
-        creationflags=creation_flags,
-        cwd=COMFYUI_PATH,
-    )
+    with open(LOG_FILE, "w") as log_file:
+        process = subprocess.Popen(
+            [PYTHON_PATH, "main.py", "--listen", "0.0.0.0", "--port", str(COMFYUI_PORT)],
+            stdout=log_file,
+            stderr=subprocess.STDOUT,
+            creationflags=creation_flags,
+            cwd=COMFYUI_PATH,
+        )
 
     print(f"[OK] ComfyUI process started with PID: {process.pid}")
     print(f"[INFO] Log file: {LOG_FILE}")
@@ -66,12 +80,7 @@ def main():
     if not wait_for_port(COMFYUI_HOST, COMFYUI_PORT, timeout=STARTUP_TIMEOUT):
         print(f"[ERROR] Port {COMFYUI_PORT} not listening after {STARTUP_TIMEOUT} seconds")
         print("[ERROR] ComfyUI failed to start")
-        print(f"[INFO] Last 20 lines of {LOG_FILE}:")
-        print("-" * 60)
-        last_lines = read_last_n_lines(LOG_FILE, 20)
-        for line in last_lines:
-            print(line.rstrip())
-        print("-" * 60)
+        print_log_tail(LOG_FILE)
         return 1
 
     print(f"[OK] Port {COMFYUI_PORT} is listening")
@@ -89,12 +98,7 @@ def main():
     # API didn't respond in time
     print(f"[ERROR] ComfyUI API not responding after {STARTUP_TIMEOUT} seconds")
     print("[ERROR] Port is listening but API is not healthy")
-    print(f"[INFO] Last 20 lines of {LOG_FILE}:")
-    print("-" * 60)
-    last_lines = read_last_n_lines(LOG_FILE, 20)
-    for line in last_lines:
-        print(line.rstrip())
-    print("-" * 60)
+    print_log_tail(LOG_FILE)
     return 1
 
 
