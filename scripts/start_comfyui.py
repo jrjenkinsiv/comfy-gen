@@ -63,14 +63,17 @@ def main():
     # CREATE_NO_WINDOW = 0x08000000
     creation_flags = 0x00000008 | 0x00000200 | 0x08000000
 
-    with open(LOG_FILE, "w") as log_file:
-        process = subprocess.Popen(
-            [PYTHON_PATH, "main.py", "--listen", "0.0.0.0", "--port", str(COMFYUI_PORT)],
-            stdout=log_file,
-            stderr=subprocess.STDOUT,
-            creationflags=creation_flags,
-            cwd=COMFYUI_PATH,
-        )
+    # Open log file for subprocess (must remain open for detached process)
+    # pylint: disable=consider-using-with
+    log_file = open(LOG_FILE, "w")  # noqa: SIM115
+
+    process = subprocess.Popen(
+        [PYTHON_PATH, "main.py", "--listen", "0.0.0.0", "--port", str(COMFYUI_PORT)],
+        stdout=log_file,
+        stderr=subprocess.STDOUT,
+        creationflags=creation_flags,
+        cwd=COMFYUI_PATH,
+    )
 
     print(f"[OK] ComfyUI process started with PID: {process.pid}")
     print(f"[INFO] Log file: {LOG_FILE}")

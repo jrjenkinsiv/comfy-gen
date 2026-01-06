@@ -77,11 +77,13 @@ class TestComfyUIUtils(unittest.TestCase):
         self.assertFalse(result)
 
     @patch("socket.socket")
-    def test_wait_for_port_success(self, mock_socket):
+    def test_wait_for_port_success(self, mock_socket_class):
         """Test wait_for_port returns True when port is available."""
         mock_sock = MagicMock()
         mock_sock.connect_ex.return_value = 0
-        mock_socket.return_value = mock_sock
+        mock_sock.__enter__ = MagicMock(return_value=mock_sock)
+        mock_sock.__exit__ = MagicMock(return_value=False)
+        mock_socket_class.return_value = mock_sock
 
         result = self.utils.wait_for_port("127.0.0.1", 8188, timeout=5)
         self.assertTrue(result)
