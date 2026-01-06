@@ -1,7 +1,9 @@
 """Common utilities for ComfyUI service management scripts."""
 
 import platform
+import socket
 import subprocess
+import time
 
 
 def find_comfyui_process():
@@ -36,3 +38,46 @@ def find_comfyui_process():
             return result.stdout.strip().split("\n")[0]
 
     return None
+
+
+def wait_for_port(host: str, port: int, timeout: int = 60) -> bool:
+    """Wait for a port to become available.
+
+    Args:
+        host: Hostname or IP address
+        port: Port number
+        timeout: Maximum time to wait in seconds (default: 60)
+
+    Returns:
+        bool: True if port is available within timeout, False otherwise
+    """
+    start_time = time.time()
+    while time.time() - start_time < timeout:
+        try:
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                sock.settimeout(1)
+                result = sock.connect_ex((host, port))
+                if result == 0:
+                    return True
+        except OSError:
+            pass
+        time.sleep(1)
+    return False
+
+
+def read_last_n_lines(filepath: str, n: int = 20) -> list:
+    """Read last N lines from a file.
+
+    Args:
+        filepath: Path to file
+        n: Number of lines to read from end (default: 20)
+
+    Returns:
+        list: Last N lines from the file, or empty list if file doesn't exist
+    """
+    try:
+        with open(filepath, encoding="utf-8", errors="ignore") as f:
+            lines = f.readlines()
+            return lines[-n:] if len(lines) >= n else lines
+    except (OSError, FileNotFoundError):
+        return []
