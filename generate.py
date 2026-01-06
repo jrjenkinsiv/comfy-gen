@@ -1940,6 +1940,7 @@ def main():
     parser.add_argument("--validate", action="store_true", help="Run validation after generation (default: from config)")
     parser.add_argument("--no-validate", action="store_true", help="Disable validation even if config enables it")
     parser.add_argument("--validate-person-count", action="store_true", help="Validate person count using YOLO (requires --validate)")
+    parser.add_argument("--validate-pose", action="store_true", help="Validate pose estimation (skeleton coherence) using MediaPipe (requires --validate)")
     parser.add_argument("--auto-retry", action="store_true", help="Automatically retry if validation fails (default: from config)")
     parser.add_argument("--retry-limit", type=int, default=None, help="Maximum retry attempts (default: from config or 3)")
     parser.add_argument("--positive-threshold", type=float, default=None, help="Minimum CLIP score for positive prompt (default: from config or 0.25)")
@@ -1969,12 +1970,13 @@ def main():
     
     args = parser.parse_args()
     
-    # Enforce --validate when --validate-person-count is used
-    if args.validate_person_count and not args.validate:
-        # Automatically enable validation when person count validation is requested
+    # Enforce --validate when --validate-person-count or --validate-pose is used
+    if (args.validate_person_count or args.validate_pose) and not args.validate:
+        # Automatically enable validation when specialized validation is requested
         args.validate = True
         if not args.quiet:
-            print("[INFO] Auto-enabling --validate because --validate-person-count was specified")
+            flag_name = "--validate-person-count" if args.validate_person_count else "--validate-pose"
+            print(f"[INFO] Auto-enabling --validate because {flag_name} was specified")
     
     # Load configuration for defaults
     config = load_config()
@@ -2609,6 +2611,34 @@ def main():
                                 print(f"[INFO] Expected persons: {validation_result['expected_person_count']}")
                         if validation_result.get('person_count_error'):
                             print(f"[WARN] Person count validation: {validation_result['person_count_error']}")
+                
+                # Run pose validation if requested
+                pose_result = None
+                if args.validate_pose:
+                    try:
+                        from comfy_gen.pose_validation import validate_pose
+                        from comfy_gen.validation import extract_expected_person_count
+                        
+                        expected_persons = extract_expected_person_count(args.prompt)
+                        pose_result = validate_pose(args.output, expected_persons=expected_persons)
+                        
+                        print(f"[INFO] Pose validation: {pose_result['reason']}")
+                        print(f"[INFO] Persons detected: {pose_result.get('person_count', 0)}")
+                        print(f"[INFO] Coherent poses: {pose_result.get('coherent_count', 0)}/{pose_result.get('person_count', 0)}")
+                        
+                        # Add pose results to main validation result
+                        validation_result['pose_valid'] = pose_result.get('valid', False)
+                        validation_result['pose_person_count'] = pose_result.get('person_count')
+                        validation_result['pose_coherent_count'] = pose_result.get('coherent_count')
+                        validation_result['pose_reason'] = pose_result.get('reason')
+                        
+                        # Fail validation if pose validation fails
+                        if not pose_result.get('valid', False):
+                            validation_result['passed'] = False
+                            validation_result['reason'] = f"Pose validation failed: {pose_result.get('reason', 'Unknown')}"
+                    except ImportError as e:
+                        print(f"[WARN] Pose validation unavailable: {e}")
+                        print(f"[WARN] Install with: pip install mediapipe opencv-python")
                 
                 if validation_result['passed']:
                     if not args.quiet:
