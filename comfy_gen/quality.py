@@ -19,12 +19,12 @@ Usage:
 
 import sys
 from pathlib import Path
-from typing import Dict, Optional, Any
+from typing import Any, Dict, Optional
 
 try:
+    import pyiqa
     import torch
     from PIL import Image
-    import pyiqa
 
     PYIQA_AVAILABLE = True
 except ImportError:
@@ -32,7 +32,7 @@ except ImportError:
 
 # Try to import CLIP for prompt adherence scoring
 try:
-    from transformers import CLIPProcessor, CLIPModel
+    from transformers import CLIPModel, CLIPProcessor
 
     CLIP_AVAILABLE = True
 except ImportError:
@@ -313,7 +313,7 @@ class QualityScorer:
 
         try:
             # Load image
-            image = Image.open(image_path).convert("RGB")
+            Image.open(image_path).convert("RGB")
 
             # Compute technical quality
             brisque_raw = float(self.brisque(image_path))
@@ -453,10 +453,10 @@ def main():
 
     # Print results
     print(f"\n{'=' * 60}")
-    print(f"Quality Assessment Results")
+    print("Quality Assessment Results")
     print(f"{'=' * 60}")
     print(f"\nOverall Grade: {result['grade']} (Composite Score: {result['composite_score']}/10)")
-    print(f"\nDimension Breakdown:")
+    print("\nDimension Breakdown:")
     print(f"  Technical Quality:    {result['technical']['brisque']:.2f}/10 (BRISQUE)")
     print(f"                        {result['technical']['niqe']:.2f}/10 (NIQE)")
     print(f"  Aesthetic Quality:    {result['aesthetic']:.2f}/10")
@@ -465,12 +465,12 @@ def main():
     if result.get("prompt_adherence"):
         print(f"  Prompt Adherence:     {result['prompt_adherence']['clip']:.2f}/10 (CLIP)")
 
-    print(f"\nGrade Scale:")
-    print(f"  A (8.0-10.0): Production ready")
-    print(f"  B (6.5-7.9):  Good, minor issues")
-    print(f"  C (5.0-6.4):  Acceptable")
-    print(f"  D (3.0-4.9):  Poor")
-    print(f"  F (0.0-2.9):  Failed")
+    print("\nGrade Scale:")
+    print("  A (8.0-10.0): Production ready")
+    print("  B (6.5-7.9):  Good, minor issues")
+    print("  C (5.0-6.4):  Acceptable")
+    print("  D (3.0-4.9):  Poor")
+    print("  F (0.0-2.9):  Failed")
     print(f"{'=' * 60}")
 
 

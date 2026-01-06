@@ -13,10 +13,10 @@ to compute similarity scores between the image and text prompts.
 Person count validation uses YOLO for object detection to count people in images.
 """
 
-import sys
 import re
-from typing import Dict, Optional, Any, TYPE_CHECKING
+import sys
 from pathlib import Path
+from typing import TYPE_CHECKING, Any, Dict, Optional
 
 if TYPE_CHECKING:
     import torch as torch_type
@@ -26,7 +26,7 @@ else:
 try:
     import torch
     from PIL import Image
-    from transformers import CLIPProcessor, CLIPModel
+    from transformers import CLIPModel, CLIPProcessor
 
     CLIP_AVAILABLE = True
 except ImportError:
@@ -82,7 +82,7 @@ class ImageValidator:
         print(f"[INFO] Loading CLIP model on {self.device}...")
         self.model = CLIPModel.from_pretrained(model_name).to(self.device)
         self.processor = CLIPProcessor.from_pretrained(model_name)
-        print(f"[OK] CLIP model loaded")
+        print("[OK] CLIP model loaded")
 
     def _chunk_prompt(self, prompt: str, max_chars: int = 250) -> list[str]:
         """Split a long prompt into chunks that fit within CLIP's token limit.
@@ -435,7 +435,7 @@ if __name__ == "__main__":
     negative = sys.argv[3] if len(sys.argv) > 3 else None
 
     result = validate_image(image_path, prompt, negative)
-    print(f"\nValidation Result:")
+    print("\nValidation Result:")
     print(f"  Passed: {result['passed']}")
     print(f"  Reason: {result['reason']}")
     print(f"  Positive Score: {result.get('positive_score', 0.0):.3f}")

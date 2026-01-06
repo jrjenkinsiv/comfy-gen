@@ -21,7 +21,7 @@ from typing import Any, Optional
 try:
     import torch
     from PIL import Image
-    from transformers import BlipProcessor, BlipForConditionalGeneration, BlipForQuestionAnswering
+    from transformers import BlipForConditionalGeneration, BlipForQuestionAnswering, BlipProcessor
 
     BLIP_AVAILABLE = True
 except ImportError:
@@ -356,14 +356,14 @@ if __name__ == "__main__":
     result = validate_content(image_path, prompt)
 
     print(f"\nCaption: {result.get('caption', 'N/A')}")
-    print(f"\nExpected elements:")
+    print("\nExpected elements:")
     expected = result.get("expected", {})
     print(f"  Subject count: {expected.get('subject_count', 'N/A')}")
     print(f"  Subject type: {expected.get('subject_type', 'N/A')}")
     print(f"  Colors: {', '.join(expected.get('colors', [])) or 'none'}")
     print(f"  Attributes: {', '.join(expected.get('attributes', [])) or 'none'}")
 
-    print(f"\nChecks:")
+    print("\nChecks:")
     for check_name, check_result in result.get("checks", {}).items():
         print(f"  {check_name}: {check_result}")
 

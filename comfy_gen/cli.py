@@ -17,7 +17,6 @@ if str(_PROJECT_ROOT) not in sys.path:
 
 import click  # noqa: E402
 
-
 # Configuration constants (can be overridden with environment variables)
 COMFYUI_HOST = os.getenv("COMFYUI_HOST", "http://192.168.1.215:8188")
 MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "192.168.1.215:9000")
@@ -483,7 +482,7 @@ def loras_list(preset):
     if catalog and "model_suggestions" in catalog:
         presets = catalog["model_suggestions"]
         if presets:
-            click.echo(f"\nAvailable presets:")
+            click.echo("\nAvailable presets:")
             for preset_name in sorted(presets.keys()):
                 click.echo(f"  - {preset_name}")
 
@@ -498,13 +497,13 @@ def loras_verify(lora_file):
     result = audit_lora(lora_file)
 
     if result.get("status") == "found":
-        click.echo(f"[OK] Found on CivitAI:")
+        click.echo("[OK] Found on CivitAI:")
         click.echo(f"  Model: {result.get('civitai_model_name')}")
         click.echo(f"  Base Model: {result.get('base_model')}")
         if result.get("trained_words"):
             click.echo(f"  Trained Words: {', '.join(result['trained_words'])}")
     elif result.get("status") == "not_found":
-        click.echo(f"[WARN] Not found on CivitAI")
+        click.echo("[WARN] Not found on CivitAI")
     else:
         click.echo(f"[ERROR] Verification failed: {result.get('status')}")
 
@@ -588,7 +587,7 @@ def civitai_info(model_id):
     click.echo(f"Downloads: {info['downloads']}")
     click.echo(f"Rating: {info['rating']}")
     if info.get("versions"):
-        click.echo(f"\nVersions:")
+        click.echo("\nVersions:")
         for v in info["versions"][:5]:
             click.echo(f"  - {v.get('name')} (Base: {v.get('base_model')})")
 
@@ -686,7 +685,7 @@ def hf_download(model_id, filename, output):
     if path:
         click.echo(f"[OK] Downloaded to: {path}")
     else:
-        click.echo(f"[ERROR] Download failed", err=True)
+        click.echo("[ERROR] Download failed", err=True)
         sys.exit(1)
 
 
@@ -719,7 +718,7 @@ def server_status():
         click.echo(f"[ERROR] Cannot connect to ComfyUI at {COMFYUI_HOST}", err=True)
         sys.exit(1)
     except requests.Timeout:
-        click.echo(f"[ERROR] Connection timeout", err=True)
+        click.echo("[ERROR] Connection timeout", err=True)
         sys.exit(1)
 
 

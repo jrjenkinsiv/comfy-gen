@@ -6,8 +6,7 @@ interoperability.
 """
 
 import json
-from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
 from PIL import Image
 from PIL.PngImagePlugin import PngInfo
@@ -217,8 +216,9 @@ def get_comfyui_version() -> Optional[str]:
         str: Version string if available, None otherwise
     """
     try:
-        import requests
         import os
+
+        import requests
 
         # ComfyUI host from environment or default
         comfyui_host = os.getenv("COMFYUI_HOST", "http://192.168.1.215:8188")

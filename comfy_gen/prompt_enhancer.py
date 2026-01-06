@@ -9,16 +9,16 @@ This module provides automatic prompt enhancement for better image generation:
 The enhancer uses small LLMs that can run on CPU for portability.
 """
 
-import os
 import sys
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
+
 import yaml
 
 # Lazy imports for transformers (only loaded when needed)
 try:
     import torch
-    from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
+    from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
 
     TRANSFORMERS_AVAILABLE = True
 except ImportError:
@@ -66,11 +66,11 @@ class PromptEnhancer:
         catalog_path = Path(__file__).parent.parent / "prompt_catalog.yaml"
         if catalog_path.exists():
             try:
-                with open(catalog_path, "r", encoding="utf-8") as f:
+                with open(catalog_path, encoding="utf-8") as f:
                     return yaml.safe_load(f) or {}
             except Exception as e:
                 print(f"[WARN] Failed to load prompt_catalog.yaml: {e}", file=sys.stderr)
-                print(f"[WARN] Enhancement will proceed without catalog context", file=sys.stderr)
+                print("[WARN] Enhancement will proceed without catalog context", file=sys.stderr)
         return {}
 
     def _ensure_model_loaded(self):
@@ -79,7 +79,7 @@ class PromptEnhancer:
             return
 
         print(f"[INFO] Loading prompt enhancer model: {self.model_name}")
-        print(f"[INFO] This may take a moment on first run (model will be cached)")
+        print("[INFO] This may take a moment on first run (model will be cached)")
 
         try:
             # Load tokenizer and model
@@ -111,7 +111,7 @@ class PromptEnhancer:
                 top_p=0.9,
             )
 
-            print(f"[OK] Model loaded successfully")
+            print("[OK] Model loaded successfully")
 
         except Exception as e:
             print(f"[ERROR] Failed to load model {self.model_name}: {e}", file=sys.stderr)
@@ -349,7 +349,7 @@ def enhance_prompt(prompt: str, style: Optional[str] = None, model: Optional[str
 
     except Exception as e:
         print(f"[ERROR] Prompt enhancement failed: {e}", file=sys.stderr)
-        print(f"[INFO] Returning original prompt", file=sys.stderr)
+        print("[INFO] Returning original prompt", file=sys.stderr)
         return prompt
 
 

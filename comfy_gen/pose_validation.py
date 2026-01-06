@@ -14,10 +14,9 @@ Multi-person support:
 """
 
 import sys
+import urllib.request
 from pathlib import Path
 from typing import Any, Optional
-import os
-import urllib.request
 
 import cv2
 import numpy as np
@@ -89,7 +88,7 @@ def _download_pose_model():
     if not model_path.exists():
         print(f"[INFO] Downloading MediaPipe pose model to {model_path}...")
         urllib.request.urlretrieve(POSE_LANDMARKER_URL, model_path)
-        print(f"[OK] Model downloaded successfully")
+        print("[OK] Model downloaded successfully")
 
     return str(model_path)
 
@@ -422,8 +421,6 @@ def visualize_pose(
         return None
 
     # Draw on image
-    mp_drawing = mp.solutions.drawing_utils
-    mp_pose = mp.solutions.pose
 
     for person in results.get("persons", []):
         bbox = person.get("bbox", [])
@@ -444,7 +441,7 @@ def visualize_pose(
             h, w = image.shape[:2]
 
             # Draw key landmarks as circles
-            for name, idx in KEY_LANDMARKS.items():
+            for _name, idx in KEY_LANDMARKS.items():
                 if idx < len(landmarks):
                     lm = landmarks[idx]
                     if lm["visibility"] >= DEFAULT_VISIBILITY_THRESHOLD:
