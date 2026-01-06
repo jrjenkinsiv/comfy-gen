@@ -457,6 +457,38 @@ After assigning, a PR should appear within 30-60 seconds:
 gh pr list --state open --json number,title,createdAt
 ```
 
+### Bot PR Workflow Approval
+
+**CRITICAL: Copilot PRs require manual workflow approval before CI runs.**
+
+When Copilot creates a PR, GitHub requires workflow approval for security. The CI workflow will show status `action_required`.
+
+**Approval Procedure:**
+
+```bash
+# 1. Mark PR as ready for review (if draft)
+gh pr ready <PR_NUMBER> --repo jrjenkinsiv/comfy-gen
+
+# 2. Find the CI workflow run that needs approval
+gh run list --repo jrjenkinsiv/comfy-gen --workflow ci.yml --branch <BRANCH> --limit 1 --json databaseId,status,conclusion
+
+# 3. Rerun the workflow (approval happens automatically for repo maintainers on rerun)
+gh run rerun <RUN_ID> --repo jrjenkinsiv/comfy-gen
+
+# 4. Monitor CI status
+gh pr checks <PR_NUMBER> --repo jrjenkinsiv/comfy-gen
+```
+
+**What NOT to do:**
+- Don't use `gh api .../approve` endpoint (only works for fork PRs, not bot PRs)
+- Don't wait indefinitely - bot PRs won't auto-run until you rerun the workflow
+
+**Expected Flow:**
+1. Copilot creates PR (status: draft)
+2. Mark as ready → triggers `action_required` workflow run
+3. Rerun the workflow → CI starts running
+4. CI completes → Review & merge
+
 ## 10. Troubleshooting
 
 - **Assignment Stuck:** Use GraphQL reset procedure in Section 9 (unassign then reassign via GraphQL mutations).
