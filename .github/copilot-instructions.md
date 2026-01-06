@@ -87,14 +87,16 @@ magneto (git push) --> GitHub --> ant-man (runner) --> moira (ComfyUI)
 | Service | Port | URL |
 |---------|------|-----|
 | PostgreSQL | 5432 | N/A (local) |
-| MLflow | 5001 | http://192.168.1.162:5001 
+| MLflow | 5001 | http://192.168.1.162:5001 |
+| Gallery | 8080 | http://192.168.1.162:8080 |
+
 **Service Ports on moira:**
 | Service | Port | URL |
 |---------|------|-----|
 | ComfyUI | 8188 | http://192.168.1.215:8188 |
 | MinIO | 9000 | http://192.168.1.215:9000 |
-| MLflow | 5000 | http://192.168.1.215:5000 |
-| Gallery | 8080 | http://192.168.1.215:8080 |
+
+**IMPORTANT:** Cerebro is the permanent home for ML experiment tracking. All scripts and workflows MUST use cerebro's MLflow (http://192.168.1.162:5001). Moira's MLflow (port 5000) was deprecated as of January 2026.
 
 ## 3. Issue-Driven Workflow
 1.  **Create Issue:** Use standard template (Context, Acceptance Criteria, Notes).
