@@ -19,12 +19,14 @@ import json
 import random
 import subprocess
 import sys
+import time
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import List, Optional, Tuple
 
 import mlflow
+import requests
 
 # ============================================================================
 # CONFIGURATION
@@ -36,6 +38,16 @@ COMFY_GEN_DIR = Path(__file__).parent.parent
 GENERATE_PY = COMFY_GEN_DIR / "generate.py"
 OUTPUT_DIR = Path("/tmp/massive_experiment")
 METADATA_DIR = OUTPUT_DIR / "metadata"
+
+# Service endpoints
+COMFYUI_URL = "http://192.168.1.215:8188"
+MINIO_HEALTH_URL = "http://192.168.1.215:9000/minio/health/live"
+
+# Health check configuration
+HEALTH_CHECK_TIMEOUT = 5  # seconds
+HEALTH_CHECK_RETRIES = 3
+HEALTH_CHECK_RETRY_DELAY = 30  # seconds
+PERIODIC_HEALTH_CHECK_INTERVAL = 10  # Check every N experiments
 
 # Quality prefix/suffix for Pony Realism
 QUALITY_PREFIX = "score_9, score_8_up, score_7_up, source_photo, raw photo, photorealistic, hyperrealistic, ultra detailed, masterpiece"
@@ -365,6 +377,128 @@ class ExperimentResult:
 
 
 # ============================================================================
+# HEALTH CHECK FUNCTIONS
+# ============================================================================
+
+def check_comfyui_health(timeout: int = HEALTH_CHECK_TIMEOUT) -> Tuple[bool, str]:
+    """Check if ComfyUI is responding.
+    
+    Args:
+        timeout: Request timeout in seconds
+        
+    Returns:
+        Tuple of (is_healthy, status_message)
+    """
+    try:
+        response = requests.get(f"{COMFYUI_URL}/system_stats", timeout=timeout)
+        if response.status_code == 200:
+            return True, "ComfyUI is healthy"
+        else:
+            return False, f"ComfyUI returned status code {response.status_code}"
+    except requests.Timeout:
+        return False, f"ComfyUI health check timed out after {timeout}s"
+    except requests.ConnectionError:
+        return False, "Cannot connect to ComfyUI server"
+    except Exception as e:
+        return False, f"ComfyUI health check failed: {str(e)}"
+
+
+def check_minio_health(timeout: int = HEALTH_CHECK_TIMEOUT) -> Tuple[bool, str]:
+    """Check if MinIO is responding.
+    
+    Args:
+        timeout: Request timeout in seconds
+        
+    Returns:
+        Tuple of (is_healthy, status_message)
+    """
+    try:
+        response = requests.get(MINIO_HEALTH_URL, timeout=timeout)
+        if response.status_code == 200:
+            return True, "MinIO is healthy"
+        else:
+            return False, f"MinIO returned status code {response.status_code}"
+    except requests.Timeout:
+        return False, f"MinIO health check timed out after {timeout}s"
+    except requests.ConnectionError:
+        return False, "Cannot connect to MinIO server"
+    except Exception as e:
+        return False, f"MinIO health check failed: {str(e)}"
+
+
+def run_health_checks(retry: bool = True) -> Tuple[bool, dict]:
+    """Run all health checks with optional retry logic.
+    
+    Args:
+        retry: Whether to retry on failure
+        
+    Returns:
+        Tuple of (all_healthy, health_status_dict)
+    """
+    health_status = {
+        "timestamp": datetime.now().isoformat(),
+        "comfyui": {"healthy": False, "message": "Not checked"},
+        "minio": {"healthy": False, "message": "Not checked"},
+    }
+    
+    attempts = HEALTH_CHECK_RETRIES if retry else 1
+    
+    for attempt in range(1, attempts + 1):
+        print(f"\n[INFO] Running health checks (attempt {attempt}/{attempts})...")
+        
+        # Check ComfyUI
+        comfyui_healthy, comfyui_msg = check_comfyui_health()
+        health_status["comfyui"]["healthy"] = comfyui_healthy
+        health_status["comfyui"]["message"] = comfyui_msg
+        
+        if comfyui_healthy:
+            print(f"[OK] {comfyui_msg}")
+        else:
+            print(f"[ERROR] {comfyui_msg}")
+        
+        # Check MinIO
+        minio_healthy, minio_msg = check_minio_health()
+        health_status["minio"]["healthy"] = minio_healthy
+        health_status["minio"]["message"] = minio_msg
+        
+        if minio_healthy:
+            print(f"[OK] {minio_msg}")
+        else:
+            print(f"[ERROR] {minio_msg}")
+        
+        # If both healthy, we're done
+        all_healthy = comfyui_healthy and minio_healthy
+        if all_healthy:
+            return True, health_status
+        
+        # If not retrying or this was the last attempt, return failure
+        if not retry or attempt == attempts:
+            break
+            
+        # Wait before retrying
+        print(f"[WARN] Health checks failed. Retrying in {HEALTH_CHECK_RETRY_DELAY}s...")
+        time.sleep(HEALTH_CHECK_RETRY_DELAY)
+    
+    return False, health_status
+
+
+def log_health_check_to_mlflow(health_status: dict):
+    """Log health check results to MLflow.
+    
+    Args:
+        health_status: Health status dictionary from run_health_checks
+    """
+    try:
+        mlflow.log_param("health_check_timestamp", health_status["timestamp"])
+        mlflow.log_param("comfyui_healthy", health_status["comfyui"]["healthy"])
+        mlflow.log_param("minio_healthy", health_status["minio"]["healthy"])
+        mlflow.set_tag("comfyui_status", health_status["comfyui"]["message"])
+        mlflow.set_tag("minio_status", health_status["minio"]["message"])
+    except Exception as e:
+        print(f"[WARN] Failed to log health check to MLflow (MLflow may be unreachable): {e}")
+
+
+# ============================================================================
 # EXPERIMENT GENERATION
 # ============================================================================
 
@@ -638,11 +772,34 @@ def main():
     parser.add_argument("--seed", type=int, default=42, help="Random seed for reproducibility")
     parser.add_argument("--dry-run", action="store_true", help="Preview without running")
     parser.add_argument("--start-from", type=int, default=0, help="Start from experiment N")
+    parser.add_argument("--pre-flight", action="store_true", help="Run pre-flight health checks before starting")
     args = parser.parse_args()
 
     print("=" * 70)
     print("MASSIVE EXPERIMENT FRAMEWORK")
     print("=" * 70)
+
+    # Run pre-flight health checks if requested
+    if args.pre_flight:
+        print("\n" + "=" * 70)
+        print("PRE-FLIGHT HEALTH CHECKS")
+        print("=" * 70)
+        
+        all_healthy, health_status = run_health_checks(retry=True)
+        
+        if not all_healthy:
+            print("\n" + "=" * 70)
+            print("[ERROR] PRE-FLIGHT CHECKS FAILED")
+            print("=" * 70)
+            print("\nOne or more services are not healthy:")
+            if not health_status["comfyui"]["healthy"]:
+                print(f"  - ComfyUI: {health_status['comfyui']['message']}")
+            if not health_status["minio"]["healthy"]:
+                print(f"  - MinIO: {health_status['minio']['message']}")
+            print("\nAborting experiment run. Please fix the issues and try again.")
+            sys.exit(1)
+        
+        print("\n[OK] All services are healthy. Proceeding with experiments...")
 
     # Generate experiment configs
     print(f"\n[INFO] Generating {args.count} experiment configurations...")
@@ -735,6 +892,35 @@ def main():
             remaining = len(configs) - i - 1
             eta_hours = (remaining * avg_time) / 3600
             print(f"\n  >>> Progress: {i+1}/{len(configs)} | Success: {success_count}/{len(results)} | ETA: {eta_hours:.1f}h <<<\n")
+
+        # Periodic health checks during run
+        if (i + 1) % PERIODIC_HEALTH_CHECK_INTERVAL == 0:
+            print(f"\n[INFO] Periodic health check at experiment {i+1}...")
+            all_healthy, health_status = run_health_checks(retry=True)
+            
+            if not all_healthy:
+                print("\n" + "=" * 70)
+                print("[ERROR] PERIODIC HEALTH CHECK FAILED")
+                print("=" * 70)
+                print("\nServices are not healthy:")
+                if not health_status["comfyui"]["healthy"]:
+                    print(f"  - ComfyUI: {health_status['comfyui']['message']}")
+                if not health_status["minio"]["healthy"]:
+                    print(f"  - MinIO: {health_status['minio']['message']}")
+                print(f"\nAborting after {i+1} experiments.")
+                print(f"Use --start-from {i+1} to resume after fixing the issues.")
+                
+                # Log health check failure to MLflow
+                try:
+                    with mlflow.start_run(run_name=f"health_check_failure_{i+1}"):
+                        log_health_check_to_mlflow(health_status)
+                        mlflow.log_metric("experiments_completed", i+1)
+                except Exception as e:
+                    print(f"[WARN] Failed to log health check failure to MLflow (MLflow may be unreachable): {e}")
+                
+                sys.exit(1)
+            
+            print("[OK] Periodic health check passed. Continuing...")
 
     # Final summary
     print("\n" + "=" * 70)
