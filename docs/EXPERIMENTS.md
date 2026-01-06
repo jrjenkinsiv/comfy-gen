@@ -9,6 +9,7 @@ Guide to running batch experiments for image generation parameter exploration.
 ## Table of Contents
 
 - [Quick Start](#quick-start)
+- [Service Recovery](#service-recovery)
 - [Image Upload Flow](#image-upload-flow)
 - [Available Scripts](#available-scripts)
 - [Running a Massive Experiment](#running-a-massive-experiment)
@@ -32,6 +33,83 @@ python3 scripts/massive_experiment_framework.py --count 5 --seed 42
 # 3. Check results in Gallery
 open http://192.168.1.215:8080
 ```
+
+---
+
+## Service Recovery
+
+After restarting moira, services need to be manually started. Use `start_all_services.py` to restore all services.
+
+### Quick Recovery
+
+```bash
+# SSH to moira and start all services
+ssh moira "C:\Users\jrjen\comfy\.venv\Scripts\python.exe C:\Users\jrjen\comfy-gen\scripts\start_all_services.py"
+```
+
+### Check Service Status
+
+```bash
+# Check if services are running
+ssh moira "C:\Users\jrjen\comfy\.venv\Scripts\python.exe C:\Users\jrjen\comfy-gen\scripts\start_all_services.py --status"
+```
+
+Expected output when services are healthy:
+```
+============================================================
+ComfyGen Services Status
+============================================================
+
+ComfyUI Server:
+  Status: [OK] Running
+  URL:    http://192.168.1.215:8188
+
+MinIO Server:
+  Status: [OK] Running
+  URL:    http://192.168.1.215:9000
+  Console: http://192.168.1.215:9001
+
+============================================================
+```
+
+### Start Individual Services
+
+```bash
+# Start only ComfyUI
+ssh moira "C:\Users\jrjen\comfy\.venv\Scripts\python.exe C:\Users\jrjen\comfy-gen\scripts\start_all_services.py --comfyui-only"
+
+# Start only MinIO
+ssh moira "C:\Users\jrjen\comfy\.venv\Scripts\python.exe C:\Users\jrjen\comfy-gen\scripts\start_all_services.py --minio-only"
+```
+
+### Service Details
+
+| Service | Port | Health Check | Log File |
+|---------|------|--------------|----------|
+| ComfyUI | 8188 | `/system_stats` | `C:\Users\jrjen\comfyui_server.log` |
+| MinIO | 9000 | `/minio/health/live` | `C:\Users\jrjen\minio_server.log` |
+| MinIO Console | 9001 | Web UI | Same as MinIO |
+
+### Troubleshooting Service Startup
+
+**Service starts but API not responding:**
+- Check log files for errors
+- ComfyUI: `type C:\Users\jrjen\comfyui_server.log`
+- MinIO: `type C:\Users\jrjen\minio_server.log`
+
+**Service fails to start:**
+- Verify paths exist (script will report missing paths)
+- Check for port conflicts (another process using 8188 or 9000)
+- Try starting services individually with `--comfyui-only` or `--minio-only`
+
+**ComfyUI still not responding after start:**
+- Wait 30-60 seconds for initialization
+- Check VRAM availability: `nvidia-smi`
+- Restart with `scripts/restart_comfyui.py`
+
+**MLflow and Gallery:**
+- These services are managed separately via `scripts/moira_services/start_services.py`
+- They typically need less frequent restarts
 
 ---
 
@@ -298,14 +376,30 @@ print(runs[["params.scenario", "params.ethnicity", "params.sampler", "params.ste
 
 ## Troubleshooting
 
+### Services Not Running After Restart
+
+**Problem:** After restarting moira, ComfyUI and MinIO need manual start.
+
+**Solution:** Use the service recovery script:
+
+```bash
+# Start all services
+ssh moira "C:\Users\jrjen\comfy\.venv\Scripts\python.exe C:\Users\jrjen\comfy-gen\scripts\start_all_services.py"
+
+# Or check status first
+ssh moira "C:\Users\jrjen\comfy\.venv\Scripts\python.exe C:\Users\jrjen\comfy-gen\scripts\start_all_services.py --status"
+```
+
+See [Service Recovery](#service-recovery) section for detailed instructions.
+
 ### ComfyUI Not Responding
 
 ```bash
 # Check status
 curl -s http://192.168.1.215:8188/system_stats || echo "OFFLINE"
 
-# Restart ComfyUI on moira
-ssh moira "taskkill /f /im python.exe 2>nul; cd C:\\Users\\jrjen\\comfy && start /b .venv\\Scripts\\python.exe -m comfy.main --listen 0.0.0.0 --port 8188"
+# Restart ComfyUI using service script
+ssh moira "C:\Users\jrjen\comfy\.venv\Scripts\python.exe C:\Users\jrjen\comfy-gen\scripts\start_all_services.py --comfyui-only"
 ```
 
 ### High Failure Rate
