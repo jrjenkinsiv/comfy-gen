@@ -2,14 +2,23 @@
 MLflow experiment logging for ComfyGen.
 
 Comprehensive schema captures ALL generation parameters.
+Supports auto-logging from generate.py for EVERY future run.
 """
 import mlflow
 from typing import Optional, Dict, Any, List
 import json
 import os
+import datetime
 
 MLFLOW_URI = "http://192.168.1.162:5001"
 DEFAULT_EXPERIMENT = "comfy-gen-nsfw"
+
+# Enable system metrics logging (CPU, memory, GPU if available)
+try:
+    mlflow.enable_system_metrics_logging()
+    SYSTEM_METRICS_ENABLED = True
+except Exception:
+    SYSTEM_METRICS_ENABLED = False
 
 # ALL parameters we want to capture - be exhaustive
 GENERATION_PARAMS = {
@@ -273,12 +282,109 @@ def get_standard_params(
     return params
 
 
+def log_from_metadata(
+    metadata: dict,
+    image_url: str,
+    run_name: str = None,
+    user_rating: int = 0,
+    feedback: str = "",
+    experiment_name: str = DEFAULT_EXPERIMENT,
+) -> Optional[str]:
+    """
+    Auto-log from generate.py metadata dict.
+    
+    This is called automatically when --mlflow-log is used with generate.py.
+    Extracts all params from the metadata JSON that generate.py creates.
+    
+    Args:
+        metadata: The metadata dict from create_metadata_json()
+        image_url: MinIO URL of the image
+        run_name: Optional run name (auto-generated if not provided)
+        user_rating: User rating 0-5 (0 = not rated yet)
+        feedback: Optional feedback
+        experiment_name: MLflow experiment name
+        
+    Returns:
+        Run ID if successful
+    """
+    # Auto-generate run name from timestamp and workflow
+    if not run_name:
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        workflow_name = metadata.get("workflow", {}).get("name", "unknown").replace(".json", "")
+        run_name = f"{timestamp}_{workflow_name}"
+    
+    # Extract params from metadata (new structure)
+    params = {}
+    
+    # Input section
+    input_section = metadata.get("input", {})
+    params["prompt"] = input_section.get("prompt", "")
+    params["negative_prompt"] = input_section.get("negative_prompt", "")
+    params["preset"] = input_section.get("preset")
+    
+    # Workflow section
+    workflow_section = metadata.get("workflow", {})
+    params["workflow"] = workflow_section.get("name", "unknown")
+    params["checkpoint"] = workflow_section.get("model", "unknown")
+    params["vae"] = workflow_section.get("vae")
+    
+    # Parameters section (this is where the good stuff is)
+    parameters = metadata.get("parameters", {})
+    params["seed"] = parameters.get("seed")
+    params["steps"] = parameters.get("steps")
+    params["cfg"] = parameters.get("cfg")
+    params["sampler"] = parameters.get("sampler")
+    params["scheduler"] = parameters.get("scheduler")
+    
+    # Resolution
+    resolution = parameters.get("resolution", [])
+    if resolution and len(resolution) >= 2:
+        params["width"] = resolution[0]
+        params["height"] = resolution[1]
+    
+    # LoRAs - convert list to string format
+    loras = parameters.get("loras", [])
+    if loras:
+        lora_strings = []
+        for lora in loras:
+            name = lora.get("name", "unknown").replace(".safetensors", "")
+            strength = lora.get("strength", 1.0)
+            lora_strings.append(f"{name}:{strength}")
+        params["loras"] = ",".join(lora_strings)
+    
+    # Quality section
+    quality = metadata.get("quality", {})
+    prompt_adherence = quality.get("prompt_adherence", {})
+    validation_score = prompt_adherence.get("clip", 0)
+    
+    # Output section
+    output_section = metadata.get("output", {})
+    params["generation_time_seconds"] = output_section.get("generation_time_seconds")
+    
+    # Session metadata
+    params["session"] = datetime.datetime.now().strftime("%Y-%m-%d")
+    
+    # Remove None values
+    params = {k: v for k, v in params.items() if v is not None}
+    
+    return log_experiment(
+        run_name=run_name,
+        image_url=image_url,
+        params=params,
+        validation_score=validation_score,
+        user_rating=user_rating,
+        feedback=feedback,
+        experiment_name=experiment_name,
+    )
+
+
 # Print schema when run directly
 if __name__ == "__main__":
     print("=" * 60)
     print("MLflow Logger for ComfyGen - Parameter Schema")
     print("=" * 60)
     print(f"\nMLflow URI: {MLFLOW_URI}")
+    print(f"System Metrics: {'[ENABLED]' if SYSTEM_METRICS_ENABLED else '[DISABLED]'}")
     print(f"Health: {'[OK]' if check_mlflow_health() else '[DOWN]'}")
     print(f"\nREQUIRED parameters ({len(REQUIRED_PARAMS)}):")
     for p in REQUIRED_PARAMS:

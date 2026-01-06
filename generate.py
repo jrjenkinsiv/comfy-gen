@@ -1998,6 +1998,17 @@ def main():
         "--no-embed-metadata", action="store_true", help="Disable embedding metadata in PNG files (default: enabled)"
     )
     parser.add_argument(
+        "--mlflow-log",
+        action="store_true",
+        help="Auto-log experiment to MLflow (http://192.168.1.162:5001). Captures ALL params automatically.",
+    )
+    parser.add_argument(
+        "--mlflow-experiment",
+        metavar="NAME",
+        default="comfy-gen-nsfw",
+        help="MLflow experiment name (default: comfy-gen-nsfw)",
+    )
+    parser.add_argument(
         "--quality-score", action="store_true", help="Run multi-dimensional quality scoring after generation"
     )
     parser.add_argument(
@@ -2876,6 +2887,22 @@ def main():
         # Embed metadata in PNG file
         if not args.no_embed_metadata:
             embed_metadata_in_output(args.output, metadata)
+
+        # Auto-log to MLflow if requested
+        if args.mlflow_log and minio_url:
+            try:
+                from comfy_gen.mlflow_logger import log_from_metadata
+
+                run_id = log_from_metadata(
+                    metadata=metadata,
+                    image_url=minio_url,
+                    experiment_name=args.mlflow_experiment,
+                )
+                if run_id and not args.quiet:
+                    print(f"[OK] Logged to MLflow (run_id: {run_id[:8]}...)")
+            except Exception as e:
+                if not args.quiet:
+                    print(f"[WARN] MLflow logging failed: {e}")
 
     # Final output
     if minio_url:
