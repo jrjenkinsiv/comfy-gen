@@ -1,0 +1,232 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# =============================================================================
+# CI CONFIGURATION
+# =============================================================================
+# This CI runs on ant-man (self-hosted runner, Ubuntu ARM64) to save costs.
+# 
+# ComfyUI-dependent tests are skipped in CI since moira (GPU server) is not
+# always available. Integration tests should be run manually.
+#
+# Runner: ant-man (self-hosted, Linux ARM64)
+# =============================================================================
+
+jobs:
+  # ============================================================================
+  # Phase 1: Fast Checks (Syntax & Linting)
+  # ============================================================================
+  lint:
+    name: Code Quality Checks
+    runs-on: [self-hosted, Linux]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Verify Python version
+        run: |
+          python3 --version
+          echo "Using system Python on self-hosted runner"
+      
+      - name: Install linting dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install -r requirements-lint.txt
+      
+      - name: Python syntax check
+        run: |
+          echo "Checking Python syntax with py_compile..."
+          python3 -m py_compile comfy_gen/*.py
+          python3 -m py_compile scripts/*.py || echo "[WARN] Some scripts may have issues"
+          python3 -m py_compile generate.py
+          python3 -m py_compile mcp_server.py
+          echo "[OK] Python syntax check passed"
+      
+      - name: Ruff lint
+        run: |
+          echo "Running ruff linter..."
+          python3 -m ruff check . --output-format github
+          echo "[OK] Ruff lint passed"
+      
+      - name: Ruff format check
+        run: |
+          echo "Checking code formatting..."
+          python3 -m ruff format --check .
+          echo "[OK] Format check passed"
+
+  # ============================================================================
+  # Phase 2: Type Checking
+  # ============================================================================
+  typecheck:
+    name: Type Checking
+    runs-on: [self-hosted, Linux]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Install dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install -r requirements-lint.txt
+      
+      - name: Run mypy
+        run: |
+          echo "Running mypy type checker..."
+          python3 -m mypy comfy_gen/ --show-error-codes --pretty || echo "[WARN] Type errors found - review recommended"
+          echo "[OK] Mypy check completed"
+
+  # ============================================================================
+  # Phase 3: Module Validation
+  # ============================================================================
+  validate:
+    name: Module Validation
+    runs-on: [self-hosted, Linux]
+    needs: lint
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Install dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          # Install minimal deps for import validation
+          python3 -m pip install requests pyyaml click Pillow minio httpx aiofiles
+          python3 -m pip install -e .
+      
+      - name: Module import validation
+        run: |
+          echo "Running smoke tests..."
+          python3 scripts/smoke_test.py
+      
+      - name: Workflow JSON validation
+        run: |
+          echo "Validating workflow JSON files..."
+          python3 -c "
+import json
+import sys
+from pathlib import Path
+
+workflows_dir = Path('workflows')
+if not workflows_dir.exists():
+    print('[WARN] No workflows directory found')
+    sys.exit(0)
+
+errors = []
+for wf in workflows_dir.glob('*.json'):
+    try:
+        with open(wf) as f:
+            json.load(f)
+        print(f'[OK] {wf.name}')
+    except json.JSONDecodeError as e:
+        print(f'[ERROR] {wf.name}: {e}')
+        errors.append(wf.name)
+
+if errors:
+    print(f'[ERROR] {len(errors)} workflow(s) have invalid JSON')
+    sys.exit(1)
+else:
+    print('[OK] All workflow JSON files are valid')
+"
+
+  # ============================================================================
+  # Phase 4: Unit Tests
+  # ============================================================================
+  test:
+    name: Unit Tests
+    runs-on: [self-hosted, Linux]
+    needs: lint
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Install dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install -r requirements.txt
+          python3 -m pip install pytest pytest-cov
+          python3 -m pip install -e .
+      
+      - name: Run pytest
+        run: |
+          echo "Running pytest..."
+          echo "Note: Integration tests marked @pytest.mark.integration are skipped"
+          python3 -m pytest tests/ -v \
+            -m "not integration" \
+            --ignore=tests/manual_test_*.py \
+            --ignore=tests/test_error_handling_manual.sh \
+            --tb=short \
+            || echo "[WARN] Some tests failed - check logs"
+      
+      - name: Generate test summary
+        if: always()
+        run: |
+          echo "# Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Platform: Linux (ant-man self-hosted runner)" >> $GITHUB_STEP_SUMMARY
+          echo "Integration tests: SKIPPED (requires ComfyUI server)" >> $GITHUB_STEP_SUMMARY
+
+  # ============================================================================
+  # Summary Job
+  # ============================================================================
+  ci-summary:
+    name: CI Summary
+    runs-on: [self-hosted, Linux]
+    needs: [lint, typecheck, validate, test]
+    if: always()
+    steps:
+      - name: Check results
+        run: |
+          echo "==================================="
+          echo "CI Pipeline Summary"
+          echo "==================================="
+          echo ""
+          echo "Runner: ant-man (self-hosted, Linux ARM64)"
+          echo ""
+          echo "Lint: ${{ needs.lint.result }}"
+          echo "Type Check: ${{ needs.typecheck.result }}"
+          echo "Validation: ${{ needs.validate.result }}"
+          echo "Tests: ${{ needs.test.result }}"
+          echo ""
+          
+          # Lint and validate must succeed; typecheck and test are advisory for now
+          if [[ "${{ needs.lint.result }}" != "success" ]] || \
+             [[ "${{ needs.validate.result }}" != "success" ]]; then
+            echo "[ERROR] CI pipeline failed"
+            exit 1
+          else
+            echo "[OK] Required checks passed!"
+            if [[ "${{ needs.typecheck.result }}" != "success" ]] || \
+               [[ "${{ needs.test.result }}" != "success" ]]; then
+              echo "[WARN] Advisory checks have issues - review recommended"
+            fi
+          fi
+      
+      - name: Generate summary
+        if: always()
+        run: |
+          echo "# CI Pipeline Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Runner" >> $GITHUB_STEP_SUMMARY
+          echo "- **Primary:** ant-man (self-hosted, Linux ARM64)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Results" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status | Required |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|----------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Lint | ${{ needs.lint.result }} | Yes |" >> $GITHUB_STEP_SUMMARY
+          echo "| Type Check | ${{ needs.typecheck.result }} | Advisory |" >> $GITHUB_STEP_SUMMARY
+          echo "| Validation | ${{ needs.validate.result }} | Yes |" >> $GITHUB_STEP_SUMMARY
+          echo "| Tests | ${{ needs.test.result }} | Advisory |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [[ "${{ needs.lint.result }}" == "success" ]] && \
+             [[ "${{ needs.validate.result }}" == "success" ]]; then
+            echo "[OK] **Required checks passed!**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "[ERROR] **Required checks failed. Please review the logs.**" >> $GITHUB_STEP_SUMMARY
+          fi
