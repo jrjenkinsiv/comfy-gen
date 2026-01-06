@@ -164,28 +164,68 @@ python3 generate.py \
 
 ### Video Generation
 
+**For comprehensive video generation documentation, see [VIDEO_GENERATION.md](VIDEO_GENERATION.md).**
+
+ComfyGen supports video generation using Wan 2.2 models (text-to-video and image-to-video).
+
+#### Text-to-Video
+
 ```bash
-# Text-to-video
+# Basic video
 python3 generate.py \
-    --workflow workflows/wan22-t2v.json \
-    --prompt "drone shot flying over coastal highway, waves crashing, cinematic" \
-    --output /tmp/coastal.mp4
+  --workflow workflows/wan22-t2v.json \
+  --prompt "a woman walking through a park on a sunny day" \
+  --output /tmp/walk.mp4
 
-# Image-to-video (animate existing image)
+# Custom duration and resolution
 python3 generate.py \
-    --workflow workflows/wan22-i2v.json \
-    --input-image /path/to/photo.png \
-    --prompt "camera slowly zooms in, subtle movement" \
-    --output /tmp/animated.mp4
+  --workflow workflows/wan22-t2v.json \
+  --prompt "ocean waves crashing on rocks" \
+  --length 161 \
+  --fps 16 \
+  --video-resolution 1280x720 \
+  --output /tmp/waves.mp4
 
-# With LoRAs
+# Using preset for fast generation
 python3 generate.py \
-    --workflow workflows/wan22-t2v.json \
-    --prompt "dancer performing, dynamic movement" \
-    --lora "BoobPhysics_WAN_v6.safetensors:0.7" \
-    --lora "BounceHighWan2_2.safetensors:0.6" \
-    --output /tmp/dance.mp4
+  --preset video-fast \
+  --prompt "city traffic timelapse" \
+  --output /tmp/traffic.mp4
+
+# High quality with physics LoRAs
+python3 generate.py \
+  --preset video-quality \
+  --prompt "woman dancing gracefully" \
+  --output /tmp/dance.mp4
 ```
+
+#### Image-to-Video
+
+```bash
+# Basic I2V animation
+python3 generate.py \
+  --workflow workflows/wan22-i2v.json \
+  --input-image /tmp/portrait.png \
+  --prompt "subtle head movement, breathing, natural motion" \
+  --output /tmp/animated.mp4
+
+# With LoRAs for physics
+python3 generate.py \
+  --workflow workflows/wan22-i2v.json \
+  --input-image /tmp/portrait.png \
+  --prompt "walking forward, natural body movement" \
+  --lora "BoobPhysics_WAN_v6.safetensors:0.7" \
+  --output /tmp/walk_anim.mp4
+```
+
+**Video Parameters:**
+- `--length` / `--frames` - Number of frames (default: 81 = ~5s at 16fps)
+- `--fps` - Frame rate (default: 16)
+- `--video-resolution` - Resolution as WxH (default: 848x480)
+
+**Duration Math:** `Duration (seconds) = Frames ÷ FPS`
+
+**IMPORTANT:** Wan 2.2 video LoRAs are NOT compatible with SD 1.5/Flux image generation. See [LORA_GUIDE.md](LORA_GUIDE.md) for details.
 
 ### Parameters
 

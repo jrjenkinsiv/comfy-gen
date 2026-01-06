@@ -143,6 +143,58 @@ class WorkflowManager:
         
         return workflow
     
+    def set_video_params(
+        self,
+        workflow: Dict[str, Any],
+        width: Optional[int] = None,
+        height: Optional[int] = None,
+        length: Optional[int] = None
+    ) -> Dict[str, Any]:
+        """Set video parameters in EmptyLatentVideo node.
+        
+        Args:
+            workflow: Workflow dictionary
+            width: Video width in pixels
+            height: Video height in pixels
+            length: Number of frames
+            
+        Returns:
+            Modified workflow
+        """
+        for node_id, node in workflow.items():
+            if node.get("class_type") == "EmptyLatentVideo":
+                if "inputs" in node:
+                    if width is not None:
+                        node["inputs"]["width"] = width
+                    if height is not None:
+                        node["inputs"]["height"] = height
+                    if length is not None:
+                        node["inputs"]["length"] = length
+        
+        return workflow
+    
+    def set_video_fps(
+        self,
+        workflow: Dict[str, Any],
+        fps: Optional[int] = None
+    ) -> Dict[str, Any]:
+        """Set video frame rate in VHS_VideoCombine node.
+        
+        Args:
+            workflow: Workflow dictionary
+            fps: Frames per second
+            
+        Returns:
+            Modified workflow
+        """
+        for node_id, node in workflow.items():
+            if node.get("class_type") == "VHS_VideoCombine":
+                if "inputs" in node:
+                    if fps is not None:
+                        node["inputs"]["frame_rate"] = fps
+        
+        return workflow
+    
     def set_sampler_params(
         self,
         workflow: Dict[str, Any],

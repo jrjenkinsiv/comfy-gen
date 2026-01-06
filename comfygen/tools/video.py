@@ -107,8 +107,13 @@ async def generate_video(
         )
         
         # Set video-specific parameters
-        # Note: These may need workflow-specific node IDs
-        # For now, this is a simplified implementation
+        workflow = _get_workflow_mgr().set_video_params(
+            workflow,
+            width=width,
+            height=height,
+            length=frames
+        )
+        workflow = _get_workflow_mgr().set_video_fps(workflow, fps=fps)
         
         # Apply LoRAs if specified
         if loras:
@@ -221,6 +226,13 @@ async def image_to_video(
             workflow,
             steps=steps
         )
+        
+        # Set video-specific parameters
+        workflow = _get_workflow_mgr().set_video_params(
+            workflow,
+            length=frames
+        )
+        workflow = _get_workflow_mgr().set_video_fps(workflow, fps=fps)
         
         # Apply LoRAs if specified
         if loras:
