@@ -495,7 +495,7 @@ def log_health_check_to_mlflow(health_status: dict):
         mlflow.set_tag("comfyui_status", health_status["comfyui"]["message"])
         mlflow.set_tag("minio_status", health_status["minio"]["message"])
     except Exception as e:
-        print(f"[WARN] Failed to log health check to MLflow: {e}")
+        print(f"[WARN] Failed to log health check to MLflow (MLflow may be unreachable): {e}")
 
 
 # ============================================================================
@@ -916,12 +916,11 @@ def main():
                         log_health_check_to_mlflow(health_status)
                         mlflow.log_metric("experiments_completed", i+1)
                 except Exception as e:
-                    print(f"[WARN] Failed to log health check failure to MLflow: {e}")
+                    print(f"[WARN] Failed to log health check failure to MLflow (MLflow may be unreachable): {e}")
                 
                 sys.exit(1)
             
             print("[OK] Periodic health check passed. Continuing...")
-
 
     # Final summary
     print("\n" + "=" * 70)
