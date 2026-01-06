@@ -14,7 +14,7 @@ from pathlib import Path
 import mlflow
 
 # MLflow setup
-MLFLOW_URI = "http://192.168.1.215:5000"
+MLFLOW_URI = "http://192.168.1.162:5001"
 EXPERIMENT_NAME = "comfy-gen-batch"
 
 # Paths

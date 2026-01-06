@@ -341,7 +341,7 @@ The experiment framework logs to MLflow for tracking:
 ### View Experiment Runs
 
 ```bash
-open http://192.168.1.215:5000
+open http://192.168.1.162:5001
 ```
 
 Look for experiment: `comfy-gen-massive-experiment`
@@ -360,7 +360,7 @@ Each run logs:
 ```python
 import mlflow
 
-mlflow.set_tracking_uri("http://192.168.1.215:5000")
+mlflow.set_tracking_uri("http://192.168.1.162:5001")
 experiment = mlflow.get_experiment_by_name("comfy-gen-massive-experiment")
 
 runs = mlflow.search_runs(
