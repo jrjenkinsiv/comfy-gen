@@ -17,6 +17,7 @@ Usage:
 import argparse
 import json
 import os
+import random
 import subprocess
 import sys
 from pathlib import Path
@@ -30,6 +31,10 @@ GENERATE_PY = COMFY_GEN_DIR / "generate.py"
 EXIT_SUCCESS = 0
 EXIT_FAILURE = 1
 EXIT_CONFIG_ERROR = 2
+
+# Grid layout constants
+GRID_LABEL_HEIGHT = 40
+GRID_PADDING = 10
 
 
 def parse_args():
@@ -248,9 +253,12 @@ def generate_image(
 def create_comparison_grid(image_paths, labels, output_path, cols=None):
     """Create a comparison grid from multiple images.
     
+    Note: Text labels are not currently rendered in the grid. Images are arranged
+    in the grid and can be identified by their position and filename.
+    
     Args:
         image_paths: List of paths to images
-        labels: List of label strings for each image
+        labels: List of label strings for each image (currently unused)
         output_path: Path for output grid image
         cols: Number of columns (None for auto-calculate)
         
@@ -278,7 +286,8 @@ def create_comparison_grid(image_paths, labels, output_path, cols=None):
         n_images = len(images)
         if cols is None:
             # Auto-calculate columns (prefer square-ish layout)
-            cols = int(n_images ** 0.5) + (1 if n_images ** 0.5 % 1 > 0 else 0)
+            sqrt_n = n_images ** 0.5
+            cols = int(sqrt_n) + (1 if sqrt_n % 1 > 0 else 0)
             cols = max(1, min(cols, n_images))
         
         rows = (n_images + cols - 1) // cols
@@ -286,28 +295,20 @@ def create_comparison_grid(image_paths, labels, output_path, cols=None):
         # Get image dimensions (assume all same size)
         img_width, img_height = images[0].size
         
-        # Add padding for labels
-        label_height = 40
-        padding = 10
-        
         # Create grid canvas
-        grid_width = cols * img_width + (cols + 1) * padding
-        grid_height = rows * (img_height + label_height) + (rows + 1) * padding
+        grid_width = cols * img_width + (cols + 1) * GRID_PADDING
+        grid_height = rows * (img_height + GRID_LABEL_HEIGHT) + (rows + 1) * GRID_PADDING
         grid = Image.new('RGB', (grid_width, grid_height), (255, 255, 255))
         
         # Paste images into grid
-        for idx, (img, label) in enumerate(zip(images, labels)):
+        for idx, img in enumerate(images):
             row = idx // cols
             col = idx % cols
             
-            x = col * img_width + (col + 1) * padding
-            y = row * (img_height + label_height) + (row + 1) * padding
+            x = col * img_width + (col + 1) * GRID_PADDING
+            y = row * (img_height + GRID_LABEL_HEIGHT) + (row + 1) * GRID_PADDING
             
             grid.paste(img, (x, y))
-            
-            # Note: PIL doesn't have built-in text rendering without ImageDraw
-            # For now, we'll skip text labels and just create the grid
-            # Users can identify images by position and filename
         
         # Save grid
         grid.save(output_path)
@@ -341,7 +342,6 @@ def main():
     
     # Generate random seed if not provided
     if args.seed is None:
-        import random
         args.seed = random.randint(0, 2**32 - 1)
         print(f"[OK] Generated random seed: {args.seed}")
     
