@@ -19,6 +19,8 @@ import sys
 import random
 import json
 import hashlib
+import time
+import requests
 from pathlib import Path
 from datetime import datetime
 from dataclasses import dataclass, asdict
@@ -35,6 +37,14 @@ COMFY_GEN_DIR = Path(__file__).parent.parent
 GENERATE_PY = COMFY_GEN_DIR / "generate.py"
 OUTPUT_DIR = Path("/tmp/massive_experiment")
 METADATA_DIR = OUTPUT_DIR / "metadata"
+
+# Health check configuration
+COMFYUI_URL = "http://192.168.1.215:8188"
+MINIO_URL = "http://192.168.1.215:9000"
+HEALTH_CHECK_TIMEOUT = 5
+HEALTH_CHECK_RETRIES = 3
+HEALTH_CHECK_RETRY_DELAY = 30
+PERIODIC_CHECK_INTERVAL = 10  # Check every N experiments
 
 # Quality prefix/suffix for Pony Realism
 QUALITY_PREFIX = "score_9, score_8_up, score_7_up, source_photo, raw photo, photorealistic, hyperrealistic, ultra detailed, masterpiece"
@@ -296,6 +306,93 @@ CATEGORY_LORA_MAPPING = {
     "threesome": ["nsfw_action", "nsfw_detailed"],
     "lesbian": ["realism_enhanced", "skin_focus", "high_detail"],
 }
+
+# ============================================================================
+# HEALTH CHECK FUNCTIONS
+# ============================================================================
+
+def check_comfyui_health() -> bool:
+    """Check if ComfyUI server is responding.
+    
+    Returns:
+        True if server is healthy, False otherwise
+    """
+    try:
+        response = requests.get(f"{COMFYUI_URL}/system_stats", timeout=HEALTH_CHECK_TIMEOUT)
+        return response.status_code == 200
+    except requests.RequestException:
+        return False
+
+
+def check_minio_health() -> bool:
+    """Check if MinIO server is responding.
+    
+    Returns:
+        True if server is healthy, False otherwise
+    """
+    try:
+        response = requests.get(f"{MINIO_URL}/minio/health/live", timeout=HEALTH_CHECK_TIMEOUT)
+        return response.status_code == 200
+    except requests.RequestException:
+        return False
+
+
+def run_health_checks_with_retry() -> Tuple[bool, str]:
+    """Run health checks with retry logic.
+    
+    Returns:
+        Tuple of (success: bool, message: str)
+    """
+    for attempt in range(1, HEALTH_CHECK_RETRIES + 1):
+        print(f"[INFO] Health check attempt {attempt}/{HEALTH_CHECK_RETRIES}...")
+        
+        comfyui_healthy = check_comfyui_health()
+        minio_healthy = check_minio_health()
+        
+        if comfyui_healthy and minio_healthy:
+            print(f"[OK] ComfyUI: healthy at {COMFYUI_URL}")
+            print(f"[OK] MinIO: healthy at {MINIO_URL}")
+            return True, "All services healthy"
+        
+        # Report which services are down
+        errors = []
+        if not comfyui_healthy:
+            errors.append(f"ComfyUI not responding at {COMFYUI_URL}")
+            print(f"[ERROR] ComfyUI not responding at {COMFYUI_URL}")
+        else:
+            print(f"[OK] ComfyUI: healthy at {COMFYUI_URL}")
+            
+        if not minio_healthy:
+            errors.append(f"MinIO not responding at {MINIO_URL}")
+            print(f"[ERROR] MinIO not responding at {MINIO_URL}")
+        else:
+            print(f"[OK] MinIO: healthy at {MINIO_URL}")
+        
+        # Retry if not last attempt
+        if attempt < HEALTH_CHECK_RETRIES:
+            print(f"[WARN] Retrying in {HEALTH_CHECK_RETRY_DELAY} seconds...")
+            time.sleep(HEALTH_CHECK_RETRY_DELAY)
+        else:
+            error_msg = "; ".join(errors)
+            return False, error_msg
+    
+    return False, "Health checks failed"
+
+
+def log_health_check_to_mlflow(success: bool, message: str):
+    """Log health check results to MLflow.
+    
+    Args:
+        success: Whether health check passed
+        message: Status message
+    """
+    try:
+        mlflow.set_tag("health_check_status", "passed" if success else "failed")
+        mlflow.set_tag("health_check_message", message)
+        mlflow.log_metric("services_healthy", 1 if success else 0)
+    except Exception as e:
+        print(f"[WARN] Failed to log health check to MLflow: {e}")
+
 
 # ============================================================================
 # DATA CLASSES FOR EXPERIMENT TRACKING
@@ -637,11 +734,33 @@ def main():
     parser.add_argument("--seed", type=int, default=42, help="Random seed for reproducibility")
     parser.add_argument("--dry-run", action="store_true", help="Preview without running")
     parser.add_argument("--start-from", type=int, default=0, help="Start from experiment N")
+    parser.add_argument("--pre-flight", action="store_true", help="Run health checks before starting")
     args = parser.parse_args()
     
     print("=" * 70)
     print("MASSIVE EXPERIMENT FRAMEWORK")
     print("=" * 70)
+    
+    # Pre-flight health checks
+    if args.pre_flight:
+        print(f"\n[INFO] Running pre-flight health checks...")
+        print("-" * 70)
+        success, message = run_health_checks_with_retry()
+        
+        if not success:
+            print("\n" + "=" * 70)
+            print("[ERROR] PRE-FLIGHT CHECK FAILED")
+            print("=" * 70)
+            print(f"[ERROR] {message}")
+            print("[ERROR] Cannot start experiments with services down")
+            print("[INFO] Please ensure ComfyUI and MinIO are running:")
+            print(f"[INFO]   ComfyUI: {COMFYUI_URL}/system_stats")
+            print(f"[INFO]   MinIO:   {MINIO_URL}/minio/health/live")
+            sys.exit(1)
+        
+        print("-" * 70)
+        print("[OK] Pre-flight checks passed - services are healthy")
+        print()
     
     # Generate experiment configs
     print(f"\n[INFO] Generating {args.count} experiment configurations...")
@@ -688,6 +807,14 @@ def main():
     mlflow.set_tracking_uri(MLFLOW_URI)
     mlflow.set_experiment(EXPERIMENT_NAME)
     
+    # Log initial health check if pre-flight was run
+    if args.pre_flight:
+        try:
+            with mlflow.start_run(run_name=f"health_check_{datetime.now().strftime('%Y%m%d_%H%M%S')}"):
+                log_health_check_to_mlflow(True, "Pre-flight checks passed")
+        except Exception as e:
+            print(f"  [WARN] Failed to log pre-flight check to MLflow: {e}")
+    
     # Run experiments
     results = []
     start_idx = args.start_from
@@ -726,6 +853,31 @@ def main():
             print(f"  URL: {result.minio_url}")
         if result.error_message:
             print(f"  Error: {result.error_message[:100]}")
+        
+        # Periodic health checks (every 10 experiments)
+        if (i + 1) % PERIODIC_CHECK_INTERVAL == 0:
+            print(f"\n  >>> Periodic health check at experiment {i+1}/{len(configs)} <<<")
+            comfyui_ok = check_comfyui_health()
+            minio_ok = check_minio_health()
+            
+            if comfyui_ok and minio_ok:
+                print(f"  [OK] Services healthy - continuing")
+            else:
+                if not comfyui_ok:
+                    print(f"  [ERROR] ComfyUI is down at {COMFYUI_URL}")
+                if not minio_ok:
+                    print(f"  [ERROR] MinIO is down at {MINIO_URL}")
+                
+                print(f"  [WARN] Attempting recovery with retries...")
+                success, message = run_health_checks_with_retry()
+                
+                if not success:
+                    print(f"\n  [ERROR] Services failed recovery: {message}")
+                    print(f"  [ERROR] Aborting experiment run to prevent further failures")
+                    print(f"  [INFO] Completed {i+1}/{len(configs)} experiments before abort")
+                    break
+                else:
+                    print(f"  [OK] Services recovered - continuing")
         
         # Progress update every 25 images
         if (i + 1) % 25 == 0:
