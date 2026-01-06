@@ -878,3 +878,38 @@ keyword_mappings:
   turbo:
     tags: ["acceleration", "speed", "turbo"]
     boost_score: 2.0
+
+# ========================================
+# PROMPTING TIPS (Agent Quick Reference)
+# ========================================
+# Common mistakes to avoid and best practices
+# NOTE: Experiment results go to MLflow (http://192.168.1.162:5001), NOT here!
+
+agent_tips:
+  facial_expressions:
+    problem: "All generated women have the same neutral expression"
+    solution: "Explicitly vary expressions in prompts"
+    examples:
+      - "(genuine smile:1.3), happy expression, laughing"
+      - "(pleasure expression:1.4), moaning, eyes half-closed"
+      - "(seductive gaze:1.3), bedroom eyes, sultry look"
+      - "(surprised expression:1.2), open mouth, wide eyes"
+      - "(intense pleasure:1.4), orgasm face, ecstasy"
+    
+  cock_size:
+    problem: "Generated penises are unrealistically massive"
+    solution: "Add size modifiers to control proportions"
+    for_realistic:
+      - "(average sized cock:1.3), (realistic proportions:1.2)"
+      - "(normal penis size:1.3), natural proportions"
+    for_exaggerated:
+      - "(huge cock:1.4), (massive:1.3)" # current default behavior
+
+  hand_anatomy:
+    problem: "Double hands, extra fingers, fused digits"
+    solution: "Use ControlNet for pose enforcement, add strong negative prompts"
+    negative_prompt_additions:
+      - "extra fingers, mutated hands, bad hands, missing fingers, fused fingers"
+      - "too many fingers, malformed limbs, extra hands, double hands"
+
+```

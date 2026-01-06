@@ -1,0 +1,24 @@
+{
+  "session": "2026-01-06-handjob-refinement",
+  "checkpoint": "pornmasterProPony_realismV1",
+  "loras": "add_detail:0.4,more_details:0.3,Pale_Skin_SDXL:0.4,realcumv6.55:0.6,airoticart_penis:0.5",
+  "workflow": "pornmaster-pony-stacked-realism.json",
+  "mlflow_pending": true,
+  "note": "Log to MLflow when cerebro is back online",
+  "experiments": [
+    {"run_name": "redhead_refined_v1", "url": "http://192.168.1.215:9000/comfy-gen/20260106_144228_redhead_refined_v1.png", "score": 0.675, "rating": 2, "feedback": "Dick looks like dildo"},
+    {"run_name": "redhead_refined_v2", "url": "http://192.168.1.215:9000/comfy-gen/20260106_144250_redhead_refined_v2.png", "score": 0.663, "rating": 2, "feedback": "Dick looks like dildo"},
+    {"run_name": "asian_handjob_v1", "url": "http://192.168.1.215:9000/comfy-gen/20260106_144310_asian_handjob_v1.png", "score": 0.669, "rating": 2, "feedback": "Dick looks like dildo"},
+    {"run_name": "asian_handjob_v2", "url": "http://192.168.1.215:9000/comfy-gen/20260106_144332_asian_handjob_v2.png", "score": 0.672, "rating": 4, "feedback": "Good composition, dick slightly less in focus - looks good"},
+    {"run_name": "asian_handjob_v3", "url": "http://192.168.1.215:9000/comfy-gen/20260106_144352_asian_handjob_v3.png", "score": 0.672, "rating": 3, "feedback": "Dick out of focus/shinier but looks real"},
+    {"run_name": "redhead_refined_v3", "url": "http://192.168.1.215:9000/comfy-gen/20260106_144523_redhead_refined_v3.png", "score": 0.672, "rating": 3, "feedback": "Dick too smooth, girl hot but smooth"},
+    {"run_name": "redhead_refined_v4", "url": "http://192.168.1.215:9000/comfy-gen/20260106_144602_redhead_refined_v4.png", "score": 0.658, "rating": 4, "feedback": "Almost there - dick shinier maybe wet. Good smirk"},
+    {"run_name": "asian_handjob_v4", "url": "http://192.168.1.215:9000/comfy-gen/20260106_144543_asian_handjob_v4.png", "score": 0.661, "rating": 2, "feedback": "Breasts through bra, dick OK but fake"}
+  ],
+  "key_learnings": [
+    "Expression variety works with explicit prompting",
+    "Dick often shinier/more in focus than scene",
+    "Best: asian_handjob_v2 (4/5), redhead_refined_v4 (4/5)",
+    "Try lower penis LoRA strength or different lighting"
+  ]
+}

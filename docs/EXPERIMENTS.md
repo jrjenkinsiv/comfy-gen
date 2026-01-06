@@ -115,24 +115,19 @@ ssh moira "C:\Users\jrjen\comfy\.venv\Scripts\python.exe C:\Users\jrjen\comfy-ge
 
 ## Image Upload Flow
 
-**IMPORTANT:** Images are automatically uploaded to MinIO by `generate.py`. No separate uploader script is needed.
+**Single Source of Truth: MinIO**
+
+All images live in one place: MinIO bucket `comfy-gen` at `http://192.168.1.215:9000`.
 
 ```
-generate.py execution
-    │
-    ├─► ComfyUI generates image
-    │
-    ├─► Image saved to local path (--output)
-    │
-    └─► Automatic upload to MinIO
-        http://192.168.1.215:9000/comfy-gen/<timestamp>_<filename>.png
-            │
-            └─► Gallery server (cerebro) displays from MinIO
-                http://192.168.1.215:8080
+generate.py → ComfyUI → MinIO → Gallery
+                         ↑
+                   (one location)
 ```
 
-**Why previous uploader script existed:**
-The `minio_uploader.py` was created when we thought `generate.py` wasn't uploading. In fact, `generate.py` always uploads on success. The separate uploader is not needed for normal operation.
+- `generate.py` automatically uploads every successful generation to MinIO
+- Gallery on cerebro (`:8080`) reads directly from MinIO
+- No duplicate storage, no separate uploaders
 
 ---
 

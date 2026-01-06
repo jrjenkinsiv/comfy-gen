@@ -1,0 +1,119 @@
+{
+  "1": {
+    "inputs": {
+      "ckpt_name": "pornmasterProPony_realismV1.safetensors"
+    },
+    "class_type": "CheckpointLoaderSimple",
+    "_meta": {
+      "title": "Load Checkpoint"
+    }
+  },
+  "8": {
+    "inputs": {
+      "lora_name": "add_detail.safetensors",
+      "strength_model": 0.4,
+      "strength_clip": 0.4,
+      "model": ["1", 0],
+      "clip": ["1", 1]
+    },
+    "class_type": "LoraLoader",
+    "_meta": {
+      "title": "LoRA 1 - Add Detail"
+    }
+  },
+  "9": {
+    "inputs": {
+      "lora_name": "more_details.safetensors",
+      "strength_model": 0.3,
+      "strength_clip": 0.3,
+      "model": ["8", 0],
+      "clip": ["8", 1]
+    },
+    "class_type": "LoraLoader",
+    "_meta": {
+      "title": "LoRA 2 - More Details"
+    }
+  },
+  "10": {
+    "inputs": {
+      "lora_name": "Pale_Skin_SDXL_v1.0.safetensors",
+      "strength_model": 0.5,
+      "strength_clip": 0.5,
+      "model": ["9", 0],
+      "clip": ["9", 1]
+    },
+    "class_type": "LoraLoader",
+    "_meta": {
+      "title": "LoRA 3 - Pale Skin (for redhead)"
+    }
+  },
+  "2": {
+    "inputs": {
+      "text": "score_9, score_8_up, score_7_up, a beautiful woman",
+      "clip": ["10", 1]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "Positive Prompt"
+    }
+  },
+  "3": {
+    "inputs": {
+      "text": "score_6, score_5, score_4, bad quality, blurry, low resolution, watermark, text, deformed, ugly",
+      "clip": ["10", 1]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "Negative Prompt"
+    }
+  },
+  "4": {
+    "inputs": {
+      "width": 1024,
+      "height": 1024,
+      "batch_size": 1
+    },
+    "class_type": "EmptyLatentImage",
+    "_meta": {
+      "title": "Empty Latent Image"
+    }
+  },
+  "5": {
+    "inputs": {
+      "seed": 0,
+      "steps": 30,
+      "cfg": 7,
+      "sampler_name": "dpmpp_2m_sde",
+      "scheduler": "karras",
+      "denoise": 1,
+      "model": ["10", 0],
+      "positive": ["2", 0],
+      "negative": ["3", 0],
+      "latent_image": ["4", 0]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "KSampler"
+    }
+  },
+  "6": {
+    "inputs": {
+      "samples": ["5", 0],
+      "vae": ["1", 2]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "7": {
+    "inputs": {
+      "filename_prefix": "pmp_multi_lora",
+      "images": ["6", 0]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "Save Image"
+    }
+  }
+}

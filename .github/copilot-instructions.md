@@ -300,6 +300,91 @@ The `extra_model_paths.yaml` file (in ComfyUI directory) tells ComfyUI where to 
 - HuggingFace required for gated models
 - civitai_client.py automatically uses `CIVITAI_API_KEY` from environment
 
+### Background Downloads (CRITICAL)
+
+**Large file downloads MUST run in the background** to prevent terminal interruption:
+
+```bash
+# CORRECT: Background download with isBackground=true
+ssh moira "powershell -Command \"
+  \$url = 'https://huggingface.co/...'
+  \$dest = 'C:\\Users\\jrjen\\comfy\\models\\controlnet\\Model.safetensors'
+  Write-Host 'Starting download...'
+  Invoke-WebRequest -Uri \$url -OutFile \$dest -UseBasicParsing
+  Write-Host 'Done!'
+\"" &
+
+# Then check status later:
+ssh moira "powershell -Command \"Get-Item 'path\\to\\file' | Select-Object Name, Length\""
+```
+
+**When to use `isBackground=true`:**
+- Model downloads (typically >100MB)
+- Any SSH command that takes >30 seconds
+- Server restarts or long-running processes
+
+**When to use `isBackground=false`:**
+- Quick generation commands (returns in <60s)
+- Status checks, file listings
+- Anything you need immediate output from
+
+### LoRA Selection for Agents
+
+**CRITICAL: Consult `lora_catalog.yaml` before selecting LoRAs!**
+
+The catalog contains:
+- `compatible_with`: Which checkpoints the LoRA works with
+- `base_model`: SD 1.5, SDXL/Pony, or Wan 2.2 Video
+- `trigger_words`: Required keywords for activation
+- `recommended_strength`: Tested working range
+- `notes`: Usage tips and stacking suggestions
+
+**Quick Reference by Checkpoint:**
+
+| Checkpoint | Compatible LoRAs (see catalog for details) |
+|------------|-------------------------------------------|
+| `pornmasterProPony_realismV1` | `add_detail`, `more_details`, `Pale_Skin_SDXL`, `realcumv6.55`, `zy_AmateurStyle_v2` |
+| `majicmixRealistic_v7` | `airoticart_penis` (trigger: penerec), `polyhedron_skin`, `POVMissionary`, `PovBlowjob-v3` |
+| `wan2.2_t2v_*` | Acceleration LoRAs, physics LoRAs, video NSFW LoRAs |
+
+### Experiment Tracking (CRITICAL)
+
+**ALL experiment feedback goes to MLflow on cerebro - NOT in YAML files!**
+
+```
+MLflow Server: http://192.168.1.162:5001
+```
+
+**DO NOT** duplicate feedback in:
+- `lora_catalog.yaml` - LoRA metadata ONLY (tags, compatibility, triggers)
+- `prompt_catalog.yaml` - Prompt templates ONLY (no test results)
+
+**DO** log experiments to MLflow:
+- Use `mlflow.log_param()` for: checkpoint, LoRAs, strengths, CFG, steps
+- Use `mlflow.log_metric()` for: validation_score, user_rating (1-5)
+- Use `mlflow.log_artifact()` for: generated image file
+- Tag with: `user_feedback` for qualitative notes
+
+**Quick MLflow logging (Python):**
+```python
+import mlflow
+mlflow.set_tracking_uri("http://192.168.1.162:5001")
+mlflow.set_experiment("comfy-gen-nsfw")
+
+with mlflow.start_run(run_name="redhead_handjob_v1"):
+    mlflow.log_params({"checkpoint": "pornmasterProPony", "loras": "add_detail:0.4,realcum:0.6"})
+    mlflow.log_metric("validation_score", 0.67)
+    mlflow.log_metric("user_rating", 4)
+    mlflow.set_tag("user_feedback", "Cock looks real, expression good")
+    mlflow.log_artifact("/tmp/output.png")
+```
+
+**Why MLflow:**
+- Searchable experiment history
+- Compare runs side-by-side
+- Track what works across sessions
+- Single source of truth for feedback
+
 **Directory Structure on moira:**
 ```
 C:\Users\jrjen\comfy\models\
@@ -326,7 +411,10 @@ C:\Users\jrjen\comfy\models\
    - Steps: 50-70 for quality, 30 for quick drafts
    - CFG: 8.5-9.5 for NSFW/explicit (stricter adherence), 7.0-8.0 for general
 5. **Generate** - `python3 generate.py --workflow <file> --prompt "<detailed_prompt>" --negative-prompt "<detailed_negative>" --steps 70 --cfg 9.0 --output /tmp/output.png`
-6. **Return URL** - Image will be at `http://192.168.1.215:9000/comfy-gen/<timestamp>_<filename>`
+6. **Return ALL URLs** - ALWAYS list every generated image URL directly so user can view each one individually. For batch generation, provide a complete list of clickable links (not just a pattern or "see bucket"). Example format:
+   - http://192.168.1.215:9000/comfy-gen/20260106_132120_nsfw_majicmix_11111.png
+   - http://192.168.1.215:9000/comfy-gen/20260106_132126_nsfw_majicmix_22222.png
+   - (list ALL generated images)
 
 ### CRITICAL: Video vs Image LoRAs
 
