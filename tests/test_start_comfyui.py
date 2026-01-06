@@ -68,6 +68,7 @@ class TestComfyUIUtils(unittest.TestCase):
     def setUp(self):
         """Import comfyui_utils before each test."""
         import comfyui_utils
+
         self.utils = comfyui_utils
 
     def test_wait_for_port_timeout(self):
