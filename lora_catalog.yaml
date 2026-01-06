@@ -603,6 +603,16 @@ loras:
   #
   # Quality tags for Pony: score_9, score_8_up, score_7_up, rating_explicit
   # Style tags for Amateur: photo, grainy, amateur, 2000s nostalgia, webcam photo
+  #
+  # MALE ANATOMY NOTE (2026-01-06):
+  #   NO SDXL/Pony-compatible penis LoRA exists on CivitAI or HuggingFace.
+  #   Use weight-based prompting instead (see docs/PONY_REALISM_GUIDE.md):
+  #     (realistic penis:1.4), (veiny cock:1.3), (detailed shaft:1.2), 
+  #     (natural skin texture:1.3), (photorealistic genitals:1.3)
+  #   Use CFG 8-9 for better anatomy adherence (instead of CFG 6).
+  #   Available LoRAs are INCOMPATIBLE:
+  #     - airoticart_penis.safetensors (SD 1.5 only)
+  #     - erect_penis_epoch_80.safetensors (Wan 2.2 Video only)
   
   - filename: "zy_AmateurStyle_v2.safetensors"
     tags: ["nsfw", "adult", "pony", "sdxl", "amateur", "photo", "realistic", "style", "image"]

@@ -116,11 +116,29 @@ Use parentheses with weights for emphasis:
 - `caucasian woman`, `latina woman`, `asian woman`, `black woman`
 - `mixed race woman`, `redhead woman`, `brunette woman`, `blonde woman`
 
-### Realistic Anatomy Prompts
-For better male anatomy rendering:
+### Male Anatomy Prompting (No LoRA Available)
+
+**Important:** No SDXL/Pony-compatible penis LoRA exists (as of 2026-01-06). Use comprehensive weight-based prompting instead.
+
+#### Quick Reference (Copy-Paste Ready)
 ```
+# Basic (moderate realism):
 (realistic penis:1.3), (veiny cock:1.2), (erect dick:1.3), (detailed male genitalia:1.2)
+
+# Advanced (maximum realism - use for close-ups or anatomy focus):
+(realistic penis:1.4), (veiny cock:1.3), (detailed shaft:1.2), (natural skin texture:1.3), (anatomically correct:1.2), (photorealistic genitals:1.3), (detailed glans:1.2), (natural penis:1.3)
+
+# Negative prompt additions:
+cartoon penis, plastic looking, smooth like doll, unrealistic anatomy, toy-like, artificial, CGI genitals
 ```
+
+#### Tips
+- Use CFG 8-9 (instead of 6) for better anatomy adherence
+- Stack 5-8 descriptors with varied weights
+- Use colloquial terms ("cock", "dick") - models trained on internet data
+- Combine with `zy_AmateurStyle_v2.safetensors:0.8` for overall realism
+
+See **Troubleshooting > Fake-Looking Dicks** section for comprehensive examples and context-specific strategies.
 
 ---
 
@@ -298,11 +316,70 @@ score_9, score_8_up, score_7_up, rating_explicit, photo, grainy, amateur
 ```
 
 ### Fake-Looking Dicks
-**Problem:** Male anatomy looks plastic/unrealistic.
+**Problem:** Male anatomy looks plastic/unrealistic even with Pony Realism.
 
-**Solution:** Use enhanced prompting:
+**Research:** No SDXL/Pony-specific penis LoRA exists on CivitAI or HuggingFace as of 2026-01-06. The only verified realistic penis LoRA (`airoticart_penis.safetensors`) is SD 1.5 only and INCOMPATIBLE with Pony.
+
+**Solution:** Use comprehensive weight-based prompting:
+
+#### Basic Approach (Moderate Realism)
 ```
 (realistic penis:1.3), (veiny cock:1.2), (erect dick:1.3), (detailed male genitalia:1.2)
+```
+
+#### Advanced Approach (Maximum Realism)
+Stack multiple descriptors with varied weights:
+```
+(realistic penis:1.4), (veiny cock:1.3), (detailed shaft:1.2), (natural skin texture:1.3), 
+(anatomically correct:1.2), (photorealistic genitals:1.3), (circumcised:1.1), 
+(erect male anatomy:1.3), (detailed glans:1.2), (natural penis:1.3)
+```
+
+#### Context-Specific Prompting
+For different scenarios, emphasize different aspects:
+
+**Close-up shots:**
+```
+(detailed penis close-up:1.5), (macro shot:1.3), (skin pores visible:1.2), 
+(veiny texture:1.4), (realistic glans:1.3), (natural lighting:1.2)
+```
+
+**POV scenes:**
+```
+(pov realistic penis:1.4), (first person view:1.3), (natural perspective:1.2), 
+(detailed cock:1.3), (photorealistic shaft:1.3)
+```
+
+**Full body with anatomy visible:**
+```
+(realistic male body:1.3), (natural genitals:1.3), (anatomically correct nude:1.2), 
+(photorealistic penis:1.3), (natural proportions:1.2)
+```
+
+#### Negative Prompting Strategy
+Add these to negative prompt to avoid common issues:
+```
+cartoon penis, plastic looking, smooth like doll, unrealistic anatomy, 
+toy-like, artificial, CGI genitals, smooth texture, featureless
+```
+
+#### Tips for Best Results
+1. **Use colloquial terms:** Models are trained on internet data - "cock" and "dick" often work better than "penis"
+2. **Layer descriptors:** Use 5-8 different terms with varied weights rather than one heavily-weighted term
+3. **Combine with Amateur LoRA:** `zy_AmateurStyle_v2.safetensors:0.8` improves overall realism
+4. **Higher CFG for anatomy:** Use CFG 8-9 instead of 6 for stricter adherence to anatomy prompts
+5. **Add reference context:** Terms like "photorealistic", "natural lighting", "skin texture" help overall realism
+
+#### Example Full Prompt
+```bash
+python3 generate.py \
+  --workflow workflows/pony-realism.json \
+  --prompt "score_9, score_8_up, score_7_up, rating_explicit, photo, grainy, amateur, 2000s nostalgia, webcam photo, pov blowjob, (realistic penis:1.4), (veiny cock:1.3), (detailed shaft:1.2), (natural skin texture:1.3), (photorealistic genitals:1.3), (detailed glans:1.2), eye contact, bedroom" \
+  --negative-prompt "score_1, score_2, score_3, cartoon penis, plastic looking, smooth like doll, unrealistic anatomy, text, watermark" \
+  --steps 40 \
+  --cfg 8.5 \
+  --lora "zy_AmateurStyle_v2.safetensors:0.8" \
+  --output /tmp/realistic_anatomy.png
 ```
 
 ### Fake-Looking Cum
@@ -355,7 +432,22 @@ These LoRAs were identified but not downloaded:
 - **Pornmaster Pro Pony** (ID 1031307) - Alternative checkpoint
 - **Pornmaster Z Image** (ID 2270401) - Different style
 
+### Male Anatomy LoRA Research (2026-01-06)
+**Searches conducted:**
+- CivitAI: 'pony penis realistic', 'sdxl penis', 'male anatomy pony', 'photorealistic male', 'realistic anatomy', 'adult male body'
+- HuggingFace: SDXL male anatomy searches
+- Pony-specific model pages
+
+**Finding:** No SDXL/Pony-compatible realistic penis LoRA exists as of 2026-01-06.
+
+**Available LoRAs (INCOMPATIBLE):**
+- `airoticart_penis.safetensors` - SD 1.5 only (CivitAI ID 15040)
+- `erect_penis_epoch_80.safetensors` - Wan 2.2 Video only (CivitAI verified)
+- `dicks_epoch_100.safetensors` - Wan 2.2 Video only (CivitAI verified)
+
+**Workaround:** Use comprehensive weight-based prompting (see "Fake-Looking Dicks" troubleshooting section).
+
 ### Potential Enhancements
-- SDXL/Pony-specific penis LoRA (none found on CivitAI)
+- SDXL/Pony-specific penis LoRA (none currently available - may need custom training)
 - Upscale models for higher resolution output
 - ControlNet integration for pose control
