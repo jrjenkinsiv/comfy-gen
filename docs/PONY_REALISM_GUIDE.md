@@ -1,6 +1,6 @@
 # Pony Realism Workflow Guide
 
-> Last Updated: 2026-01-05
+> Last Updated: 2026-01-06
 
 This guide documents the optimal workflow for photorealistic NSFW image generation using Pony Realism V2.2 and associated LoRAs.
 
@@ -196,6 +196,71 @@ python3 scripts/refine_pony_hq.py --pattern "pony_hq_" --passes 2 --denoise 0.35
 
 ---
 
+## LoRA Strength Experimentation
+
+### Purpose
+Test multiple LoRA strength values with the same prompt and seed to find optimal strength for different aesthetics.
+
+### Usage
+```bash
+python3 scripts/lora_strength_test.py \
+  --workflow workflows/pony-realism.json \
+  --prompt "score_9, 1girl, nude, looking at camera" \
+  --lora zy_AmateurStyle_v2.safetensors \
+  --strengths 0.4,0.6,0.8,1.0,1.2 \
+  --seed 12345 \
+  --output-dir /tmp/lora_tests
+```
+
+### Options
+| Flag | Description |
+|------|-------------|
+| `--workflow` | Path to workflow JSON (required) |
+| `--prompt` | Positive prompt (required) |
+| `--lora` | LoRA filename (required, can repeat for multiple LoRAs) |
+| `--strengths` | Comma-separated strength values to test (required) |
+| `--seed` | Random seed for reproducibility (optional) |
+| `--output-dir` | Output directory (default: /tmp/lora_strength_test) |
+| `--grid` | Create comparison grid image |
+| `--steps` | Sampling steps (optional) |
+| `--cfg` | CFG scale (optional) |
+
+### Example: Multiple LoRAs
+```bash
+python3 scripts/lora_strength_test.py \
+  --workflow workflows/pony-realism.json \
+  --prompt "1girl, nude, bedroom, soft lighting" \
+  --lora zy_AmateurStyle_v2.safetensors \
+  --lora realcumv6.55.safetensors \
+  --strengths 0.5,0.7,0.9 \
+  --grid \
+  --seed 42
+```
+
+### Example: With Comparison Grid
+```bash
+python3 scripts/lora_strength_test.py \
+  --workflow workflows/pony-realism.json \
+  --prompt "detailed portrait, high quality" \
+  --lora zy_AmateurStyle_v2.safetensors \
+  --strengths 0.3,0.5,0.7,0.9,1.1 \
+  --grid \
+  --grid-cols 3
+```
+
+### Output
+- Individual images: `test_strength_0_4.png`, `test_strength_0_6.png`, etc.
+- Optional grid: `test_comparison_grid.png`
+- All images use the same seed for direct comparison
+
+### Use Cases
+- Finding optimal strength for new LoRAs
+- Testing LoRA compatibility at different intensities
+- Creating A/B comparison images for documentation
+- Exploring artistic variations within a consistent composition
+
+---
+
 ## File Locations
 
 ### Models (moira: C:\Users\jrjen\comfy\models\)
@@ -217,6 +282,7 @@ workflows/pony-realism-refine.json # Img2img refinement
 scripts/batch_pony_hq.py           # High-quality batch generation
 scripts/batch_pony_realism.py      # 100-image batch (legacy)
 scripts/refine_pony_hq.py          # Refinement passes
+scripts/lora_strength_test.py      # LoRA strength experimentation
 ```
 
 ---
