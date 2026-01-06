@@ -11,9 +11,9 @@ import subprocess
 
 def run_command(description, command):
     """Run a command and display output."""
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"{description}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     print(f"Command: {' '.join(command)}\n")
 
     result = subprocess.run(command, capture_output=True, text=True)
@@ -22,52 +22,63 @@ def run_command(description, command):
         print(result.stderr)
     print()
 
+
 # Example 1: List available LoRAs
-run_command(
-    "Example 1: List Available LoRAs",
-    ["python3", "generate.py", "--list-loras"]
-)
+run_command("Example 1: List Available LoRAs", ["python3", "generate.py", "--list-loras"])
 
 # Example 2: Single LoRA injection
 run_command(
     "Example 2: Generate with Single LoRA",
     [
-        "python3", "generate.py",
-        "--workflow", "workflows/flux-dev.json",
-        "--prompt", "a beautiful sunset over mountains",
-        "--lora", "style_lora.safetensors:0.8",
-        "--dry-run"  # Dry run to avoid actual generation
-    ]
+        "python3",
+        "generate.py",
+        "--workflow",
+        "workflows/flux-dev.json",
+        "--prompt",
+        "a beautiful sunset over mountains",
+        "--lora",
+        "style_lora.safetensors:0.8",
+        "--dry-run",  # Dry run to avoid actual generation
+    ],
 )
 
 # Example 3: Multiple LoRAs (chained)
 run_command(
     "Example 3: Generate with Multiple LoRAs (Chained)",
     [
-        "python3", "generate.py",
-        "--workflow", "workflows/wan22-t2v.json",
-        "--prompt", "a person walking through a park",
-        "--lora", "BoobPhysics_WAN_v6.safetensors:0.7",
-        "--lora", "BounceHighWan2_2.safetensors:0.6",
-        "--dry-run"
-    ]
+        "python3",
+        "generate.py",
+        "--workflow",
+        "workflows/wan22-t2v.json",
+        "--prompt",
+        "a person walking through a park",
+        "--lora",
+        "BoobPhysics_WAN_v6.safetensors:0.7",
+        "--lora",
+        "BounceHighWan2_2.safetensors:0.6",
+        "--dry-run",
+    ],
 )
 
 # Example 4: LoRA preset
 run_command(
     "Example 4: Generate with LoRA Preset",
     [
-        "python3", "generate.py",
-        "--workflow", "workflows/wan22-t2v.json",
-        "--prompt", "dynamic motion scene",
-        "--lora-preset", "text_to_video",
-        "--dry-run"
-    ]
+        "python3",
+        "generate.py",
+        "--workflow",
+        "workflows/wan22-t2v.json",
+        "--prompt",
+        "dynamic motion scene",
+        "--lora-preset",
+        "text_to_video",
+        "--dry-run",
+    ],
 )
 
-print("\n" + "="*60)
+print("\n" + "=" * 60)
 print("NOTES:")
-print("="*60)
+print("=" * 60)
 print("""
 1. LoRAs are injected dynamically - workflow JSON files remain unchanged
 2. Multiple --lora arguments chain LoRAs in order

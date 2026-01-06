@@ -13,19 +13,13 @@ import generate
 def create_test_workflow():
     """Create a minimal test workflow."""
     return {
-        "1": {
-            "class_type": "CheckpointLoaderSimple",
-            "inputs": {"ckpt_name": "test.safetensors"}
-        },
+        "1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": "test.safetensors"}},
         "2": {
             "class_type": "CLIPTextEncode",
             "inputs": {"text": "test", "clip": ["1", 1]},
-            "_meta": {"title": "Positive Prompt"}
+            "_meta": {"title": "Positive Prompt"},
         },
-        "3": {
-            "class_type": "EmptyLatentImage",
-            "inputs": {"width": 512, "height": 512, "batch_size": 1}
-        },
+        "3": {"class_type": "EmptyLatentImage", "inputs": {"width": 512, "height": 512, "batch_size": 1}},
         "4": {
             "class_type": "KSampler",
             "inputs": {
@@ -38,9 +32,9 @@ def create_test_workflow():
                 "model": ["1", 0],
                 "positive": ["2", 0],
                 "negative": ["2", 0],
-                "latent_image": ["3", 0]
-            }
-        }
+                "latent_image": ["3", 0],
+            },
+        },
     }
 
 
@@ -50,12 +44,7 @@ def test_modify_workflow_with_all_params():
 
     # Apply sampler params
     workflow = generate.modify_sampler_params(
-        workflow,
-        steps=50,
-        cfg=8.5,
-        seed=12345,
-        sampler_name="dpmpp_2m_sde",
-        scheduler="karras"
+        workflow, steps=50, cfg=8.5, seed=12345, sampler_name="dpmpp_2m_sde", scheduler="karras"
     )
 
     # Apply dimensions
@@ -135,19 +124,15 @@ def test_preset_override_logic():
     create_test_workflow()
 
     # Simulate preset values
-    preset_params = {
-        "steps": 50,
-        "cfg": 7.5,
-        "sampler": "dpmpp_2m_sde"
-    }
+    preset_params = {"steps": 50, "cfg": 7.5, "sampler": "dpmpp_2m_sde"}
 
     # CLI overrides
     cli_steps = 30
     cli_cfg = None  # Not specified, use preset
 
     # Merge logic (simulating what main() does)
-    final_steps = cli_steps if cli_steps is not None else preset_params.get('steps')
-    final_cfg = cli_cfg if cli_cfg is not None else preset_params.get('cfg')
+    final_steps = cli_steps if cli_steps is not None else preset_params.get("steps")
+    final_cfg = cli_cfg if cli_cfg is not None else preset_params.get("cfg")
 
     assert final_steps == 30, "CLI steps should override preset"
     assert final_cfg == 7.5, "Preset cfg should be used when CLI not specified"

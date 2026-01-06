@@ -39,11 +39,11 @@ async def example_json_progress():
     print(f"MinIO URL: {result.get('url', 'N/A')}")
 
     # Display progress summary if available
-    if 'progress_updates' in result:
+    if "progress_updates" in result:
         print(f"\nTotal Progress Updates: {len(result['progress_updates'])}")
 
         # Show sampling progress
-        progress_updates = [u for u in result['progress_updates'] if u['type'] == 'progress']
+        progress_updates = [u for u in result["progress_updates"] if u["type"] == "progress"]
         if progress_updates:
             print("\nSampling Progress:")
             for update in progress_updates[:5]:  # Show first 5
@@ -72,15 +72,15 @@ async def example_local_file_output():
         width=512,
         height=512,
         output_path=str(output_path),  # Save to local file
-        validate=False  # Skip validation for example
+        validate=False,  # Skip validation for example
     )
 
     print(f"\nGeneration Status: {result['status']}")
     print(f"MinIO URL: {result.get('url', 'N/A')}")
     print(f"Local File: {result.get('local_path', 'N/A')}")
 
-    if result.get('local_path'):
-        local_file = Path(result['local_path'])
+    if result.get("local_path"):
+        local_file = Path(result["local_path"])
         if local_file.exists():
             print(f"✓ File saved successfully ({local_file.stat().st_size} bytes)")
         else:
@@ -99,9 +99,7 @@ async def example_workflow_validation():
     from comfygen.workflows import WorkflowManager
 
     # Get clients
-    comfyui = ComfyUIClient(
-        host=os.getenv("COMFYUI_HOST", "http://192.168.1.215:8188")
-    )
+    comfyui = ComfyUIClient(host=os.getenv("COMFYUI_HOST", "http://192.168.1.215:8188"))
     workflow_mgr = WorkflowManager()
 
     # Check server availability
@@ -121,22 +119,22 @@ async def example_workflow_validation():
 
     print(f"\nValidation Result: {'✓ VALID' if validation['is_valid'] else '✗ INVALID'}")
 
-    if validation['errors']:
+    if validation["errors"]:
         print("\nErrors:")
-        for error in validation['errors']:
+        for error in validation["errors"]:
             print(f"  - {error}")
 
-    if validation['warnings']:
+    if validation["warnings"]:
         print("\nWarnings:")
-        for warning in validation['warnings']:
+        for warning in validation["warnings"]:
             print(f"  - {warning}")
 
-    if validation['missing_models']:
+    if validation["missing_models"]:
         print("\nMissing Models:")
-        for model in validation['missing_models']:
+        for model in validation["missing_models"]:
             print(f"  - {model['type']}: {model['name']}")
 
-    if validation['is_valid']:
+    if validation["is_valid"]:
         print("\n✓ Workflow is valid and ready for generation")
     else:
         print("\n✗ Workflow has errors, please fix before generating")
@@ -147,7 +145,6 @@ async def example_progress_polling():
     print("\n" + "=" * 60)
     print("Example: Progress Polling")
     print("=" * 60)
-
 
     from comfygen.tools import control, generation
 
@@ -161,10 +158,10 @@ async def example_progress_polling():
         height=512,
         steps=30,
         json_progress=False,  # Don't use built-in progress
-        validate=False
+        validate=False,
     )
 
-    prompt_id = result.get('prompt_id')
+    prompt_id = result.get("prompt_id")
     if not prompt_id:
         print("[ERROR] No prompt_id returned")
         return
@@ -177,9 +174,9 @@ async def example_progress_polling():
     progress = await control.get_progress(prompt_id)
 
     print(f"\nProgress Status: {progress.get('status', 'unknown')}")
-    if progress.get('position'):
+    if progress.get("position"):
         print(f"Queue Position: {progress['position']}")
-    if progress.get('queue_length') is not None:
+    if progress.get("queue_length") is not None:
         print(f"Queue Length: {progress['queue_length']}")
 
     print(f"\nFinal Generation Status: {result['status']}")
@@ -210,6 +207,7 @@ async def main():
         except Exception as e:
             print(f"\n[ERROR] Example '{name}' failed: {e}")
             import traceback
+
             traceback.print_exc()
 
     print("\n" + "=" * 60)

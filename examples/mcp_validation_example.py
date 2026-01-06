@@ -40,10 +40,10 @@ async def example_with_validation():
     )
 
     print(f"\nStatus: {result['status']}")
-    if result['status'] == 'success':
+    if result["status"] == "success":
         print(f"URL: {result['url']}")
         print(f"Attempt: {result.get('attempt', 1)}")
-        if 'validation' in result:
+        if "validation" in result:
             print("\nValidation:")
             print(f"  Passed: {result['validation'].get('passed')}")
             print(f"  Positive Score: {result['validation'].get('positive_score', 'N/A')}")
@@ -66,11 +66,11 @@ async def example_without_validation():
         width=512,
         height=512,
         steps=20,
-        validate=False  # Disable validation
+        validate=False,  # Disable validation
     )
 
     print(f"\nStatus: {result['status']}")
-    if result['status'] == 'success':
+    if result["status"] == "success":
         print(f"URL: {result['url']}")
         print("Validation: Disabled")
     else:
@@ -94,14 +94,14 @@ async def example_custom_validation():
         validate=True,
         auto_retry=True,
         retry_limit=5,  # More retries
-        positive_threshold=0.30  # Higher threshold for stricter validation
+        positive_threshold=0.30,  # Higher threshold for stricter validation
     )
 
     print(f"\nStatus: {result['status']}")
-    if result['status'] == 'success':
+    if result["status"] == "success":
         print(f"URL: {result['url']}")
         print(f"Attempt: {result.get('attempt', 1)}")
-        if 'validation' in result:
+        if "validation" in result:
             print("\nValidation:")
             print(f"  Passed: {result['validation'].get('passed')}")
             print(f"  Positive Score: {result['validation'].get('positive_score', 'N/A'):.3f}")

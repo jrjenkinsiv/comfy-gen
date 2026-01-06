@@ -26,17 +26,12 @@ async def test_search():
     print("\n[TEST] civitai_search_models")
     print("-" * 60)
 
-    result = await civitai_search_models(
-        query="realistic portrait",
-        model_type="LORA",
-        base_model="SD 1.5",
-        limit=3
-    )
+    result = await civitai_search_models(query="realistic portrait", model_type="LORA", base_model="SD 1.5", limit=3)
 
     print(f"Status: {result['status']}")
-    if result['status'] == 'success':
+    if result["status"] == "success":
         print(f"Found {result['count']} results")
-        for i, model in enumerate(result['results'][:3], 1):
+        for i, model in enumerate(result["results"][:3], 1):
             print(f"\n  {i}. {model['name']}")
             print(f"     Type: {model['type']}")
             print(f"     Base Model: {model['base_model']}")
@@ -46,7 +41,7 @@ async def test_search():
     else:
         print(f"Error: {result.get('error', 'Unknown error')}")
 
-    return result['status'] == 'success'
+    return result["status"] == "success"
 
 
 async def test_get_model():
@@ -59,21 +54,21 @@ async def test_get_model():
     result = await civitai_get_model(model_id)
 
     print(f"Status: {result['status']}")
-    if result['status'] == 'success':
-        model = result['model']
+    if result["status"] == "success":
+        model = result["model"]
         print(f"Model: {model['name']}")
         print(f"Type: {model['type']}")
         print(f"Creator: {model['creator']['username']}")
         print(f"Downloads: {model['stats']['downloadCount']:,}")
         print(f"Versions: {len(model['modelVersions'])}")
-        if model['modelVersions']:
-            latest = model['modelVersions'][0]
+        if model["modelVersions"]:
+            latest = model["modelVersions"][0]
             print(f"Latest Version: {latest['name']}")
             print(f"Base Model: {latest['baseModel']}")
     else:
         print(f"Error: {result.get('error', 'Unknown error')}")
 
-    return result['status'] == 'success'
+    return result["status"] == "success"
 
 
 async def test_hash_lookup():
@@ -92,7 +87,7 @@ async def test_hash_lookup():
     fake_hash = "0" * 64
     result = await civitai_lookup_hash(fake_hash)
     print(f"Status: {result['status']}")
-    if result['status'] == 'error':
+    if result["status"] == "error":
         print(f"Error (expected): {result['error']}")
 
     print("\nNote: To test with real hash, get SHA256 from moira:")
@@ -112,7 +107,7 @@ async def test_download_url():
     result = await civitai_get_download_url(model_id)
 
     print(f"Status: {result['status']}")
-    if result['status'] == 'success':
+    if result["status"] == "success":
         print(f"Model ID: {result['model_id']}")
         print(f"Version ID: {result['version_id']}")
         print(f"Requires Auth: {result['requires_auth']}")
@@ -120,7 +115,7 @@ async def test_download_url():
     else:
         print(f"Error: {result.get('error', 'Unknown error')}")
 
-    return result['status'] == 'success'
+    return result["status"] == "success"
 
 
 async def main():
@@ -140,28 +135,28 @@ async def main():
 
     # Run tests
     try:
-        results['search'] = await test_search()
+        results["search"] = await test_search()
     except Exception as e:
         print(f"[ERROR] Search test failed: {e}")
-        results['search'] = False
+        results["search"] = False
 
     try:
-        results['get_model'] = await test_get_model()
+        results["get_model"] = await test_get_model()
     except Exception as e:
         print(f"[ERROR] Get model test failed: {e}")
-        results['get_model'] = False
+        results["get_model"] = False
 
     try:
-        results['hash_lookup'] = await test_hash_lookup()
+        results["hash_lookup"] = await test_hash_lookup()
     except Exception as e:
         print(f"[ERROR] Hash lookup test failed: {e}")
-        results['hash_lookup'] = False
+        results["hash_lookup"] = False
 
     try:
-        results['download_url'] = await test_download_url()
+        results["download_url"] = await test_download_url()
     except Exception as e:
         print(f"[ERROR] Download URL test failed: {e}")
-        results['download_url'] = False
+        results["download_url"] = False
 
     # Summary
     print("\n" + "=" * 60)

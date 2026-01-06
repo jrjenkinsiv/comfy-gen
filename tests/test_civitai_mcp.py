@@ -27,14 +27,14 @@ async def test_civitai_mcp():
         print(f"  {tool.description}")
 
         # Show parameters
-        if hasattr(tool, 'inputSchema') and tool.inputSchema:
+        if hasattr(tool, "inputSchema") and tool.inputSchema:
             schema = tool.inputSchema
-            if 'properties' in schema:
+            if "properties" in schema:
                 print("  Parameters:")
-                for param_name, param_info in schema['properties'].items():
-                    param_type = param_info.get('type', 'unknown')
-                    param_desc = param_info.get('description', 'No description')
-                    required = param_name in schema.get('required', [])
+                for param_name, param_info in schema["properties"].items():
+                    param_type = param_info.get("type", "unknown")
+                    param_desc = param_info.get("description", "No description")
+                    required = param_name in schema.get("required", [])
                     req_marker = " (required)" if required else " (optional)"
                     print(f"    - {param_name} ({param_type}){req_marker}: {param_desc[:80]}...")
 
@@ -42,12 +42,7 @@ async def test_civitai_mcp():
     print("\n" + "=" * 60)
 
     # Verify expected tools
-    expected_tools = [
-        "civitai_search_models",
-        "civitai_get_model",
-        "civitai_lookup_hash",
-        "civitai_get_download_url"
-    ]
+    expected_tools = ["civitai_search_models", "civitai_get_model", "civitai_lookup_hash", "civitai_get_download_url"]
 
     tool_names = [t.name for t in tools]
 

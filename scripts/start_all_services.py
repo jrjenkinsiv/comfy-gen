@@ -209,7 +209,7 @@ Examples:
   python start_all_services.py --status     # Check status only
   python start_all_services.py --comfyui-only  # Start only ComfyUI
   python start_all_services.py --minio-only    # Start only MinIO
-        """
+        """,
     )
     parser.add_argument("--status", action="store_true", help="Check service status only")
     parser.add_argument("--comfyui-only", action="store_true", help="Start only ComfyUI")

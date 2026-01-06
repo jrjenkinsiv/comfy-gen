@@ -50,7 +50,7 @@ async def example_using_preset():
         print(f"    cfg: {config['cfg']}")
         print(f"    sampler: {config['sampler']}")
         print(f"    scheduler: {config['scheduler']}")
-        if 'validate' in config:
+        if "validate" in config:
             print(f"    validate: {config['validate']}")
 
     print("\n" + "-" * 60)
@@ -85,9 +85,9 @@ async def example_using_lora_preset():
         print(f"\n  {name}:")
         print(f"    model: {config['model']}")
         print(f"    workflow: {config['workflow']}")
-        if config.get('default_loras'):
+        if config.get("default_loras"):
             print("    default LoRAs:")
-            for lora in config['default_loras']:
+            for lora in config["default_loras"]:
                 print(f"      - {lora}")
 
     print("\n" + "-" * 60)

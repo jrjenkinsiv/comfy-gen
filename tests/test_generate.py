@@ -16,7 +16,7 @@ import generate
 
 def test_check_server_availability_success():
     """Test server availability check when server is reachable."""
-    with patch('requests.get') as mock_get:
+    with patch("requests.get") as mock_get:
         mock_response = Mock()
         mock_response.status_code = 200
         mock_get.return_value = mock_response
@@ -28,8 +28,9 @@ def test_check_server_availability_success():
 
 def test_check_server_availability_connection_error():
     """Test server availability check when server is unreachable."""
-    with patch('requests.get') as mock_get:
+    with patch("requests.get") as mock_get:
         import requests
+
         mock_get.side_effect = requests.ConnectionError("Connection refused")
 
         result = generate.check_server_availability()
@@ -39,8 +40,9 @@ def test_check_server_availability_connection_error():
 
 def test_check_server_availability_timeout():
     """Test server availability check when request times out."""
-    with patch('requests.get') as mock_get:
+    with patch("requests.get") as mock_get:
         import requests
+
         mock_get.side_effect = requests.Timeout("Timeout")
 
         result = generate.check_server_availability()
@@ -50,24 +52,14 @@ def test_check_server_availability_timeout():
 
 def test_get_available_models_success():
     """Test getting available models from API."""
-    with patch('requests.get') as mock_get:
+    with patch("requests.get") as mock_get:
         mock_response = Mock()
         mock_response.status_code = 200
         mock_response.json.return_value = {
             "CheckpointLoaderSimple": {
-                "input": {
-                    "required": {
-                        "ckpt_name": [["model1.safetensors", "model2.safetensors"]]
-                    }
-                }
+                "input": {"required": {"ckpt_name": [["model1.safetensors", "model2.safetensors"]]}}
             },
-            "LoraLoader": {
-                "input": {
-                    "required": {
-                        "lora_name": [["lora1.safetensors", "lora2.safetensors"]]
-                    }
-                }
-            }
+            "LoraLoader": {"input": {"required": {"lora_name": [["lora1.safetensors", "lora2.safetensors"]]}}},
         }
         mock_get.return_value = mock_response
 
@@ -87,44 +79,27 @@ def test_find_model_fallbacks():
             "sd15-v1-5.safetensors",
             "sd15-inpainting.safetensors",
             "sdxl-base-1.0.safetensors",
-            "flux-dev.safetensors"
+            "flux-dev.safetensors",
         ]
     }
 
     # Test exact substring match
-    suggestions = generate.find_model_fallbacks(
-        "sd15",
-        available_models,
-        "checkpoints"
-    )
+    suggestions = generate.find_model_fallbacks("sd15", available_models, "checkpoints")
     assert len(suggestions) > 0
     assert any("sd15" in s.lower() for s in suggestions)
     print("[OK] find_model_fallbacks suggests similar models")
 
     # Test no matches
-    suggestions = generate.find_model_fallbacks(
-        "nonexistent-model",
-        available_models,
-        "checkpoints"
-    )
+    suggestions = generate.find_model_fallbacks("nonexistent-model", available_models, "checkpoints")
     # May return empty or partial matches
     print(f"[OK] find_model_fallbacks handles no matches: {len(suggestions)} suggestions")
 
 
 def test_validate_workflow_models_valid():
     """Test workflow validation with valid models."""
-    workflow = {
-        "1": {
-            "class_type": "CheckpointLoaderSimple",
-            "inputs": {
-                "ckpt_name": "model1.safetensors"
-            }
-        }
-    }
+    workflow = {"1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": "model1.safetensors"}}}
 
-    available_models = {
-        "checkpoints": ["model1.safetensors", "model2.safetensors"]
-    }
+    available_models = {"checkpoints": ["model1.safetensors", "model2.safetensors"]}
 
     is_valid, missing, suggestions = generate.validate_workflow_models(workflow, available_models)
     assert is_valid is True
@@ -134,18 +109,9 @@ def test_validate_workflow_models_valid():
 
 def test_validate_workflow_models_missing():
     """Test workflow validation with missing models."""
-    workflow = {
-        "1": {
-            "class_type": "CheckpointLoaderSimple",
-            "inputs": {
-                "ckpt_name": "missing-model.safetensors"
-            }
-        }
-    }
+    workflow = {"1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": "missing-model.safetensors"}}}
 
-    available_models = {
-        "checkpoints": ["model1.safetensors", "model2.safetensors"]
-    }
+    available_models = {"checkpoints": ["model1.safetensors", "model2.safetensors"]}
 
     is_valid, missing, suggestions = generate.validate_workflow_models(workflow, available_models)
     assert is_valid is False
@@ -158,7 +124,7 @@ def test_queue_workflow_retry_on_server_error():
     """Test that queue_workflow retries on server errors."""
     workflow = {"test": "workflow"}
 
-    with patch('requests.post') as mock_post:
+    with patch("requests.post") as mock_post:
         # First call fails with 503, second succeeds
         mock_response_fail = Mock()
         mock_response_fail.status_code = 503
@@ -170,7 +136,7 @@ def test_queue_workflow_retry_on_server_error():
 
         mock_post.side_effect = [mock_response_fail, mock_response_success]
 
-        with patch('time.sleep'):  # Skip actual sleep
+        with patch("time.sleep"):  # Skip actual sleep
             result = generate.queue_workflow(workflow, retry=True)
 
         assert result == "test123"
@@ -182,7 +148,7 @@ def test_queue_workflow_no_retry_on_client_error():
     """Test that queue_workflow doesn't retry on client errors."""
     workflow = {"test": "workflow"}
 
-    with patch('requests.post') as mock_post:
+    with patch("requests.post") as mock_post:
         mock_response = Mock()
         mock_response.status_code = 400
         mock_response.text = "Bad Request"
@@ -197,9 +163,9 @@ def test_queue_workflow_no_retry_on_client_error():
 
 def test_exit_codes():
     """Test that exit code constants are defined."""
-    assert hasattr(generate, 'EXIT_SUCCESS')
-    assert hasattr(generate, 'EXIT_FAILURE')
-    assert hasattr(generate, 'EXIT_CONFIG_ERROR')
+    assert hasattr(generate, "EXIT_SUCCESS")
+    assert hasattr(generate, "EXIT_FAILURE")
+    assert hasattr(generate, "EXIT_CONFIG_ERROR")
     assert generate.EXIT_SUCCESS == 0
     assert generate.EXIT_FAILURE == 1
     assert generate.EXIT_CONFIG_ERROR == 2
@@ -217,7 +183,7 @@ def test_load_workflow_file_not_found():
 
 def test_load_workflow_invalid_json():
     """Test workflow loading with invalid JSON."""
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
         f.write("invalid json {")
         temp_path = f.name
 
@@ -234,20 +200,9 @@ def test_load_workflow_invalid_json():
 def test_find_prompt_nodes_sd15():
     """Test finding prompt nodes in SD 1.5 workflow."""
     workflow = {
-        "1": {
-            "class_type": "CheckpointLoaderSimple",
-            "_meta": {"title": "Load Checkpoint"}
-        },
-        "2": {
-            "class_type": "CLIPTextEncode",
-            "inputs": {"text": "test"},
-            "_meta": {"title": "Positive Prompt"}
-        },
-        "3": {
-            "class_type": "CLIPTextEncode",
-            "inputs": {"text": ""},
-            "_meta": {"title": "Negative Prompt"}
-        }
+        "1": {"class_type": "CheckpointLoaderSimple", "_meta": {"title": "Load Checkpoint"}},
+        "2": {"class_type": "CLIPTextEncode", "inputs": {"text": "test"}, "_meta": {"title": "Positive Prompt"}},
+        "3": {"class_type": "CLIPTextEncode", "inputs": {"text": ""}, "_meta": {"title": "Negative Prompt"}},
     }
 
     pos_node, neg_node = generate.find_prompt_nodes(workflow)
@@ -259,15 +214,8 @@ def test_find_prompt_nodes_sd15():
 def test_find_prompt_nodes_wan22():
     """Test finding prompt nodes in Wan 2.2 workflow."""
     workflow = {
-        "1": {
-            "class_type": "UNETLoader",
-            "_meta": {"title": "Load Diffusion Model"}
-        },
-        "3": {
-            "class_type": "CLIPTextEncode",
-            "inputs": {"text": "motion prompt"},
-            "_meta": {"title": "Motion Prompt"}
-        }
+        "1": {"class_type": "UNETLoader", "_meta": {"title": "Load Diffusion Model"}},
+        "3": {"class_type": "CLIPTextEncode", "inputs": {"text": "motion prompt"}, "_meta": {"title": "Motion Prompt"}},
     }
 
     pos_node, neg_node = generate.find_prompt_nodes(workflow)
@@ -282,13 +230,13 @@ def test_find_prompt_nodes_fallback():
         "5": {
             "class_type": "CLIPTextEncode",
             "inputs": {"text": "first clip node"},
-            "_meta": {"title": "Some CLIP Node"}
+            "_meta": {"title": "Some CLIP Node"},
         },
         "6": {
             "class_type": "CLIPTextEncode",
             "inputs": {"text": "second clip node"},
-            "_meta": {"title": "Another CLIP Node"}
-        }
+            "_meta": {"title": "Another CLIP Node"},
+        },
     }
 
     pos_node, neg_node = generate.find_prompt_nodes(workflow)
@@ -299,12 +247,7 @@ def test_find_prompt_nodes_fallback():
 
 def test_get_default_negative_prompt_sd15():
     """Test default negative prompt for SD 1.5 workflows."""
-    workflow = {
-        "1": {
-            "class_type": "CheckpointLoaderSimple",
-            "inputs": {"ckpt_name": "sd15.safetensors"}
-        }
-    }
+    workflow = {"1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": "sd15.safetensors"}}}
 
     default_neg = generate.get_default_negative_prompt(workflow)
     assert default_neg != "", "SD 1.5 workflow should have default negative prompt"
@@ -315,12 +258,7 @@ def test_get_default_negative_prompt_sd15():
 
 def test_get_default_negative_prompt_wan22():
     """Test default negative prompt for Wan 2.2 workflows."""
-    workflow = {
-        "1": {
-            "class_type": "UNETLoader",
-            "inputs": {}
-        }
-    }
+    workflow = {"1": {"class_type": "UNETLoader", "inputs": {}}}
 
     default_neg = generate.get_default_negative_prompt(workflow)
     assert default_neg == "", "Wan 2.2 workflow should have empty default negative prompt"
@@ -333,13 +271,13 @@ def test_modify_prompt_with_negative():
         "2": {
             "class_type": "CLIPTextEncode",
             "inputs": {"text": "old positive"},
-            "_meta": {"title": "Positive Prompt"}
+            "_meta": {"title": "Positive Prompt"},
         },
         "3": {
             "class_type": "CLIPTextEncode",
             "inputs": {"text": "old negative"},
-            "_meta": {"title": "Negative Prompt"}
-        }
+            "_meta": {"title": "Negative Prompt"},
+        },
     }
 
     modified = generate.modify_prompt(workflow, "new positive", "new negative")
@@ -352,20 +290,13 @@ def test_modify_prompt_with_negative():
 def test_modify_prompt_default_negative():
     """Test modify_prompt with default negative prompt."""
     workflow = {
-        "1": {
-            "class_type": "CheckpointLoaderSimple",
-            "inputs": {}
-        },
+        "1": {"class_type": "CheckpointLoaderSimple", "inputs": {}},
         "2": {
             "class_type": "CLIPTextEncode",
             "inputs": {"text": "old positive"},
-            "_meta": {"title": "Positive Prompt"}
+            "_meta": {"title": "Positive Prompt"},
         },
-        "3": {
-            "class_type": "CLIPTextEncode",
-            "inputs": {"text": ""},
-            "_meta": {"title": "Negative Prompt"}
-        }
+        "3": {"class_type": "CLIPTextEncode", "inputs": {"text": ""}, "_meta": {"title": "Negative Prompt"}},
     }
 
     # Call without negative prompt - should apply default
@@ -382,11 +313,7 @@ def test_modify_prompt_default_negative():
 def test_modify_prompt_no_negative_node():
     """Test modify_prompt with workflow that has no negative node."""
     workflow = {
-        "3": {
-            "class_type": "CLIPTextEncode",
-            "inputs": {"text": "old prompt"},
-            "_meta": {"title": "Motion Prompt"}
-        }
+        "3": {"class_type": "CLIPTextEncode", "inputs": {"text": "old prompt"}, "_meta": {"title": "Motion Prompt"}}
     }
 
     # Should not crash when negative prompt provided but no node exists
@@ -433,12 +360,13 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"[FAILED] {test.__name__}: {e}")
             import traceback
+
             traceback.print_exc()
             failed += 1
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"Tests passed: {passed}/{len(tests)}")
     print(f"Tests failed: {failed}/{len(tests)}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     sys.exit(0 if failed == 0 else 1)

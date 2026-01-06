@@ -26,14 +26,11 @@ async def example_simple_generation():
     from comfygen.tools import generation
 
     result = await generation.generate_image(
-        prompt="a sunset over mountains, highly detailed, 8k",
-        width=768,
-        height=512,
-        steps=25
+        prompt="a sunset over mountains, highly detailed, 8k", width=768, height=512, steps=25
     )
 
     print(f"\nStatus: {result.get('status')}")
-    if result.get('status') == 'success':
+    if result.get("status") == "success":
         print(f"Image URL: {result.get('url')}")
         print(f"Prompt ID: {result.get('prompt_id')}")
     else:
@@ -59,7 +56,7 @@ async def example_intelligent_workflow():
     prompt_text = "woman portrait"
     analysis = await prompts.analyze_prompt(prompt_text)
     print(f"Analysis: {len(analysis.get('analysis', {}).get('suggestions', []))} suggestions")
-    for suggestion in analysis.get('analysis', {}).get('suggestions', [])[:2]:
+    for suggestion in analysis.get("analysis", {}).get("suggestions", [])[:2]:
         print(f"  - {suggestion}")
 
     # Step 3: Build improved prompt
@@ -67,7 +64,7 @@ async def example_intelligent_workflow():
     improved = await prompts.build_prompt(
         subject="woman portrait with detailed face",
         style="photorealistic, professional photography",
-        setting="studio lighting, neutral background"
+        setting="studio lighting, neutral background",
     )
     print(f"Improved prompt: {improved.get('prompt')}")
 
@@ -85,23 +82,21 @@ async def example_video_creation():
     lora_result = await models.suggest_loras(
         prompt="a flowing river through a forest",
         model="wan2.2_t2v_high_noise_14B_fp8_scaled.safetensors",
-        max_suggestions=2
+        max_suggestions=2,
     )
 
     print(f"Found {lora_result.get('count', 0)} LoRA suggestions:")
-    for lora in lora_result.get('suggestions', []):
+    for lora in lora_result.get("suggestions", []):
         print(f"  - {lora.get('name')}: {lora.get('reason')}")
 
     # Generate video
     print("\n[2/2] Generating video...")
     video_result = await video.generate_video(
-        prompt="a flowing river through a forest, gentle movement, natural lighting",
-        steps=30,
-        frames=81
+        prompt="a flowing river through a forest, gentle movement, natural lighting", steps=30, frames=81
     )
 
     print(f"\nStatus: {video_result.get('status')}")
-    if video_result.get('status') == 'success':
+    if video_result.get("status") == "success":
         print(f"Video URL: {video_result.get('url')}")
     else:
         print(f"Error: {video_result.get('error')}")
@@ -120,7 +115,7 @@ async def example_gallery_management():
     images = await gallery.list_images(limit=5, sort="newest")
 
     print(f"Found {images.get('count', 0)} images:")
-    for img in images.get('images', [])[:3]:
+    for img in images.get("images", [])[:3]:
         print(f"  - {img.get('name')} ({img.get('size')} bytes)")
 
     # Get generation history
@@ -128,8 +123,8 @@ async def example_gallery_management():
     history = await gallery.get_history(limit=3)
 
     print(f"\nFound {history.get('count', 0)} history entries:")
-    for entry in history.get('history', []):
-        params = entry.get('parameters', {})
+    for entry in history.get("history", []):
+        params = entry.get("parameters", {})
         print(f"  - Prompt ID: {entry.get('prompt_id')}")
         print(f"    Prompt: {params.get('positive_prompt', 'N/A')[:50]}...")
 
@@ -146,9 +141,9 @@ async def example_system_monitoring():
     print("\n[1/3] Checking system status...")
     status = await control.get_system_status()
 
-    if status.get('status') == 'online':
+    if status.get("status") == "online":
         print("ComfyUI server is online")
-        gpu_info = status.get('gpu', [])
+        gpu_info = status.get("gpu", [])
         if gpu_info:
             for gpu in gpu_info:
                 print(f"  - {gpu.get('name')}: {gpu.get('vram_used_percent', 0):.1f}% VRAM used")
@@ -166,7 +161,7 @@ async def example_system_monitoring():
     print("\n[3/3] Checking progress...")
     progress = await control.get_progress()
 
-    if progress.get('is_processing'):
+    if progress.get("is_processing"):
         print(f"Currently processing: {progress.get('current_job', {}).get('prompt_id')}")
     else:
         print("No active generation")
@@ -183,14 +178,11 @@ async def example_model_discovery():
     # Search for models
     print("\n[1/2] Searching CivitAI for detail enhancer LoRAs...")
     search_results = await models.search_civitai(
-        query="detail enhancer",
-        model_type="lora",
-        base_model="SD 1.5",
-        limit=3
+        query="detail enhancer", model_type="lora", base_model="SD 1.5", limit=3
     )
 
     print(f"Found {search_results.get('count', 0)} results:")
-    for model in search_results.get('results', []):
+    for model in search_results.get("results", []):
         print(f"  - {model.get('name')}")
         print(f"    Type: {model.get('type')}, Downloads: {model.get('downloads')}")
         print(f"    Rating: {model.get('rating', 0):.2f}")
@@ -200,7 +192,7 @@ async def example_model_discovery():
     installed = await models.list_models()
 
     print(f"Installed checkpoints: {installed.get('count', 0)}")
-    for checkpoint in installed.get('checkpoints', [])[:3]:
+    for checkpoint in installed.get("checkpoints", [])[:3]:
         print(f"  - {checkpoint}")
 
 
@@ -235,6 +227,7 @@ async def main():
     except Exception as e:
         print(f"\nError running examples: {e}")
         import traceback
+
         traceback.print_exc()
 
 

@@ -14,6 +14,7 @@ UPSCALE_MODELS = {
     "4x_NMKD-Superscale-SP_178000_G.pth": "https://huggingface.co/gemasai/4x_NMKD-Superscale-SP_178000_G/resolve/main/4x_NMKD-Superscale-SP_178000_G.pth",
 }
 
+
 def download_model(name: str, url: str, dest_dir: Path):
     """Download upscale model"""
     dest_path = dest_dir / name
@@ -32,6 +33,7 @@ def download_model(name: str, url: str, dest_dir: Path):
     except Exception as e:
         print(f"[ERROR] Failed to download {name}: {e}")
 
+
 def main():
     import sys
 
@@ -43,23 +45,24 @@ def main():
     dest_dir = Path(sys.argv[1])
     dest_dir.mkdir(parents=True, exist_ok=True)
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("DOWNLOADING UPSCALE MODELS")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     print(f"Destination: {dest_dir}\n")
 
     for name, url in UPSCALE_MODELS.items():
         download_model(name, url, dest_dir)
         print()
 
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     print("DOWNLOAD COMPLETE")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     print(f"\nModels saved in: {dest_dir}")
     print("\nRecommendations:")
     print("  - RealESRGAN_x4plus.pth: General purpose, photorealistic")
     print("  - 4x-UltraSharp.pth: Best for faces and people")
     print("  - RealESRGAN_x4plus_anime_6B.pth: For anime/cartoon style")
+
 
 if __name__ == "__main__":
     main()

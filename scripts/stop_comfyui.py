@@ -28,7 +28,7 @@ def stop_comfyui():
     try:
         if system == "Windows":
             # Use taskkill to terminate process
-            cmd = ['taskkill', '/PID', pid, '/F']
+            cmd = ["taskkill", "/PID", pid, "/F"]
             result = subprocess.run(cmd, capture_output=True, text=True)
             if result.returncode == 0:
                 print(f"[OK] ComfyUI process {pid} terminated successfully")
@@ -38,7 +38,7 @@ def stop_comfyui():
                 return 1
         else:
             # Use kill on Unix-like systems
-            cmd = ['kill', '-TERM', pid]
+            cmd = ["kill", "-TERM", pid]
             result = subprocess.run(cmd, capture_output=True, text=True)
             if result.returncode == 0:
                 print(f"[OK] ComfyUI process {pid} terminated successfully")

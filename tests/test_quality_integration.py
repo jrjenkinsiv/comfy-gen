@@ -16,17 +16,10 @@ def test_metadata_quality_fields():
     quality_result = {
         "composite_score": 7.5,
         "grade": "B",
-        "technical": {
-            "brisque": 7.2,
-            "niqe": 6.8,
-            "raw_brisque": 28.0,
-            "raw_niqe": 32.0
-        },
+        "technical": {"brisque": 7.2, "niqe": 6.8, "raw_brisque": 28.0, "raw_niqe": 32.0},
         "aesthetic": 8.1,
         "detail": 7.8,
-        "prompt_adherence": {
-            "clip": 8.5
-        }
+        "prompt_adherence": {"clip": 8.5},
     }
 
     # Create metadata
@@ -39,7 +32,7 @@ def test_metadata_quality_fields():
         preset=None,
         validation_score=0.85,
         minio_url="http://test/image.png",
-        quality_result=quality_result
+        quality_result=quality_result,
     )
 
     # Verify quality fields are present
@@ -68,7 +61,7 @@ def test_metadata_without_quality():
         preset=None,
         validation_score=0.85,
         minio_url="http://test/image.png",
-        quality_result=None
+        quality_result=None,
     )
 
     # Verify quality fields are still present but None

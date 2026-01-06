@@ -85,6 +85,7 @@ def main():
 
         # Upload to MinIO
         import datetime
+
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         object_name = f"{timestamp}_basic_example.png"
 

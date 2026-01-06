@@ -23,12 +23,12 @@ def parse_filename(filename: str) -> dict:
         "seed": None,
         "steps": None,
         "cfg": None,
-        "loras": []
+        "loras": [],
     }
 
     # Remove .png extension
-    base = filename.replace('.png', '')
-    parts = base.split('_')
+    base = filename.replace(".png", "")
+    parts = base.split("_")
 
     if len(parts) >= 3:
         # Try to parse timestamp
@@ -39,7 +39,7 @@ def parse_filename(filename: str) -> dict:
                 # Valid timestamp format
                 result["timestamp"] = f"{date_str}_{time_str}"
                 # Rest is description
-                description = '_'.join(parts[2:])
+                description = "_".join(parts[2:])
                 result["prompt"] = f"[Backfilled] {description.replace('_', ' ')}"
         except (ValueError, IndexError):
             pass
@@ -55,36 +55,28 @@ def create_metadata(filename: str, file_size: int = None) -> dict:
     return {
         "input": {
             "prompt": parsed.get("prompt", "No prompt recorded"),
-            "negative_prompt": parsed.get("negative_prompt", "")
+            "negative_prompt": parsed.get("negative_prompt", ""),
         },
         "parameters": {
             "seed": parsed.get("seed"),
             "steps": parsed.get("steps"),
             "cfg": parsed.get("cfg"),
             "loras": parsed.get("loras", []),
-            "resolution": None
+            "resolution": None,
         },
-        "workflow": {
-            "name": "unknown",
-            "model": "unknown"
-        },
+        "workflow": {"name": "unknown", "model": "unknown"},
         "quality": {
             "grade": None,
             "composite_score": None,
-            "prompt_adherence": {
-                "clip": None
-            },
-            "technical": {
-                "brisque": None,
-                "niqe": None
-            }
+            "prompt_adherence": {"clip": None},
+            "technical": {"brisque": None, "niqe": None},
         },
         "storage": {
             "file_size_bytes": file_size,
             "generation_time_seconds": None,
             "backfilled": True,
-            "backfill_date": datetime.now().isoformat()
-        }
+            "backfill_date": datetime.now().isoformat(),
+        },
     }
 
 
@@ -93,10 +85,10 @@ def main():
 
     # Connect to MinIO
     mc = Minio(
-        '192.168.1.215:9000',
-        access_key=os.environ.get('MINIO_ACCESS_KEY', 'minioadmin'),
-        secret_key=os.environ.get('MINIO_SECRET_KEY', 'minioadmin'),
-        secure=False
+        "192.168.1.215:9000",
+        access_key=os.environ.get("MINIO_ACCESS_KEY", "minioadmin"),
+        secret_key=os.environ.get("MINIO_SECRET_KEY", "minioadmin"),
+        secure=False,
     )
 
     bucket = "comfy-gen"
@@ -106,13 +98,13 @@ def main():
     objects = list(mc.list_objects(bucket))
 
     # Find images and their metadata
-    png_files = {obj.object_name: obj for obj in objects if obj.object_name.endswith('.png')}
-    json_keys = {obj.object_name for obj in objects if obj.object_name.endswith('.json')}
+    png_files = {obj.object_name: obj for obj in objects if obj.object_name.endswith(".png")}
+    json_keys = {obj.object_name for obj in objects if obj.object_name.endswith(".json")}
 
     # Find missing metadata
     missing = []
     for png_name, png_obj in png_files.items():
-        json_key = png_name + '.json'
+        json_key = png_name + ".json"
         if json_key not in json_keys:
             missing.append((png_name, png_obj))
 
@@ -136,22 +128,17 @@ def main():
     errors = 0
 
     for png_name, png_obj in missing:
-        json_key = png_name + '.json'
+        json_key = png_name + ".json"
 
         try:
             # Create metadata
             metadata = create_metadata(png_name, png_obj.size)
-            json_data = json.dumps(metadata, indent=2).encode('utf-8')
+            json_data = json.dumps(metadata, indent=2).encode("utf-8")
 
             # Upload to MinIO
             from io import BytesIO
-            mc.put_object(
-                bucket,
-                json_key,
-                BytesIO(json_data),
-                len(json_data),
-                content_type='application/json'
-            )
+
+            mc.put_object(bucket, json_key, BytesIO(json_data), len(json_data), content_type="application/json")
             created += 1
             print(f"  [OK] {json_key}")
 

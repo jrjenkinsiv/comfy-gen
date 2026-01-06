@@ -14,6 +14,7 @@ from pathlib import Path
 COMFYUI_DIR = Path.home() / "ComfyUI"
 COMFYUI_REPO = "https://github.com/comfyanonymous/ComfyUI.git"
 
+
 def run_command(cmd, cwd=None):
     """Run a command and return success."""
     try:
@@ -23,6 +24,7 @@ def run_command(cmd, cwd=None):
     except subprocess.CalledProcessError as e:
         print(f"[ERROR] {cmd}: {e.stderr}")
         return False
+
 
 def main():
     print("Setting up ComfyUI on moira...")
@@ -60,6 +62,7 @@ def main():
     print("[OK] ComfyUI setup complete!")
     print(f"ComfyUI installed at: {COMFYUI_DIR}")
     print("To start server: python main.py --listen 0.0.0.0 --port 8188")
+
 
 if __name__ == "__main__":
     main()

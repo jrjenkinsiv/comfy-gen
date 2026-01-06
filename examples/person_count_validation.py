@@ -69,7 +69,7 @@ def main():
     --workflow workflows/flux-dev.json \\
     --prompt "solo woman standing in a field, detailed portrait" \\
     --output /tmp/solo_portrait.png \\
-    --validate --validate-person-count"""
+    --validate --validate-person-count""",
         },
         {
             "description": "Two people validation",
@@ -77,7 +77,7 @@ def main():
     --workflow workflows/flux-dev.json \\
     --prompt "two women having a conversation, cafe setting" \\
     --output /tmp/conversation.png \\
-    --validate --validate-person-count"""
+    --validate --validate-person-count""",
         },
         {
             "description": "Person count with auto-retry",
@@ -86,8 +86,8 @@ def main():
     --prompt "solo person hiking on a mountain trail" \\
     --output /tmp/hiker.png \\
     --validate --validate-person-count \\
-    --auto-retry --retry-limit 3"""
-        }
+    --auto-retry --retry-limit 3""",
+        },
     ]
 
     for i, example in enumerate(examples, 1):

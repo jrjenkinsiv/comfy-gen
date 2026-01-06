@@ -14,6 +14,7 @@ import requests
 
 COMFYUI_HOST = "http://192.168.1.215:8188"
 
+
 def get_queue():
     """Get current queue from ComfyUI."""
     try:
@@ -27,6 +28,7 @@ def get_queue():
     except requests.RequestException as e:
         print(f"[ERROR] Failed to connect to ComfyUI: {e}")
         return None
+
 
 def interrupt_generation():
     """Interrupt currently running generation."""
@@ -42,6 +44,7 @@ def interrupt_generation():
     except requests.RequestException as e:
         print(f"[ERROR] Failed to connect to ComfyUI: {e}")
         return False
+
 
 def delete_from_queue(prompt_ids):
     """Delete specific prompts from queue.
@@ -62,6 +65,7 @@ def delete_from_queue(prompt_ids):
     except requests.RequestException as e:
         print(f"[ERROR] Failed to connect to ComfyUI: {e}")
         return False
+
 
 def list_queue(queue_data):
     """Display current queue information."""
@@ -86,7 +90,7 @@ def list_queue(queue_data):
             if len(item) >= 2:
                 queue_num = item[0]
                 prompt_id = item[1]
-                print(f"  [{idx+1}] Queue #{queue_num} - Prompt ID: {prompt_id}")
+                print(f"  [{idx + 1}] Queue #{queue_num} - Prompt ID: {prompt_id}")
         print()
 
     if pending:
@@ -95,11 +99,12 @@ def list_queue(queue_data):
             if len(item) >= 2:
                 queue_num = item[0]
                 prompt_id = item[1]
-                print(f"  [{idx+1}] Queue #{queue_num} - Prompt ID: {prompt_id}")
+                print(f"  [{idx + 1}] Queue #{queue_num} - Prompt ID: {prompt_id}")
         print()
 
     total = len(running) + len(pending)
     print(f"Total: {total} job(s) in queue")
+
 
 def cancel_all():
     """Cancel all running and pending jobs."""
@@ -133,6 +138,7 @@ def cancel_all():
     print("[OK] All jobs cancelled")
     return True
 
+
 def cancel_specific(prompt_id):
     """Cancel a specific prompt by ID."""
     queue_data = get_queue()
@@ -159,20 +165,13 @@ def cancel_specific(prompt_id):
     print(f"[OK] Cancelled prompt {prompt_id}")
     return True
 
+
 def main():
     parser = argparse.ArgumentParser(
-        description="Cancel ComfyUI generation jobs",
-        formatter_class=argparse.RawDescriptionHelpFormatter
+        description="Cancel ComfyUI generation jobs", formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    parser.add_argument(
-        "--list",
-        action="store_true",
-        help="List current queue without cancelling"
-    )
-    parser.add_argument(
-        "--prompt-id",
-        help="Cancel specific prompt by ID"
-    )
+    parser.add_argument("--list", action="store_true", help="List current queue without cancelling")
+    parser.add_argument("--prompt-id", help="Cancel specific prompt by ID")
     args = parser.parse_args()
 
     # List queue
@@ -193,6 +192,7 @@ def main():
     if cancel_all():
         return 0
     return 1
+
 
 if __name__ == "__main__":
     sys.exit(main())

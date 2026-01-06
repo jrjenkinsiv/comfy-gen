@@ -83,20 +83,12 @@ async def civitai_search_models(
             base_model=base_model,
             sort=sort,
             nsfw=nsfw,
-            limit=min(limit, 100)  # Cap at 100
+            limit=min(limit, 100),  # Cap at 100
         )
 
-        return {
-            "status": "success",
-            "results": results,
-            "count": len(results),
-            "query": query
-        }
+        return {"status": "success", "results": results, "count": len(results), "query": query}
     except Exception as e:
-        return {
-            "status": "error",
-            "error": str(e)
-        }
+        return {"status": "error", "error": str(e)}
 
 
 @mcp.tool()
@@ -123,20 +115,11 @@ async def civitai_get_model(model_id: int) -> dict:
         model = client.get_model(model_id)
 
         if not model:
-            return {
-                "status": "error",
-                "error": f"Model not found: {model_id}"
-            }
+            return {"status": "error", "error": f"Model not found: {model_id}"}
 
-        return {
-            "status": "success",
-            "model": model
-        }
+        return {"status": "success", "model": model}
     except Exception as e:
-        return {
-            "status": "error",
-            "error": str(e)
-        }
+        return {"status": "error", "error": str(e)}
 
 
 @mcp.tool()
@@ -176,43 +159,25 @@ async def civitai_lookup_hash(file_hash: str) -> dict:
     try:
         # Validate hash format
         if not file_hash or len(file_hash) != 64:
-            return {
-                "status": "error",
-                "error": "Invalid SHA256 hash. Must be 64 hexadecimal characters."
-            }
+            return {"status": "error", "error": "Invalid SHA256 hash. Must be 64 hexadecimal characters."}
 
         client = _get_civitai_client()
         result = client.get_model_by_hash(file_hash)
 
         if not result:
-            return {
-                "status": "error",
-                "error": "Hash lookup failed - no response from CivitAI"
-            }
+            return {"status": "error", "error": "Hash lookup failed - no response from CivitAI"}
 
         # Check if it's an error response
         if "error" in result:
-            return {
-                "status": "error",
-                "error": result["error"]
-            }
+            return {"status": "error", "error": result["error"]}
 
-        return {
-            "status": "success",
-            **result
-        }
+        return {"status": "success", **result}
     except Exception as e:
-        return {
-            "status": "error",
-            "error": str(e)
-        }
+        return {"status": "error", "error": str(e)}
 
 
 @mcp.tool()
-async def civitai_get_download_url(
-    model_id: int,
-    version_id: Optional[int] = None
-) -> dict:
+async def civitai_get_download_url(model_id: int, version_id: Optional[int] = None) -> dict:
     """Get authenticated download URL for a CivitAI model.
 
     Args:
@@ -238,19 +203,13 @@ async def civitai_get_download_url(
         # Get the model to validate it exists
         model = client.get_model(model_id)
         if not model:
-            return {
-                "status": "error",
-                "error": f"Model not found: {model_id}"
-            }
+            return {"status": "error", "error": f"Model not found: {model_id}"}
 
         # Get download URL
         download_url = client.get_download_url(model_id, version_id)
 
         if not download_url:
-            return {
-                "status": "error",
-                "error": "Failed to get download URL. Model may not have downloadable files."
-            }
+            return {"status": "error", "error": "Failed to get download URL. Model may not have downloadable files."}
 
         # Determine which version was used
         versions = model.get("modelVersions", [])
@@ -266,13 +225,10 @@ async def civitai_get_download_url(
             "download_url": download_url,
             "model_id": model_id,
             "version_id": actual_version_id,
-            "requires_auth": client.api_key is None and model.get("nsfw", False)
+            "requires_auth": client.api_key is None and model.get("nsfw", False),
         }
     except Exception as e:
-        return {
-            "status": "error",
-            "error": str(e)
-        }
+        return {"status": "error", "error": str(e)}
 
 
 if __name__ == "__main__":

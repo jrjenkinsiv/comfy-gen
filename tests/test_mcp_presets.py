@@ -93,7 +93,9 @@ async def test_mcp_preset_integration():
     assert "auto_retry" in validation
     assert "retry_limit" in validation
     assert "positive_threshold" in validation
-    print(f"[OK] Validation: enabled={validation['enabled']}, auto_retry={validation['auto_retry']}, retry_limit={validation['retry_limit']}")
+    print(
+        f"[OK] Validation: enabled={validation['enabled']}, auto_retry={validation['auto_retry']}, retry_limit={validation['retry_limit']}"
+    )
 
     # Test 8: Preset parameter merging logic simulation
     print("\n[TEST] Preset parameter merging logic")
@@ -113,13 +115,17 @@ async def test_mcp_preset_integration():
     final_steps = user_steps if user_steps is not None else preset.get("steps", 20)
     final_cfg = user_cfg if user_cfg is not None else preset.get("cfg", 7.0)
     final_sampler = user_sampler if user_sampler is not None else preset.get("sampler", "euler")
-    final_validate = user_validate if user_validate is not None else preset.get("validate", validation_config.get("enabled", True))
+    final_validate = (
+        user_validate if user_validate is not None else preset.get("validate", validation_config.get("enabled", True))
+    )
 
     assert final_steps == 10  # From draft preset
     assert final_cfg == 5.0  # From draft preset
     assert final_sampler == "euler"  # From draft preset
     assert not final_validate  # From draft preset
-    print(f"[OK] Merged params: steps={final_steps}, cfg={final_cfg}, sampler={final_sampler}, validate={final_validate}")
+    print(
+        f"[OK] Merged params: steps={final_steps}, cfg={final_cfg}, sampler={final_sampler}, validate={final_validate}"
+    )
 
     # Test 9: User override of preset
     print("\n[TEST] User override of preset")
@@ -239,11 +245,13 @@ async def run_all_tests():
     except AssertionError as e:
         print(f"\n[ERROR] Test failed: {e}")
         import traceback
+
         traceback.print_exc()
         return 1
     except Exception as e:
         print(f"\n[ERROR] Unexpected error: {e}")
         import traceback
+
         traceback.print_exc()
         return 1
 

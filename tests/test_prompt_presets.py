@@ -19,7 +19,7 @@ def test_load_prompt_catalog():
         return False
 
     try:
-        with open(catalog_path, encoding='utf-8') as f:
+        with open(catalog_path, encoding="utf-8") as f:
             catalog = yaml.safe_load(f)
 
         assert catalog is not None, "Catalog should not be None"
@@ -47,7 +47,7 @@ def test_prompt_preset_structure():
     """Test that prompt presets have expected structure."""
     catalog_path = Path(__file__).parent.parent / "prompt_catalog.yaml"
 
-    with open(catalog_path, encoding='utf-8') as f:
+    with open(catalog_path, encoding="utf-8") as f:
         catalog = yaml.safe_load(f)
 
     saved_prompts = catalog.get("saved_prompts", {})
@@ -109,4 +109,3 @@ if __name__ == "__main__":
     else:
         print("\n[ERROR] Some tests failed")
         sys.exit(1)
-

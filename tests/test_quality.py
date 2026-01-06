@@ -14,6 +14,7 @@ from comfy_gen.quality import PYIQA_AVAILABLE
 def test_quality_import():
     """Test that quality module can be imported."""
     from comfy_gen import quality
+
     assert quality is not None
     print("[OK] Quality module imported successfully")
 
@@ -34,7 +35,7 @@ def test_quality_function_signature():
 
     # Test with minimal arguments (should not crash)
     # Use tempfile to generate a unique non-existent file path
-    with tempfile.NamedTemporaryFile(suffix='.png', delete=True) as tmp:
+    with tempfile.NamedTemporaryFile(suffix=".png", delete=True) as tmp:
         nonexistent_path = tmp.name + "_nonexistent"
 
     result = score_image(nonexistent_path)
@@ -65,7 +66,7 @@ def test_quality_scorer_class():
         print("[OK] QualityScorer instantiated successfully")
 
         # Test with non-existent file (unique path)
-        with tempfile.NamedTemporaryFile(suffix='.png', delete=True) as tmp:
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=True) as tmp:
             nonexistent_path = tmp.name + "_nonexistent"
 
         result = scorer.score_image(nonexistent_path)
@@ -105,7 +106,7 @@ def test_metadata_integration():
     from comfy_gen.quality import score_image
 
     # Create a unique non-existent path
-    with tempfile.NamedTemporaryFile(suffix='.png', delete=True) as tmp:
+    with tempfile.NamedTemporaryFile(suffix=".png", delete=True) as tmp:
         nonexistent_path = tmp.name + "_nonexistent"
 
     # Create a mock result

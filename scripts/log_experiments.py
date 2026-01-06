@@ -52,7 +52,7 @@ def setup_mlflow() -> str:
                 "model_family": "pony-diffusion",
                 "infrastructure": "moira-rtx5090",
                 "created": datetime.now().isoformat(),
-            }
+            },
         )
         print(f"[OK] Created experiment: {EXPERIMENT_NAME} (ID: {experiment_id})")
     else:
@@ -86,45 +86,37 @@ def log_generation(
     steps: int,
     cfg: float,
     sampler: str,
-
     # Generation settings
     scheduler: str = "karras",
     width: int = 1024,
     height: int = 1024,
     seed: int = None,
     denoise: float = None,
-
     # Model info
     checkpoint: str = "ponyRealism_V22.safetensors",
     vae: str = "default",
-
     # LoRAs - list of tuples (name, strength) or list of strings
     loras: List = None,
-
     # Validation scores (from CLIP evaluator)
     clip_score: float = None,
     positive_score: float = None,
     negative_score: float = None,
     delta_score: float = None,
-
     # Human feedback
     human_rating: int = None,  # 1-5 stars
     feedback: str = None,
     feedback_category: str = None,  # "good", "overprocessed", "artifacts", "anatomy_issue"
-
     # Metadata
     generation_type: str = "txt2img",  # "txt2img", "img2img", "inpaint"
     source_image_url: str = None,  # For img2img/inpaint
     session_id: str = None,
     run_name: str = None,
     tags: Dict[str, str] = None,
-
     # Options
     log_image_artifact: bool = True,
-
     # Legacy aliases (for backward compatibility)
     score: float = None,  # Alias for clip_score
-    rating: int = None,   # Alias for human_rating
+    rating: int = None,  # Alias for human_rating
 ) -> str:
     """
     Log a comprehensive generation run to MLflow.
@@ -282,7 +274,7 @@ def main():
             "feedback_category": "good",
             "session_id": session_id,
             "run_name": "baseline_150steps_cfg6",
-            "tags": {"approach": "baseline", "sampler_type": "sde", "recommended": "yes"}
+            "tags": {"approach": "baseline", "sampler_type": "sde", "recommended": "yes"},
         },
         {
             "image_url": "http://192.168.1.215:9000/comfy-gen/20260105_182830_var1_150_euler.png",
@@ -303,7 +295,7 @@ def main():
             "feedback_category": "good",
             "session_id": session_id,
             "run_name": "euler_ancestral_cfg55",
-            "tags": {"approach": "euler_test", "sampler_type": "ancestral", "recommended": "yes"}
+            "tags": {"approach": "euler_test", "sampler_type": "ancestral", "recommended": "yes"},
         },
         {
             "image_url": "http://192.168.1.215:9000/comfy-gen/20260105_182858_var2_150_nolora.png",
@@ -324,7 +316,12 @@ def main():
             "feedback_category": "overprocessed",
             "session_id": session_id,
             "run_name": "dpmpp_2m_nonsde",
-            "tags": {"approach": "sampler_comparison", "sampler_type": "non_sde", "issue": "overprocessed", "avoid": "yes"}
+            "tags": {
+                "approach": "sampler_comparison",
+                "sampler_type": "non_sde",
+                "issue": "overprocessed",
+                "avoid": "yes",
+            },
         },
         {
             "image_url": "http://192.168.1.215:9000/comfy-gen/20260105_182942_var3_150_heun.png",
@@ -345,7 +342,12 @@ def main():
             "feedback_category": "overprocessed",
             "session_id": session_id,
             "run_name": "heun_cfg7",
-            "tags": {"approach": "sampler_comparison", "sampler_type": "heun", "issue": "overprocessed", "avoid": "yes"}
+            "tags": {
+                "approach": "sampler_comparison",
+                "sampler_type": "heun",
+                "issue": "overprocessed",
+                "avoid": "yes",
+            },
         },
         {
             "image_url": "http://192.168.1.215:9000/comfy-gen/20260105_183043_var4_cfg5.png",
@@ -366,7 +368,7 @@ def main():
             "feedback_category": "needs_improvement",
             "session_id": session_id,
             "run_name": "low_cfg_5",
-            "tags": {"approach": "cfg_test", "note": "needs_lora_for_anatomy"}
+            "tags": {"approach": "cfg_test", "note": "needs_lora_for_anatomy"},
         },
         {
             "image_url": "http://192.168.1.215:9000/comfy-gen/20260105_183108_var5_euler_cfg45.png",
@@ -387,7 +389,7 @@ def main():
             "feedback_category": "artifacts",
             "session_id": session_id,
             "run_name": "euler_very_low_cfg",
-            "tags": {"approach": "cfg_test", "issue": "skin_artifacts", "cfg_too_low": "true", "avoid": "yes"}
+            "tags": {"approach": "cfg_test", "issue": "skin_artifacts", "cfg_too_low": "true", "avoid": "yes"},
         },
         # === Optimized runs with LoRA based on feedback ===
         {
@@ -409,7 +411,7 @@ def main():
             "feedback_category": "pending_review",
             "session_id": session_id,
             "run_name": "optimized_euler_lora04",
-            "tags": {"approach": "optimized", "based_on": "feedback_analysis", "iteration": "1"}
+            "tags": {"approach": "optimized", "based_on": "feedback_analysis", "iteration": "1"},
         },
         {
             "image_url": "http://192.168.1.215:9000/comfy-gen/20260105_183910_best2_sde_lora.png",
@@ -430,14 +432,14 @@ def main():
             "feedback_category": "pending_review",
             "session_id": session_id,
             "run_name": "optimized_sde_lora04",
-            "tags": {"approach": "optimized", "based_on": "feedback_analysis", "iteration": "1"}
+            "tags": {"approach": "optimized", "based_on": "feedback_analysis", "iteration": "1"},
         },
     ]
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"Logging {len(experiments)} experiments with comprehensive data")
     print("(Image URLs logged as tags - images viewable in MinIO)")
-    print(f"{'='*60}\n")
+    print(f"{'=' * 60}\n")
 
     for i, exp in enumerate(experiments, 1):
         print(f"[{i}/{len(experiments)}] {exp.get('run_name', 'unnamed')}")
@@ -445,7 +447,7 @@ def main():
         # Images are accessible via MinIO URLs stored in tags
         log_generation(**exp, log_image_artifact=False)
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("[OK] All experiments logged successfully!")
     print("")
     print("View experiments: http://192.168.1.162:5001/#/experiments")
@@ -457,7 +459,7 @@ def main():
     print("  - AVOID: dpmpp_2m (non-SDE), heun")
     print("  - CFG sweet spot: 5.5-6.0")
     print("  - LoRA strength: 0.3-0.4 (light touch)")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
 
 if __name__ == "__main__":

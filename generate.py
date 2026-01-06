@@ -137,12 +137,9 @@ class ProgressTracker:
                         remaining_steps = max_steps - step
                         eta = time_per_step * remaining_steps
 
-                    self._log_progress({
-                        "step": step,
-                        "max_steps": max_steps,
-                        "eta_seconds": eta,
-                        "node": self.current_node
-                    })
+                    self._log_progress(
+                        {"step": step, "max_steps": max_steps, "eta_seconds": eta, "node": self.current_node}
+                    )
 
             elif msg_type == "execution_cached":
                 cached_data = data.get("data", {})
@@ -195,7 +192,7 @@ class ProgressTracker:
             on_message=self._on_message,
             on_error=self._on_error,
             on_close=self._on_close,
-            on_open=self._on_open
+            on_open=self._on_open,
         )
 
         # Run in background thread
@@ -258,6 +255,7 @@ def check_server_availability():
         print(f"[ERROR] Failed to check server availability: {e}")
         return False
 
+
 def get_available_models():
     """Query available models from ComfyUI API.
 
@@ -302,6 +300,7 @@ def get_available_models():
         print(f"[ERROR] Failed to query available models: {e}")
         return None
 
+
 def find_model_fallbacks(requested_model, available_models, model_type="checkpoints"):
     """Suggest fallback models when requested model is not found.
 
@@ -325,19 +324,20 @@ def find_model_fallbacks(requested_model, available_models, model_type="checkpoi
     suggestions = []
 
     # Extract key terms from requested model
-    requested_base = requested_lower.replace('.safetensors', '').replace('.ckpt', '').replace('.pt', '')
+    requested_base = requested_lower.replace(".safetensors", "").replace(".ckpt", "").replace(".pt", "")
 
     for model in models:
-        model_base = model.lower().replace('.safetensors', '').replace('.ckpt', '').replace('.pt', '')
+        model_base = model.lower().replace(".safetensors", "").replace(".ckpt", "").replace(".pt", "")
 
         # Check for substring matches
         if requested_base in model_base or model_base in requested_base:
             suggestions.append(model)
         # Check for common prefixes (e.g., "sd15" matches "sd15-v1-5")
-        elif any(term in model_base for term in requested_base.split('-')):
+        elif any(term in model_base for term in requested_base.split("-")):
             suggestions.append(model)
 
     return suggestions[:5]  # Return top 5 suggestions
+
 
 def validate_workflow_models(workflow, available_models):
     """Validate that all models referenced in workflow exist.
@@ -393,6 +393,7 @@ def validate_workflow_models(workflow, available_models):
     is_valid = len(missing_models) == 0
     return is_valid, missing_models, suggestions
 
+
 def load_lora_presets():
     """Load LoRA catalog from lora_catalog.yaml.
 
@@ -413,6 +414,7 @@ def load_lora_presets():
         print(f"[ERROR] Failed to load lora_catalog.yaml: {e}")
         return {}
 
+
 def list_available_loras(available_models=None):
     """List available LoRAs from ComfyUI server and catalog.
 
@@ -429,6 +431,7 @@ def list_available_loras(available_models=None):
         return available_models["loras"]
     return []
 
+
 def validate_lora_exists(lora_name, available_loras=None):
     """Validate that a LoRA file exists on the server.
 
@@ -443,6 +446,7 @@ def validate_lora_exists(lora_name, available_loras=None):
         available_loras = list_available_loras()
 
     return lora_name in available_loras
+
 
 def find_model_output_connections(workflow, node_id, output_index=0):
     """Find all nodes that connect to a specific output of a node.
@@ -467,6 +471,7 @@ def find_model_output_connections(workflow, node_id, output_index=0):
                     connections.append((target_id, input_key))
 
     return connections
+
 
 def inject_lora(workflow, lora_name, strength_model=1.0, strength_clip=1.0, insert_after=None):
     """Inject a LoRA loader node into the workflow.
@@ -544,11 +549,9 @@ def inject_lora(workflow, lora_name, strength_model=1.0, strength_clip=1.0, inse
             "clip": clip_output,
             "lora_name": lora_name,
             "strength_model": strength_model,
-            "strength_clip": strength_clip
+            "strength_clip": strength_clip,
         },
-        "_meta": {
-            "title": f"LoRA: {lora_name}"
-        }
+        "_meta": {"title": f"LoRA: {lora_name}"},
     }
 
     # Add the node to workflow
@@ -576,6 +579,7 @@ def inject_lora(workflow, lora_name, strength_model=1.0, strength_clip=1.0, inse
 
     print(f"[OK] Injected LoRA '{lora_name}' as node {new_id} (strength: {strength_model})")
     return workflow, new_id
+
 
 def inject_lora_chain(workflow, lora_specs, available_loras=None):
     """Inject multiple LoRAs in a chain.
@@ -609,7 +613,7 @@ def inject_lora_chain(workflow, lora_specs, available_loras=None):
             lora_name,
             strength_model,
             strength_clip,
-            insert_after=last_node_id  # Chain to previous LoRA
+            insert_after=last_node_id,  # Chain to previous LoRA
         )
         if last_node_id is None:
             print(f"[ERROR] Failed to inject LoRA: {lora_name}")
@@ -617,17 +621,19 @@ def inject_lora_chain(workflow, lora_specs, available_loras=None):
 
     return workflow
 
+
 def load_workflow(workflow_path):
     """Load workflow JSON."""
     with open(workflow_path) as f:
         return json.load(f)
+
 
 def download_image(url, temp_path):
     """Download image from URL to temporary file."""
     try:
         response = requests.get(url, timeout=30)
         if response.status_code == 200:
-            with open(temp_path, 'wb') as f:
+            with open(temp_path, "wb") as f:
                 f.write(response.content)
             print(f"[OK] Downloaded image from {url}")
             return True
@@ -637,6 +643,7 @@ def download_image(url, temp_path):
     except Exception as e:
         print(f"[ERROR] Failed to download image: {e}")
         return False
+
 
 def preprocess_image(image_path, resize=None, crop=None):
     """Preprocess image with resize and crop options.
@@ -660,7 +667,7 @@ def preprocess_image(image_path, resize=None, crop=None):
         if resize:
             target_w, target_h = resize
 
-            if crop == 'cover':
+            if crop == "cover":
                 # Scale to cover target, crop excess
                 scale = max(target_w / img.width, target_h / img.height)
                 new_w = int(img.width * scale)
@@ -672,7 +679,7 @@ def preprocess_image(image_path, resize=None, crop=None):
                 top = (new_h - target_h) // 2
                 img = img.crop((left, top, left + target_w, top + target_h))
 
-            elif crop == 'contain':
+            elif crop == "contain":
                 # Scale to fit inside target, pad if needed
                 scale = min(target_w / img.width, target_h / img.height)
                 new_w = int(img.width * scale)
@@ -680,13 +687,13 @@ def preprocess_image(image_path, resize=None, crop=None):
                 img = img.resize((new_w, new_h), Image.Resampling.LANCZOS)
 
                 # Create padded image
-                padded = Image.new('RGB', (target_w, target_h), (0, 0, 0))
+                padded = Image.new("RGB", (target_w, target_h), (0, 0, 0))
                 paste_x = (target_w - new_w) // 2
                 paste_y = (target_h - new_h) // 2
                 padded.paste(img, (paste_x, paste_y))
                 img = padded
 
-            elif crop == 'center':
+            elif crop == "center":
                 # Resize then center crop
                 img = img.resize((target_w, target_h), Image.Resampling.LANCZOS)
             else:
@@ -701,6 +708,7 @@ def preprocess_image(image_path, resize=None, crop=None):
     except Exception as e:
         print(f"[ERROR] Failed to preprocess image: {e}")
         return image_path
+
 
 def upload_image_to_comfyui(image_path):
     """Upload image to ComfyUI input directory.
@@ -718,24 +726,24 @@ def upload_image_to_comfyui(image_path):
 
         # Determine MIME type based on extension
         mime_types = {
-            '.png': 'image/png',
-            '.jpg': 'image/jpeg',
-            '.jpeg': 'image/jpeg',
-            '.gif': 'image/gif',
-            '.webp': 'image/webp',
-            '.bmp': 'image/bmp'
+            ".png": "image/png",
+            ".jpg": "image/jpeg",
+            ".jpeg": "image/jpeg",
+            ".gif": "image/gif",
+            ".webp": "image/webp",
+            ".bmp": "image/bmp",
         }
-        mime_type = mime_types.get(ext, 'image/png')
+        mime_type = mime_types.get(ext, "image/png")
 
         url = f"{COMFYUI_HOST}/upload/image"
-        with open(image_path, 'rb') as f:
-            files = {'image': (filename, f, mime_type)}
-            data = {'overwrite': 'true'}
+        with open(image_path, "rb") as f:
+            files = {"image": (filename, f, mime_type)}
+            data = {"overwrite": "true"}
             response = requests.post(url, files=files, data=data, timeout=30)
 
         if response.status_code == 200:
             result = response.json()
-            uploaded_name = result.get('name', filename)
+            uploaded_name = result.get("name", filename)
             print(f"[OK] Uploaded image to ComfyUI: {uploaded_name}")
             return uploaded_name
         else:
@@ -745,6 +753,7 @@ def upload_image_to_comfyui(image_path):
     except Exception as e:
         print(f"[ERROR] Failed to upload image to ComfyUI: {e}")
         return None
+
 
 def find_prompt_nodes(workflow):
     """Find positive and negative prompt nodes in workflow.
@@ -770,14 +779,14 @@ def find_prompt_nodes(workflow):
 
         # Normalize title for matching: lowercase and remove special chars
         title = node.get("_meta", {}).get("title", "")
-        title_normalized = re.sub(r'[^a-z0-9]', '', title.lower())
+        title_normalized = re.sub(r"[^a-z0-9]", "", title.lower())
 
         # Match positive prompt patterns (normalized)
-        positive_patterns = ['positive', 'motionprompt']
+        positive_patterns = ["positive", "motionprompt"]
         if any(pattern in title_normalized for pattern in positive_patterns):
             positive_node = node_id
         # Match negative prompt patterns (normalized)
-        elif 'negative' in title_normalized:
+        elif "negative" in title_normalized:
             negative_node = node_id
 
     # Fallback: use first CLIP node if no positive found
@@ -797,15 +806,9 @@ def get_default_negative_prompt(workflow):
         str: Default negative prompt or empty string
     """
     # Detect workflow type by examining nodes
-    has_unet_loader = any(
-        node.get("class_type") == "UNETLoader"
-        for node in workflow.values()
-    )
+    has_unet_loader = any(node.get("class_type") == "UNETLoader" for node in workflow.values())
 
-    has_video_combine = any(
-        node.get("class_type") == "VHS_VideoCombine"
-        for node in workflow.values()
-    )
+    has_video_combine = any(node.get("class_type") == "VHS_VideoCombine" for node in workflow.values())
 
     # Wan 2.2 video workflows (typically don't use negative prompts)
     if has_unet_loader or has_video_combine:
@@ -855,6 +858,7 @@ def modify_prompt(workflow, positive_prompt, negative_prompt=""):
 
     return workflow
 
+
 def modify_input_image(workflow, uploaded_filename):
     """Modify workflow to use uploaded input image.
 
@@ -873,6 +877,7 @@ def modify_input_image(workflow, uploaded_filename):
 
     return workflow
 
+
 def modify_denoise(workflow, denoise_value):
     """Modify denoise strength in KSampler node."""
     for node_id, node in workflow.items():
@@ -881,6 +886,7 @@ def modify_denoise(workflow, denoise_value):
                 node["inputs"]["denoise"] = denoise_value
                 print(f"Updated denoise strength in node {node_id}: {denoise_value}")
     return workflow
+
 
 def modify_sampler_params(workflow, steps=None, cfg=None, seed=None, sampler_name=None, scheduler=None):
     """Modify KSampler parameters in workflow.
@@ -915,6 +921,7 @@ def modify_sampler_params(workflow, steps=None, cfg=None, seed=None, sampler_nam
                     node["inputs"]["scheduler"] = scheduler
                     print(f"[OK] Updated scheduler in node {node_id}: {scheduler}")
     return workflow
+
 
 def modify_dimensions(workflow, width=None, height=None):
     """Modify output dimensions in EmptyLatentImage node.
@@ -984,6 +991,7 @@ def modify_video_fps(workflow, fps=None):
                     print(f"[OK] Updated video FPS in node {node_id}: {fps}")
     return workflow
 
+
 def enable_transparency(workflow, sam_model="sam_vit_b_01ec64.pth"):
     """Enable transparent background by injecting SAM nodes into workflow.
 
@@ -1038,39 +1046,22 @@ def enable_transparency(workflow, sam_model="sam_vit_b_01ec64.pth"):
     # Add SAM model loader node
     workflow[sam_loader_id] = {
         "class_type": "SAMModelLoader (segment anything)",
-        "inputs": {
-            "model_name": sam_model
-        },
-        "_meta": {
-            "title": "Load SAM Model"
-        }
+        "inputs": {"model_name": sam_model},
+        "_meta": {"title": "Load SAM Model"},
     }
 
     # Add SAM detector node
     workflow[sam_detector_id] = {
         "class_type": "SAMDetector (segment anything)",
-        "inputs": {
-            "device_mode": "AUTO",
-            "sam_model": [sam_loader_id, 0],
-            "image": [vae_decode_id, 0]
-        },
-        "_meta": {
-            "title": "SAM Detector"
-        }
+        "inputs": {"device_mode": "AUTO", "sam_model": [sam_loader_id, 0], "image": [vae_decode_id, 0]},
+        "_meta": {"title": "SAM Detector"},
     }
 
     # Add ImageCompositeMasked node to apply alpha channel
     workflow[composite_id] = {
         "class_type": "ImageCompositeMasked",
-        "inputs": {
-            "channel": "alpha",
-            "invert": False,
-            "image": [vae_decode_id, 0],
-            "mask": [sam_detector_id, 0]
-        },
-        "_meta": {
-            "title": "Apply Alpha Mask"
-        }
+        "inputs": {"channel": "alpha", "invert": False, "image": [vae_decode_id, 0], "mask": [sam_detector_id, 0]},
+        "_meta": {"title": "Apply Alpha Mask"},
     }
 
     # Redirect SaveImage node to use the transparent output
@@ -1086,6 +1077,7 @@ def enable_transparency(workflow, sam_model="sam_vit_b_01ec64.pth"):
     print(f"[OK] Added nodes: SAMLoader({sam_loader_id}), SAMDetector({sam_detector_id}), Composite({composite_id})")
 
     return workflow
+
 
 def validate_generation_params(steps=None, cfg=None, denoise=None, width=None, height=None):
     """Validate generation parameters are within acceptable ranges.
@@ -1126,6 +1118,7 @@ def validate_generation_params(steps=None, cfg=None, denoise=None, width=None, h
 
     return True, None
 
+
 def load_presets():
     """Load generation presets from presets.yaml.
 
@@ -1137,7 +1130,7 @@ def load_presets():
         return {}
 
     try:
-        with open(presets_path, encoding='utf-8') as f:
+        with open(presets_path, encoding="utf-8") as f:
             data = yaml.safe_load(f)
         return data.get("presets", {}) if data else {}
     except Exception as e:
@@ -1156,16 +1149,17 @@ def load_config():
         return {"presets": {}, "default_negative_prompt": "", "validation": {}}
 
     try:
-        with open(presets_path, encoding='utf-8') as f:
+        with open(presets_path, encoding="utf-8") as f:
             data = yaml.safe_load(f) or {}
         return {
             "presets": data.get("presets", {}),
             "default_negative_prompt": data.get("default_negative_prompt", ""),
-            "validation": data.get("validation", {})
+            "validation": data.get("validation", {}),
         }
     except Exception as e:
         print(f"[ERROR] Failed to load presets.yaml: {e}")
         return {"presets": {}, "default_negative_prompt": "", "validation": {}}
+
 
 def load_prompt_catalog():
     """Load prompt catalog from prompt_catalog.yaml.
@@ -1178,12 +1172,13 @@ def load_prompt_catalog():
         return {}
 
     try:
-        with open(catalog_path, encoding='utf-8') as f:
+        with open(catalog_path, encoding="utf-8") as f:
             data = yaml.safe_load(f)
         return data or {}
     except Exception as e:
         print(f"[ERROR] Failed to load prompt_catalog.yaml: {e}")
         return {}
+
 
 def queue_workflow(workflow, retry=True):
     """Send workflow to ComfyUI server with retry logic.
@@ -1252,6 +1247,7 @@ def queue_workflow(workflow, retry=True):
 
     return None
 
+
 def wait_for_completion(prompt_id, quiet=False, json_progress=False):
     """Wait for workflow to complete with real-time progress tracking.
 
@@ -1300,6 +1296,7 @@ def wait_for_completion(prompt_id, quiet=False, json_progress=False):
 
     return None
 
+
 def download_output(status, output_path):
     """Download the generated image."""
     # Assume output is in outputs node
@@ -1312,13 +1309,14 @@ def download_output(status, output_path):
                 url = f"{COMFYUI_HOST}/view?filename={filename}&subfolder={subfolder}&type=output"
                 response = requests.get(url)
                 if response.status_code == 200:
-                    with open(output_path, 'wb') as f:
+                    with open(output_path, "wb") as f:
                         f.write(response.content)
                     print(f"Saved image to {output_path}")
                     return True
                 else:
                     print(f"Error downloading image: {response.text}")
     return False
+
 
 def upload_to_minio(file_path, object_name):
     """Upload file to MinIO with correct content type for browser viewing."""
@@ -1327,7 +1325,7 @@ def upload_to_minio(file_path, object_name):
             MINIO_ENDPOINT,
             access_key=MINIO_ACCESS_KEY,
             secret_key=MINIO_SECRET_KEY,
-            secure=False  # HTTP, not HTTPS
+            secure=False,  # HTTP, not HTTPS
         )
 
         # Make bucket if not exists
@@ -1349,17 +1347,13 @@ def upload_to_minio(file_path, object_name):
         content_type = content_types.get(ext, "application/octet-stream")
 
         # Upload with correct content type so browser displays instead of downloads
-        client.fput_object(
-            BUCKET_NAME,
-            object_name,
-            file_path,
-            content_type=content_type
-        )
+        client.fput_object(BUCKET_NAME, object_name, file_path, content_type=content_type)
         print(f"[OK] Uploaded {file_path} to MinIO as {object_name}")
         return f"http://192.168.1.215:9000/{BUCKET_NAME}/{object_name}"
     except S3Error as e:
         print(f"[ERROR] MinIO error: {e}")
         return None
+
 
 def extract_workflow_params(workflow):
     """Extract generation parameters from workflow.
@@ -1370,13 +1364,7 @@ def extract_workflow_params(workflow):
     Returns:
         dict: Extracted parameters (seed, steps, cfg, sampler, scheduler)
     """
-    params = {
-        "seed": None,
-        "steps": None,
-        "cfg": None,
-        "sampler": None,
-        "scheduler": None
-    }
+    params = {"seed": None, "steps": None, "cfg": None, "sampler": None, "scheduler": None}
 
     # Find KSampler node
     for _node_id, node in workflow.items():
@@ -1390,6 +1378,7 @@ def extract_workflow_params(workflow):
             break
 
     return params
+
 
 def extract_loras_from_workflow(workflow):
     """Extract LoRA information from workflow.
@@ -1409,12 +1398,10 @@ def extract_loras_from_workflow(workflow):
             strength_model = inputs.get("strength_model", 1.0)
 
             if lora_name:
-                loras.append({
-                    "name": lora_name,
-                    "strength": strength_model
-                })
+                loras.append({"name": lora_name, "strength": strength_model})
 
     return loras
+
 
 def extract_model_from_workflow(workflow):
     """Extract model name from workflow.
@@ -1434,6 +1421,7 @@ def extract_model_from_workflow(workflow):
             return inputs.get("unet_name")
     return None
 
+
 def extract_vae_from_workflow(workflow):
     """Extract VAE name from workflow.
 
@@ -1448,6 +1436,7 @@ def extract_vae_from_workflow(workflow):
             inputs = node.get("inputs", {})
             return inputs.get("vae_name")
     return None
+
 
 def extract_resolution_from_workflow(workflow):
     """Extract resolution from workflow.
@@ -1467,6 +1456,7 @@ def extract_resolution_from_workflow(workflow):
                 return [width, height]
     return None
 
+
 def create_metadata_json(
     workflow_path,
     prompt,
@@ -1484,7 +1474,7 @@ def create_metadata_json(
     refinement_max_attempts=None,
     refinement_strategy=None,
     refinement_previous_scores=None,
-    refinement_status=None
+    refinement_status=None,
 ):
     """Create metadata JSON for experiment tracking.
 
@@ -1524,25 +1514,18 @@ def create_metadata_json(
     file_format = None
     if output_path and os.path.exists(output_path):
         file_size_bytes = os.path.getsize(output_path)
-        file_format = Path(output_path).suffix.lstrip('.')
+        file_format = Path(output_path).suffix.lstrip(".")
 
     # Create new nested metadata structure
     metadata = {
         "timestamp": datetime.datetime.now().isoformat(),
         "generation_id": generation_id,
-
         "input": {
             "prompt": prompt,
             "negative_prompt": negative_prompt if negative_prompt else "",
-            "preset": preset if preset else None
+            "preset": preset if preset else None,
         },
-
-        "workflow": {
-            "name": Path(workflow_path).name,
-            "model": model,
-            "vae": vae
-        },
-
+        "workflow": {"name": Path(workflow_path).name, "model": model, "vae": vae},
         "parameters": {
             "seed": workflow_params.get("seed"),
             "steps": workflow_params.get("steps"),
@@ -1550,35 +1533,35 @@ def create_metadata_json(
             "sampler": workflow_params.get("sampler"),
             "scheduler": workflow_params.get("scheduler"),
             "resolution": resolution,
-            "loras": loras
+            "loras": loras,
         },
-
         "quality": {
             "composite_score": quality_result.get("composite_score") if quality_result else None,
             "grade": quality_result.get("grade") if quality_result else None,
             "technical": quality_result.get("technical") if quality_result else None,
             "aesthetic": quality_result.get("aesthetic") if quality_result else None,
-            "prompt_adherence": quality_result.get("prompt_adherence") if quality_result else ({"clip": validation_score} if validation_score is not None else None),
-            "detail": quality_result.get("detail") if quality_result else None
+            "prompt_adherence": quality_result.get("prompt_adherence")
+            if quality_result
+            else ({"clip": validation_score} if validation_score is not None else None),
+            "detail": quality_result.get("detail") if quality_result else None,
         },
-
         "refinement": {
             "attempt": refinement_attempt,
             "max_attempts": refinement_max_attempts,
             "strategy": refinement_strategy,
             "previous_scores": refinement_previous_scores,
-            "final_status": refinement_status
+            "final_status": refinement_status,
         },
-
         "storage": {
             "minio_url": minio_url,
             "file_size_bytes": file_size_bytes,
             "format": file_format,
-            "generation_time_seconds": generation_time_seconds
-        }
+            "generation_time_seconds": generation_time_seconds,
+        },
     }
 
     return metadata
+
 
 def upload_metadata_to_minio(metadata, object_name):
     """Upload metadata JSON to MinIO as a sidecar file.
@@ -1592,7 +1575,7 @@ def upload_metadata_to_minio(metadata, object_name):
     """
     try:
         # Create temporary JSON file
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             json.dump(metadata, f, indent=2)
             temp_path = f.name
 
@@ -1600,19 +1583,9 @@ def upload_metadata_to_minio(metadata, object_name):
             # Upload with .json extension
             json_object_name = f"{object_name}.json"
 
-            client = Minio(
-                MINIO_ENDPOINT,
-                access_key=MINIO_ACCESS_KEY,
-                secret_key=MINIO_SECRET_KEY,
-                secure=False
-            )
+            client = Minio(MINIO_ENDPOINT, access_key=MINIO_ACCESS_KEY, secret_key=MINIO_SECRET_KEY, secure=False)
 
-            client.fput_object(
-                BUCKET_NAME,
-                json_object_name,
-                temp_path,
-                content_type="application/json"
-            )
+            client.fput_object(BUCKET_NAME, json_object_name, temp_path, content_type="application/json")
 
             print(f"[OK] Uploaded metadata to MinIO as {json_object_name}")
             return f"http://192.168.1.215:9000/{BUCKET_NAME}/{json_object_name}"
@@ -1624,6 +1597,7 @@ def upload_metadata_to_minio(metadata, object_name):
     except Exception as e:
         print(f"[ERROR] Failed to upload metadata: {e}")
         return None
+
 
 def embed_metadata_in_output(output_path, metadata):
     """Embed metadata into PNG output file.
@@ -1637,7 +1611,7 @@ def embed_metadata_in_output(output_path, metadata):
     """
     try:
         # Only embed in PNG files
-        if not output_path.lower().endswith('.png'):
+        if not output_path.lower().endswith(".png"):
             # Not an error - just skip for non-PNG files
             return False
 
@@ -1656,6 +1630,7 @@ def embed_metadata_in_output(output_path, metadata):
         print(f"[WARN] Failed to embed metadata in PNG: {e}")
         return False
 
+
 def interrupt_generation():
     """Interrupt currently running generation."""
     try:
@@ -1670,6 +1645,7 @@ def interrupt_generation():
     except requests.RequestException as e:
         print(f"[ERROR] Failed to connect to ComfyUI: {e}")
         return False
+
 
 def delete_from_queue(prompt_ids):
     """Delete specific prompts from queue.
@@ -1691,6 +1667,7 @@ def delete_from_queue(prompt_ids):
         print(f"[ERROR] Failed to connect to ComfyUI: {e}")
         return False
 
+
 def cancel_prompt(prompt_id):
     """Cancel a specific prompt by ID."""
     # First interrupt (in case it's running)
@@ -1701,6 +1678,7 @@ def cancel_prompt(prompt_id):
         return True
     return False
 
+
 def cleanup_partial_output(output_path):
     """Remove partial output file if it exists."""
     if os.path.exists(output_path):
@@ -1710,11 +1688,8 @@ def cleanup_partial_output(output_path):
         except Exception as e:
             print(f"[WARN] Failed to clean up {output_path}: {e}")
 
-def adjust_prompt_for_retry(
-    positive_prompt: str,
-    negative_prompt: str,
-    attempt: int
-) -> tuple:
+
+def adjust_prompt_for_retry(positive_prompt: str, negative_prompt: str, attempt: int) -> tuple:
     """Adjust prompts for retry attempt to improve quality.
 
     Args:
@@ -1737,29 +1712,15 @@ def adjust_prompt_for_retry(
 
         # Apply weight to single/one car phrases
         adjusted_positive = re.sub(
-            r'\bsingle\s+car\b',
-            f'(single car:{multiplier:.1f})',
-            adjusted_positive,
-            flags=re.IGNORECASE
+            r"\bsingle\s+car\b", f"(single car:{multiplier:.1f})", adjusted_positive, flags=re.IGNORECASE
         )
         adjusted_positive = re.sub(
-            r'\bone\s+car\b',
-            f'(one car:{multiplier:.1f})',
-            adjusted_positive,
-            flags=re.IGNORECASE
+            r"\bone\s+car\b", f"(one car:{multiplier:.1f})", adjusted_positive, flags=re.IGNORECASE
         )
 
     # Strengthen negative prompt (handle empty string)
     adjusted_negative = negative_prompt if negative_prompt else ""
-    retry_negative_terms = [
-        "multiple cars",
-        "duplicate",
-        "cloned",
-        "ghosting",
-        "mirrored",
-        "two cars",
-        "extra car"
-    ]
+    retry_negative_terms = ["multiple cars", "duplicate", "cloned", "ghosting", "mirrored", "two cars", "extra car"]
 
     # Add retry-specific negative terms if not already present
     for term in retry_negative_terms:
@@ -1770,6 +1731,7 @@ def adjust_prompt_for_retry(
 
     return adjusted_positive, adjusted_negative
 
+
 def get_retry_params(
     attempt: int,
     strategy: str,
@@ -1777,7 +1739,7 @@ def get_retry_params(
     base_cfg: float = None,
     base_seed: int = None,
     base_prompt: str = "",
-    base_negative: str = ""
+    base_negative: str = "",
 ) -> dict:
     """Get adjusted parameters for retry attempt based on strategy.
 
@@ -1802,11 +1764,11 @@ def get_retry_params(
         base_seed = random.randint(0, 2**31 - 1)
 
     params = {
-        'steps': base_steps,
-        'cfg': base_cfg,
-        'seed': base_seed,
-        'positive_prompt': base_prompt,
-        'negative_prompt': base_negative
+        "steps": base_steps,
+        "cfg": base_cfg,
+        "seed": base_seed,
+        "positive_prompt": base_prompt,
+        "negative_prompt": base_negative,
     }
 
     if attempt == 1:
@@ -1814,7 +1776,7 @@ def get_retry_params(
         return params
 
     # Subsequent attempts - apply strategy
-    if strategy == 'progressive':
+    if strategy == "progressive":
         # Progressive enhancement: increase steps and CFG
         # Attempt 2: steps=base*1.67, cfg=base+0.5
         # Attempt 3: steps=base*2.67, cfg=base+1.0
@@ -1822,25 +1784,25 @@ def get_retry_params(
         cfg_increases = [0.0, 0.5, 1.0]
 
         idx = min(attempt - 1, len(step_multipliers) - 1)
-        params['steps'] = int(base_steps * step_multipliers[idx])
-        params['cfg'] = min(20.0, base_cfg + cfg_increases[idx])  # Cap at 20.0
+        params["steps"] = int(base_steps * step_multipliers[idx])
+        params["cfg"] = min(20.0, base_cfg + cfg_increases[idx])  # Cap at 20.0
         # Use different seed each attempt
-        params['seed'] = random.randint(0, 2**31 - 1)
+        params["seed"] = random.randint(0, 2**31 - 1)
 
-    elif strategy == 'seed_search':
+    elif strategy == "seed_search":
         # Seed search: keep params same, try different seeds
         # Use deterministic seeds based on attempt for reproducibility
         seed_offsets = [0, 1000, 5000]
         idx = min(attempt - 1, len(seed_offsets) - 1)
         # Prevent overflow by capping at max safe seed value
-        params['seed'] = min(2**31 - 1, base_seed + seed_offsets[idx])
+        params["seed"] = min(2**31 - 1, base_seed + seed_offsets[idx])
 
-    elif strategy == 'prompt_enhance':
+    elif strategy == "prompt_enhance":
         # Prompt enhancement: add quality boosters progressively
         quality_boosters = [
             [],  # Attempt 1: no changes
             ["highly detailed", "sharp focus"],  # Attempt 2
-            ["masterpiece", "best quality", "8K", "ultra detailed"]  # Attempt 3
+            ["masterpiece", "best quality", "8K", "ultra detailed"],  # Attempt 3
         ]
 
         idx = min(attempt - 1, len(quality_boosters) - 1)
@@ -1852,16 +1814,18 @@ def get_retry_params(
             for booster in boosters:
                 if booster.lower() not in enhanced_prompt.lower():
                     enhanced_prompt = f"{enhanced_prompt}, {booster}"
-            params['positive_prompt'] = enhanced_prompt
+            params["positive_prompt"] = enhanced_prompt
 
         # Use different seed each attempt
-        params['seed'] = random.randint(0, 2**31 - 1)
+        params["seed"] = random.randint(0, 2**31 - 1)
 
     return params
+
 
 # Global variable to track current prompt for signal handler
 current_prompt_id = None
 current_output_path = None
+
 
 def signal_handler(signum, frame):
     """Handle Ctrl+C gracefully."""
@@ -1873,12 +1837,13 @@ def signal_handler(signum, frame):
     print("[INFO] Cancelled. Exiting.")
     sys.exit(0)
 
+
 def run_generation(
     workflow: dict,
     output_path: str,
     uploaded_image_filename: str = None,
     quiet: bool = False,
-    json_progress: bool = False
+    json_progress: bool = False,
 ) -> tuple:
     """Run a single generation attempt.
 
@@ -1912,6 +1877,7 @@ def run_generation(
 
             # Upload to MinIO
             import datetime
+
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
             object_name = f"{timestamp}_{Path(output_path).name}"
             minio_url = upload_to_minio(output_path, object_name)
@@ -1925,6 +1891,7 @@ def run_generation(
                 return False, None, None, None
 
     return False, None, None, None
+
 
 def main():
     global current_prompt_id, current_output_path
@@ -1961,47 +1928,100 @@ def main():
     parser = argparse.ArgumentParser(description="Generate images with ComfyUI")
     parser.add_argument("--workflow", help="Path to workflow JSON")
     parser.add_argument("--prompt", help="Positive text prompt")
-    parser.add_argument("--negative-prompt", "-n", default="",
-                        help=f"Negative text prompt (what to avoid). If not specified, SD workflows use default: '{DEFAULT_SD_NEGATIVE_PROMPT}'")
+    parser.add_argument(
+        "--negative-prompt",
+        "-n",
+        default="",
+        help=f"Negative text prompt (what to avoid). If not specified, SD workflows use default: '{DEFAULT_SD_NEGATIVE_PROMPT}'",
+    )
     parser.add_argument("--output", default="output.png", help="Output image path")
     parser.add_argument("--input-image", "-i", help="Input image path (local file or URL) for img2img/I2V")
     parser.add_argument("--resize", help="Resize input image to WxH (e.g., 512x512)")
-    parser.add_argument("--crop", choices=['center', 'cover', 'contain'], help="Crop mode for resize")
+    parser.add_argument("--crop", choices=["center", "cover", "contain"], help="Crop mode for resize")
     parser.add_argument("--denoise", type=float, help="Denoise strength (0.0-1.0) for img2img")
-    parser.add_argument("--transparent", action="store_true", help="Generate image with transparent background (requires SAM model)")
-    parser.add_argument("--lora", action="append", metavar="NAME:STRENGTH",
-                        help="Add LoRA with strength (e.g., 'style.safetensors:0.8'). Can be repeated for multiple LoRAs.")
-    parser.add_argument("--lora-preset", metavar="PRESET_NAME",
-                        help="Use a predefined LoRA preset from lora_catalog.yaml")
-    parser.add_argument("--list-loras", action="store_true",
-                        help="List available LoRAs and presets, then exit")
-    parser.add_argument("--prompt-preset", metavar="PRESET_NAME",
-                        help="Load a prompt preset from prompt_catalog.yaml (saved_prompts section)")
-    parser.add_argument("--list-presets", action="store_true",
-                        help="List available prompt presets from prompt_catalog.yaml, then exit")
+    parser.add_argument(
+        "--transparent", action="store_true", help="Generate image with transparent background (requires SAM model)"
+    )
+    parser.add_argument(
+        "--lora",
+        action="append",
+        metavar="NAME:STRENGTH",
+        help="Add LoRA with strength (e.g., 'style.safetensors:0.8'). Can be repeated for multiple LoRAs.",
+    )
+    parser.add_argument(
+        "--lora-preset", metavar="PRESET_NAME", help="Use a predefined LoRA preset from lora_catalog.yaml"
+    )
+    parser.add_argument("--list-loras", action="store_true", help="List available LoRAs and presets, then exit")
+    parser.add_argument(
+        "--prompt-preset",
+        metavar="PRESET_NAME",
+        help="Load a prompt preset from prompt_catalog.yaml (saved_prompts section)",
+    )
+    parser.add_argument(
+        "--list-presets", action="store_true", help="List available prompt presets from prompt_catalog.yaml, then exit"
+    )
     parser.add_argument("--cancel", metavar="PROMPT_ID", help="Cancel a specific prompt by ID")
     parser.add_argument("--dry-run", action="store_true", help="Validate workflow without generating")
-    parser.add_argument("--validate", action="store_true", help="Run validation after generation (default: from config)")
+    parser.add_argument(
+        "--validate", action="store_true", help="Run validation after generation (default: from config)"
+    )
     parser.add_argument("--no-validate", action="store_true", help="Disable validation even if config enables it")
-    parser.add_argument("--validate-person-count", action="store_true", help="Validate person count using YOLO (requires --validate)")
-    parser.add_argument("--validate-pose", action="store_true", help="Validate pose estimation (skeleton coherence) using MediaPipe (requires --validate)")
-    parser.add_argument("--validate-content", action="store_true", help="Validate image content against prompt using vision model (BLIP-2)")
-    parser.add_argument("--auto-retry", action="store_true", help="Automatically retry if validation fails (default: from config)")
-    parser.add_argument("--retry-limit", type=int, default=None, help="Maximum retry attempts (default: from config or 3)")
-    parser.add_argument("--positive-threshold", type=float, default=None, help="Minimum CLIP score for positive prompt (default: from config or 0.25)")
+    parser.add_argument(
+        "--validate-person-count", action="store_true", help="Validate person count using YOLO (requires --validate)"
+    )
+    parser.add_argument(
+        "--validate-pose",
+        action="store_true",
+        help="Validate pose estimation (skeleton coherence) using MediaPipe (requires --validate)",
+    )
+    parser.add_argument(
+        "--validate-content",
+        action="store_true",
+        help="Validate image content against prompt using vision model (BLIP-2)",
+    )
+    parser.add_argument(
+        "--auto-retry", action="store_true", help="Automatically retry if validation fails (default: from config)"
+    )
+    parser.add_argument(
+        "--retry-limit", type=int, default=None, help="Maximum retry attempts (default: from config or 3)"
+    )
+    parser.add_argument(
+        "--positive-threshold",
+        type=float,
+        default=None,
+        help="Minimum CLIP score for positive prompt (default: from config or 0.25)",
+    )
     parser.add_argument("--quiet", action="store_true", help="Suppress progress output")
     parser.add_argument("--json-progress", action="store_true", help="Output machine-readable JSON progress")
     parser.add_argument("--no-metadata", action="store_true", help="Disable JSON metadata sidecar upload")
-    parser.add_argument("--no-embed-metadata", action="store_true", help="Disable embedding metadata in PNG files (default: enabled)")
-    parser.add_argument("--quality-score", action="store_true", help="Run multi-dimensional quality scoring after generation")
-    parser.add_argument("--enhance-prompt", action="store_true", help="Enhance prompt using small LLM before generation")
-    parser.add_argument("--enhance-style", metavar="STYLE", help="Style hint for prompt enhancement (photorealistic, artistic, game-asset, etc.)")
+    parser.add_argument(
+        "--no-embed-metadata", action="store_true", help="Disable embedding metadata in PNG files (default: enabled)"
+    )
+    parser.add_argument(
+        "--quality-score", action="store_true", help="Run multi-dimensional quality scoring after generation"
+    )
+    parser.add_argument(
+        "--enhance-prompt", action="store_true", help="Enhance prompt using small LLM before generation"
+    )
+    parser.add_argument(
+        "--enhance-style",
+        metavar="STYLE",
+        help="Style hint for prompt enhancement (photorealistic, artistic, game-asset, etc.)",
+    )
 
     # Quality-based iterative refinement
-    parser.add_argument("--quality-threshold", type=float, default=7.0, help="Minimum quality score to accept (0-10, default: 7.0)")
-    parser.add_argument("--max-attempts", type=int, default=3, help="Maximum generation attempts for quality refinement (default: 3)")
-    parser.add_argument("--retry-strategy", choices=['progressive', 'seed_search', 'prompt_enhance'], default='progressive',
-                        help="Retry strategy: progressive (increase steps/cfg), seed_search (try different seeds), prompt_enhance (add quality boosters)")
+    parser.add_argument(
+        "--quality-threshold", type=float, default=7.0, help="Minimum quality score to accept (0-10, default: 7.0)"
+    )
+    parser.add_argument(
+        "--max-attempts", type=int, default=3, help="Maximum generation attempts for quality refinement (default: 3)"
+    )
+    parser.add_argument(
+        "--retry-strategy",
+        choices=["progressive", "seed_search", "prompt_enhance"],
+        default="progressive",
+        help="Retry strategy: progressive (increase steps/cfg), seed_search (try different seeds), prompt_enhance (add quality boosters)",
+    )
 
     # Advanced generation parameters
     parser.add_argument("--steps", type=int, help="Number of sampling steps (1-150, default: 20)")
@@ -2014,7 +2034,9 @@ def main():
     parser.add_argument("--preset", help="Use a generation preset (draft, balanced, high-quality)")
 
     # Video-specific parameters
-    parser.add_argument("--length", "--frames", type=int, dest="length", help="Video length in frames (default: 81 = ~5s at 16fps)")
+    parser.add_argument(
+        "--length", "--frames", type=int, dest="length", help="Video length in frames (default: 81 = ~5s at 16fps)"
+    )
     parser.add_argument("--fps", type=int, help="Video frame rate (default: 16)")
     parser.add_argument("--video-resolution", help="Video resolution as WxH (e.g., 848x480, 1280x720)")
 
@@ -2154,7 +2176,7 @@ def main():
         saved_prompts = catalog["saved_prompts"]
         if args.prompt_preset not in saved_prompts:
             print(f"[ERROR] Prompt preset not found: {args.prompt_preset}")
-            available = ', '.join(saved_prompts.keys()) if saved_prompts else 'none'
+            available = ", ".join(saved_prompts.keys()) if saved_prompts else "none"
             print(f"[ERROR] Available presets: {available}")
             sys.exit(EXIT_CONFIG_ERROR)
 
@@ -2246,10 +2268,7 @@ def main():
                 print("[INFO] Enhancing prompt...")
                 print(f"[INFO] Original: {original_prompt}")
 
-            enhanced = enhance_prompt(
-                original_prompt,
-                style=args.enhance_style
-            )
+            enhanced = enhance_prompt(original_prompt, style=args.enhance_style)
 
             args.prompt = enhanced
 
@@ -2291,9 +2310,9 @@ def main():
         try:
             # Check if input is URL or local file
             parsed = urlparse(args.input_image)
-            if parsed.scheme in ('http', 'https'):
+            if parsed.scheme in ("http", "https"):
                 # Download from URL
-                temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.png')
+                temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
                 temp_file.close()
                 if not download_image(args.input_image, temp_file.name):
                     print("[ERROR] Failed to download input image")
@@ -2307,8 +2326,8 @@ def main():
                 # Copy to temp file for preprocessing
                 temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=Path(args.input_image).suffix)
                 temp_file.close()
-                with open(args.input_image, 'rb') as src:
-                    with open(temp_file.name, 'wb') as dst:
+                with open(args.input_image, "rb") as src:
+                    with open(temp_file.name, "wb") as dst:
                         dst.write(src.read())
                 image_path = temp_file.name
 
@@ -2316,7 +2335,7 @@ def main():
             resize = None
             if args.resize:
                 try:
-                    parts = args.resize.lower().split('x', 1)
+                    parts = args.resize.lower().split("x", 1)
                     if len(parts) != 2:
                         raise ValueError("Invalid format")
                     w, h = parts
@@ -2356,7 +2375,7 @@ def main():
             preset_params = presets[args.preset]
             print(f"[OK] Loaded preset '{args.preset}': {preset_params}")
         else:
-            available_presets = ', '.join(presets.keys()) if presets else 'none'
+            available_presets = ", ".join(presets.keys()) if presets else "none"
             print(f"[ERROR] Preset not found: {args.preset}")
             print(f"[ERROR] Available presets: {available_presets}")
             sys.exit(EXIT_CONFIG_ERROR)
@@ -2365,11 +2384,11 @@ def main():
     lora_specs = []
 
     # First, load LoRAs from generation preset if specified
-    if preset_params and 'loras' in preset_params:
+    if preset_params and "loras" in preset_params:
         print(f"[OK] Loading LoRAs from preset '{args.preset}'")
-        for lora_entry in preset_params['loras']:
-            lora_name = lora_entry.get('name')
-            strength = lora_entry.get('strength', 1.0)
+        for lora_entry in preset_params["loras"]:
+            lora_name = lora_entry.get("name")
+            strength = lora_entry.get("strength", 1.0)
             if lora_name:
                 lora_specs.append((lora_name, strength, strength))
                 print(f"  - {lora_name} (strength: {strength})")
@@ -2410,8 +2429,8 @@ def main():
             # Parse "name:strength" format
             # Note: Using rsplit(':', 1) to split from right, which correctly handles
             # paths with colons (e.g., "C:\\path\\lora.safetensors:0.8")
-            if ':' in lora_spec:
-                parts = lora_spec.rsplit(':', 1)
+            if ":" in lora_spec:
+                parts = lora_spec.rsplit(":", 1)
                 lora_name = parts[0]
                 try:
                     strength = float(parts[1])
@@ -2438,19 +2457,19 @@ def main():
         workflow = inject_lora_chain(workflow, lora_specs, available_loras)
 
     # Merge preset with CLI args (CLI args override preset)
-    steps = args.steps if args.steps is not None else preset_params.get('steps')
-    cfg = args.cfg if args.cfg is not None else preset_params.get('cfg')
-    seed = args.seed if args.seed is not None else preset_params.get('seed')
-    width = args.width if args.width is not None else preset_params.get('width')
-    height = args.height if args.height is not None else preset_params.get('height')
-    sampler = args.sampler if args.sampler is not None else preset_params.get('sampler')
-    scheduler = args.scheduler if args.scheduler is not None else preset_params.get('scheduler')
+    steps = args.steps if args.steps is not None else preset_params.get("steps")
+    cfg = args.cfg if args.cfg is not None else preset_params.get("cfg")
+    seed = args.seed if args.seed is not None else preset_params.get("seed")
+    width = args.width if args.width is not None else preset_params.get("width")
+    height = args.height if args.height is not None else preset_params.get("height")
+    sampler = args.sampler if args.sampler is not None else preset_params.get("sampler")
+    scheduler = args.scheduler if args.scheduler is not None else preset_params.get("scheduler")
 
     # Merge video-specific parameters from preset
-    if args.length is None and 'length' in preset_params:
-        args.length = preset_params.get('length')
-    if args.fps is None and 'fps' in preset_params:
-        args.fps = preset_params.get('fps')
+    if args.length is None and "length" in preset_params:
+        args.length = preset_params.get("length")
+    if args.fps is None and "fps" in preset_params:
+        args.fps = preset_params.get("fps")
 
     # Handle seed=-1 for random seed generation
     if seed == -1:
@@ -2459,11 +2478,7 @@ def main():
 
     # Validate parameters
     is_valid, error_msg = validate_generation_params(
-        steps=steps,
-        cfg=cfg,
-        denoise=args.denoise,
-        width=width,
-        height=height
+        steps=steps, cfg=cfg, denoise=args.denoise, width=width, height=height
     )
     if not is_valid:
         print(f"[ERROR] Parameter validation failed: {error_msg}")
@@ -2472,12 +2487,7 @@ def main():
     # Apply sampler parameters to workflow
     if any(p is not None for p in [steps, cfg, seed, sampler, scheduler]):
         workflow = modify_sampler_params(
-            workflow,
-            steps=steps,
-            cfg=cfg,
-            seed=seed,
-            sampler_name=sampler,
-            scheduler=scheduler
+            workflow, steps=steps, cfg=cfg, seed=seed, sampler_name=sampler, scheduler=scheduler
         )
 
     # Apply dimension parameters to workflow
@@ -2490,19 +2500,14 @@ def main():
     video_height = None
     if args.video_resolution:
         try:
-            video_width, video_height = map(int, args.video_resolution.split('x'))
+            video_width, video_height = map(int, args.video_resolution.split("x"))
         except ValueError:
             print(f"[ERROR] Invalid video resolution format: {args.video_resolution}. Use WxH (e.g., 848x480)")
             sys.exit(EXIT_CONFIG_ERROR)
 
     # Apply video parameters to workflow if any video params are set
     if args.length is not None or video_width is not None or video_height is not None:
-        workflow = modify_video_params(
-            workflow,
-            width=video_width,
-            height=video_height,
-            length=args.length
-        )
+        workflow = modify_video_params(workflow, width=video_width, height=video_height, length=args.length)
 
     # Apply video FPS if provided
     if args.fps is not None:
@@ -2564,30 +2569,36 @@ def main():
                     base_cfg=base_cfg,
                     base_seed=base_seed,
                     base_prompt=args.prompt,
-                    base_negative=effective_negative_prompt
+                    base_negative=effective_negative_prompt,
                 )
 
                 # Apply retry parameters to workflow
-                if retry_params['steps'] != base_steps or retry_params['cfg'] != base_cfg or retry_params['seed'] != base_seed:
+                if (
+                    retry_params["steps"] != base_steps
+                    or retry_params["cfg"] != base_cfg
+                    or retry_params["seed"] != base_seed
+                ):
                     workflow = modify_sampler_params(
-                        workflow,
-                        steps=retry_params['steps'],
-                        cfg=retry_params['cfg'],
-                        seed=retry_params['seed']
+                        workflow, steps=retry_params["steps"], cfg=retry_params["cfg"], seed=retry_params["seed"]
                     )
                     if not args.quiet:
-                        print(f"[INFO] Strategy '{args.retry_strategy}': steps={retry_params['steps']}, cfg={retry_params['cfg']:.1f}, seed={retry_params['seed']}")
+                        print(
+                            f"[INFO] Strategy '{args.retry_strategy}': steps={retry_params['steps']}, cfg={retry_params['cfg']:.1f}, seed={retry_params['seed']}"
+                        )
 
                 # Apply prompt adjustments if strategy modified them
-                if retry_params['positive_prompt'] != args.prompt or retry_params['negative_prompt'] != effective_negative_prompt:
-                    workflow = modify_prompt(workflow, retry_params['positive_prompt'], retry_params['negative_prompt'])
+                if (
+                    retry_params["positive_prompt"] != args.prompt
+                    or retry_params["negative_prompt"] != effective_negative_prompt
+                ):
+                    workflow = modify_prompt(workflow, retry_params["positive_prompt"], retry_params["negative_prompt"])
                     if not args.quiet:
-                        if retry_params['positive_prompt'] != args.prompt:
+                        if retry_params["positive_prompt"] != args.prompt:
                             print(f"[INFO] Enhanced prompt: {retry_params['positive_prompt']}")
 
                 # Update current prompts for metadata
-                current_positive = retry_params['positive_prompt']
-                current_negative = retry_params['negative_prompt']
+                current_positive = retry_params["positive_prompt"]
+                current_negative = retry_params["negative_prompt"]
             else:
                 # Legacy validation retry - adjust prompts
                 adjusted_positive, adjusted_negative = adjust_prompt_for_retry(
@@ -2610,7 +2621,7 @@ def main():
             args.output,
             uploaded_filename if args.input_image else None,
             quiet=args.quiet,
-            json_progress=args.json_progress
+            json_progress=args.json_progress,
         )
 
         if not success:
@@ -2631,13 +2642,15 @@ def main():
                 quality_result = score_image(args.output, current_positive)
 
                 if "error" not in quality_result:
-                    composite_score = quality_result['composite_score']
+                    composite_score = quality_result["composite_score"]
                     previous_quality_scores.append(composite_score)
 
                     if not args.quiet:
                         print(f"[OK] Quality Grade: {quality_result['grade']} (Score: {composite_score:.2f}/10)")
-                        print(f"[INFO] Technical: {quality_result['technical']['brisque']:.2f}/10, Aesthetic: {quality_result['aesthetic']:.2f}/10, Detail: {quality_result['detail']:.2f}/10")
-                        if quality_result.get('prompt_adherence'):
+                        print(
+                            f"[INFO] Technical: {quality_result['technical']['brisque']:.2f}/10, Aesthetic: {quality_result['aesthetic']:.2f}/10, Detail: {quality_result['detail']:.2f}/10"
+                        )
+                        if quality_result.get("prompt_adherence"):
                             print(f"[INFO] Prompt Adherence: {quality_result['prompt_adherence']['clip']:.2f}/10")
 
                     # Track best attempt
@@ -2651,7 +2664,9 @@ def main():
                     # Check if quality threshold met
                     if use_quality_refinement and composite_score >= args.quality_threshold:
                         if not args.quiet:
-                            print(f"[OK] Quality threshold {args.quality_threshold:.1f} met! Score: {composite_score:.2f}/10")
+                            print(
+                                f"[OK] Quality threshold {args.quality_threshold:.1f} met! Score: {composite_score:.2f}/10"
+                            )
                         # Break out of retry loop - we have a good result
                         refinement_status = "success"
                         break
@@ -2681,24 +2696,24 @@ def main():
                     args.prompt,
                     effective_negative_prompt if effective_negative_prompt else None,
                     positive_threshold=args.positive_threshold,
-                    validate_person_count=args.validate_person_count
+                    validate_person_count=args.validate_person_count,
                 )
 
                 if not args.quiet:
                     print(f"[INFO] Validation result: {validation_result['reason']}")
                     print(f"[INFO] Positive score: {validation_result.get('positive_score', 0.0):.3f}")
 
-                    if validation_result.get('negative_score'):
+                    if validation_result.get("negative_score"):
                         print(f"[INFO] Negative score: {validation_result['negative_score']:.3f}")
                         print(f"[INFO] Delta: {validation_result.get('score_delta', 0.0):.3f}")
 
                     # Print person count validation results if available
                     if args.validate_person_count:
-                        if validation_result.get('person_count') is not None:
+                        if validation_result.get("person_count") is not None:
                             print(f"[INFO] Detected persons: {validation_result['person_count']}")
-                            if validation_result.get('expected_person_count') is not None:
+                            if validation_result.get("expected_person_count") is not None:
                                 print(f"[INFO] Expected persons: {validation_result['expected_person_count']}")
-                        if validation_result.get('person_count_error'):
+                        if validation_result.get("person_count_error"):
                             print(f"[WARN] Person count validation: {validation_result['person_count_error']}")
 
                 # Run pose validation if requested
@@ -2713,18 +2728,22 @@ def main():
 
                         print(f"[INFO] Pose validation: {pose_result['reason']}")
                         print(f"[INFO] Persons detected: {pose_result.get('person_count', 0)}")
-                        print(f"[INFO] Coherent poses: {pose_result.get('coherent_count', 0)}/{pose_result.get('person_count', 0)}")
+                        print(
+                            f"[INFO] Coherent poses: {pose_result.get('coherent_count', 0)}/{pose_result.get('person_count', 0)}"
+                        )
 
                         # Add pose results to main validation result
-                        validation_result['pose_valid'] = pose_result.get('valid', False)
-                        validation_result['pose_person_count'] = pose_result.get('person_count')
-                        validation_result['pose_coherent_count'] = pose_result.get('coherent_count')
-                        validation_result['pose_reason'] = pose_result.get('reason')
+                        validation_result["pose_valid"] = pose_result.get("valid", False)
+                        validation_result["pose_person_count"] = pose_result.get("person_count")
+                        validation_result["pose_coherent_count"] = pose_result.get("coherent_count")
+                        validation_result["pose_reason"] = pose_result.get("reason")
 
                         # Fail validation if pose validation fails
-                        if not pose_result.get('valid', False):
-                            validation_result['passed'] = False
-                            validation_result['reason'] = f"Pose validation failed: {pose_result.get('reason', 'Unknown')}"
+                        if not pose_result.get("valid", False):
+                            validation_result["passed"] = False
+                            validation_result["reason"] = (
+                                f"Pose validation failed: {pose_result.get('reason', 'Unknown')}"
+                            )
                     except ImportError as e:
                         print(f"[WARN] Pose validation unavailable: {e}")
                         print("[WARN] Install with: pip install mediapipe opencv-python")
@@ -2737,27 +2756,29 @@ def main():
                         content_result = validate_content(args.output, args.prompt)
 
                         print(f"[INFO] Content validation: {content_result['reason']}")
-                        if content_result.get('caption'):
+                        if content_result.get("caption"):
                             print(f"[INFO] Image caption: {content_result['caption']}")
-                        if content_result.get('issues'):
-                            for issue in content_result['issues']:
+                        if content_result.get("issues"):
+                            for issue in content_result["issues"]:
                                 print(f"[WARN] Content issue: {issue}")
 
                         # Add content results to main validation result
-                        validation_result['content_valid'] = content_result.get('valid', True)
-                        validation_result['content_caption'] = content_result.get('caption')
-                        validation_result['content_issues'] = content_result.get('issues', [])
-                        validation_result['content_reason'] = content_result.get('reason')
+                        validation_result["content_valid"] = content_result.get("valid", True)
+                        validation_result["content_caption"] = content_result.get("caption")
+                        validation_result["content_issues"] = content_result.get("issues", [])
+                        validation_result["content_reason"] = content_result.get("reason")
 
                         # Fail validation if content validation fails
-                        if not content_result.get('valid', True):
-                            validation_result['passed'] = False
-                            validation_result['reason'] = f"Content validation failed: {content_result.get('reason', 'Unknown')}"
+                        if not content_result.get("valid", True):
+                            validation_result["passed"] = False
+                            validation_result["reason"] = (
+                                f"Content validation failed: {content_result.get('reason', 'Unknown')}"
+                            )
                     except ImportError as e:
                         print(f"[WARN] Content validation unavailable: {e}")
                         print("[WARN] Install with: pip install transformers torch")
 
-                if validation_result['passed']:
+                if validation_result["passed"]:
                     if not args.quiet:
                         print("[OK] Image passed validation")
                     # Break out - metadata will be created after loop
@@ -2836,7 +2857,7 @@ def main():
             workflow_params=workflow_params,
             loras=loras_metadata,
             preset=args.preset,
-            validation_score=validation_result.get('positive_score') if validation_result else None,
+            validation_score=validation_result.get("positive_score") if validation_result else None,
             minio_url=minio_url,
             workflow=workflow,
             output_path=args.output,
@@ -2846,7 +2867,7 @@ def main():
             refinement_max_attempts=refinement_max_attempts,
             refinement_strategy=refinement_strategy,
             refinement_previous_scores=refinement_previous_scores,
-            refinement_status=refinement_status
+            refinement_status=refinement_status,
         )
         metadata_url = upload_metadata_to_minio(metadata, object_name)
         if metadata_url and not args.quiet:

@@ -8,9 +8,9 @@ This script shows how to use the new parameters for different use cases.
 
 def run_command(description, args):
     """Run a generate.py command with description."""
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"Example: {description}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     cmd = ["python3", "generate.py"] + args
     print(f"Command: {' '.join(cmd)}\n")
 
@@ -33,111 +33,157 @@ def main():
     examples = []
 
     # Example 1: Using a preset
-    examples.append({
-        "description": "Quick draft with preset",
-        "args": [
-            "--workflow", "workflows/flux-dev.json",
-            "--prompt", "a futuristic city at sunset",
-            "--preset", "draft",
-            "--output", "/tmp/draft.png"
-        ],
-        "expected": "Fast generation with 10 steps, CFG 5.0, euler sampler"
-    })
+    examples.append(
+        {
+            "description": "Quick draft with preset",
+            "args": [
+                "--workflow",
+                "workflows/flux-dev.json",
+                "--prompt",
+                "a futuristic city at sunset",
+                "--preset",
+                "draft",
+                "--output",
+                "/tmp/draft.png",
+            ],
+            "expected": "Fast generation with 10 steps, CFG 5.0, euler sampler",
+        }
+    )
 
     # Example 2: High quality with custom parameters
-    examples.append({
-        "description": "High quality with custom settings",
-        "args": [
-            "--workflow", "workflows/flux-dev.json",
-            "--prompt", "detailed portrait of a warrior, highly detailed",
-            "--steps", "50",
-            "--cfg", "7.5",
-            "--sampler", "dpmpp_2m_sde",
-            "--scheduler", "karras",
-            "--output", "/tmp/high_quality.png"
-        ],
-        "expected": "Slow, high-quality generation with 50 steps and karras scheduler"
-    })
+    examples.append(
+        {
+            "description": "High quality with custom settings",
+            "args": [
+                "--workflow",
+                "workflows/flux-dev.json",
+                "--prompt",
+                "detailed portrait of a warrior, highly detailed",
+                "--steps",
+                "50",
+                "--cfg",
+                "7.5",
+                "--sampler",
+                "dpmpp_2m_sde",
+                "--scheduler",
+                "karras",
+                "--output",
+                "/tmp/high_quality.png",
+            ],
+            "expected": "Slow, high-quality generation with 50 steps and karras scheduler",
+        }
+    )
 
     # Example 3: Reproducible generation with seed
-    examples.append({
-        "description": "Reproducible generation with fixed seed",
-        "args": [
-            "--workflow", "workflows/flux-dev.json",
-            "--prompt", "a red sports car on a mountain road",
-            "--seed", "12345",
-            "--steps", "30",
-            "--output", "/tmp/reproducible.png"
-        ],
-        "expected": "Same output every time with seed 12345"
-    })
+    examples.append(
+        {
+            "description": "Reproducible generation with fixed seed",
+            "args": [
+                "--workflow",
+                "workflows/flux-dev.json",
+                "--prompt",
+                "a red sports car on a mountain road",
+                "--seed",
+                "12345",
+                "--steps",
+                "30",
+                "--output",
+                "/tmp/reproducible.png",
+            ],
+            "expected": "Same output every time with seed 12345",
+        }
+    )
 
     # Example 4: Custom dimensions
-    examples.append({
-        "description": "Wide panoramic image",
-        "args": [
-            "--workflow", "workflows/flux-dev.json",
-            "--prompt", "panoramic view of a mountain range",
-            "--width", "768",
-            "--height", "512",
-            "--steps", "25",
-            "--output", "/tmp/panorama.png"
-        ],
-        "expected": "768x512 image (3:2 aspect ratio)"
-    })
+    examples.append(
+        {
+            "description": "Wide panoramic image",
+            "args": [
+                "--workflow",
+                "workflows/flux-dev.json",
+                "--prompt",
+                "panoramic view of a mountain range",
+                "--width",
+                "768",
+                "--height",
+                "512",
+                "--steps",
+                "25",
+                "--output",
+                "/tmp/panorama.png",
+            ],
+            "expected": "768x512 image (3:2 aspect ratio)",
+        }
+    )
 
     # Example 5: Preset with overrides
-    examples.append({
-        "description": "Preset with parameter overrides",
-        "args": [
-            "--workflow", "workflows/flux-dev.json",
-            "--prompt", "cyberpunk street scene",
-            "--preset", "high-quality",
-            "--seed", "42",
-            "--width", "768",
-            "--output", "/tmp/override.png"
-        ],
-        "expected": "High-quality preset but with custom seed and width"
-    })
+    examples.append(
+        {
+            "description": "Preset with parameter overrides",
+            "args": [
+                "--workflow",
+                "workflows/flux-dev.json",
+                "--prompt",
+                "cyberpunk street scene",
+                "--preset",
+                "high-quality",
+                "--seed",
+                "42",
+                "--width",
+                "768",
+                "--output",
+                "/tmp/override.png",
+            ],
+            "expected": "High-quality preset but with custom seed and width",
+        }
+    )
 
     # Example 6: Fast sampler for iteration
-    examples.append({
-        "description": "Fast iteration for prompt testing",
-        "args": [
-            "--workflow", "workflows/flux-dev.json",
-            "--prompt", "test prompt variations",
-            "--steps", "15",
-            "--cfg", "7.0",
-            "--sampler", "dpmpp_2m",
-            "--output", "/tmp/test.png"
-        ],
-        "expected": "Quick results for testing different prompts"
-    })
+    examples.append(
+        {
+            "description": "Fast iteration for prompt testing",
+            "args": [
+                "--workflow",
+                "workflows/flux-dev.json",
+                "--prompt",
+                "test prompt variations",
+                "--steps",
+                "15",
+                "--cfg",
+                "7.0",
+                "--sampler",
+                "dpmpp_2m",
+                "--output",
+                "/tmp/test.png",
+            ],
+            "expected": "Quick results for testing different prompts",
+        }
+    )
 
     # Print all examples
     for i, example in enumerate(examples, 1):
-        print(f"\n{'='*60}")
+        print(f"\n{'=' * 60}")
         print(f"Example {i}: {example['description']}")
-        print(f"{'='*60}")
+        print(f"{'=' * 60}")
         print("Command:")
         print("  python3 generate.py \\")
-        for j, arg in enumerate(example['args']):
-            if j < len(example['args']) - 1:
-                if not arg.startswith('--'):
+        for j, arg in enumerate(example["args"]):
+            if j < len(example["args"]) - 1:
+                if not arg.startswith("--"):
                     print(f"    {arg} \\")
                 else:
-                    print(f"    {arg}", end='')
+                    print(f"    {arg}", end="")
                     # Add space after flag if next arg is a value
-                    if j + 1 < len(example['args']) and not example['args'][j + 1].startswith('--'):
-                        print(" ", end='')
+                    if j + 1 < len(example["args"]) and not example["args"][j + 1].startswith("--"):
+                        print(" ", end="")
                     print("\\")
             else:
                 print(f"    {arg}")
         print(f"\nExpected: {example['expected']}")
 
-    print("\n" + "="*60)
+    print("\n" + "=" * 60)
     print("Parameter Quick Reference")
-    print("="*60)
+    print("=" * 60)
     print("""
 Steps (--steps):
   10-15:  Fast draft quality
@@ -170,9 +216,9 @@ Presets (--preset):
   ultra:        100 steps, maximum quality
 """)
 
-    print("="*60)
+    print("=" * 60)
     print("For more information, see docs/USAGE.md")
-    print("="*60)
+    print("=" * 60)
 
 
 if __name__ == "__main__":

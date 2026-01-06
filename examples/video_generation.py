@@ -67,6 +67,7 @@ def text_to_video_example():
 
         # Upload to MinIO
         import datetime
+
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         object_name = f"{timestamp}_t2v_example.mp4"
 

@@ -825,7 +825,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     </script>
 </body>
 </html>
-""".replace('__MINIO_ENDPOINT__', MINIO_ENDPOINT).replace('__BUCKET__', BUCKET)
+""".replace("__MINIO_ENDPOINT__", MINIO_ENDPOINT).replace("__BUCKET__", BUCKET)
 
 
 class GalleryHandler(http.server.BaseHTTPRequestHandler):
@@ -836,25 +836,26 @@ class GalleryHandler(http.server.BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         """Enable logging for debugging."""
         import sys
+
         sys.stderr.write(f"[{self.client_address[0]}:{self.client_address[1]}] {format % args}\n")
         sys.stderr.flush()
 
     def do_GET(self):
-        if self.path == '/' or self.path == '/index.html':
-            content = HTML_TEMPLATE.encode('utf-8')
+        if self.path == "/" or self.path == "/index.html":
+            content = HTML_TEMPLATE.encode("utf-8")
             self.send_response(200)
-            self.send_header('Content-type', 'text/html; charset=utf-8')
-            self.send_header('Content-Length', len(content))
+            self.send_header("Content-type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", len(content))
             self.end_headers()
             self.wfile.write(content)
-        elif self.path == '/favicon.ico':
+        elif self.path == "/favicon.ico":
             self.send_response(204)
             self.end_headers()
-        elif self.path.startswith('/thumbnail'):
+        elif self.path.startswith("/thumbnail"):
             try:
                 query = urlparse(self.path).query
                 params = parse_qs(query)
-                img_url = params.get('url', [None])[0]
+                img_url = params.get("url", [None])[0]
 
                 if not img_url:
                     self.send_error(400, "Missing 'url' parameter")
@@ -871,16 +872,16 @@ class GalleryHandler(http.server.BaseHTTPRequestHandler):
                 img.thumbnail((350, 350))  # Resize to max 350px (card width covers approx 300px)
 
                 # Convert to RGB if necessary (e.g. if RGBA)
-                if img.mode in ('RGBA', 'P'):
-                    img = img.convert('RGB')
+                if img.mode in ("RGBA", "P"):
+                    img = img.convert("RGB")
 
                 out_io = io.BytesIO()
-                img.save(out_io, 'JPEG', quality=85)
+                img.save(out_io, "JPEG", quality=85)
                 out_io.seek(0)
 
                 self.send_response(200)
-                self.send_header('Content-type', 'image/jpeg')
-                self.send_header('Cache-Control', 'public, max-age=86400')  # Cache for 1 day
+                self.send_header("Content-type", "image/jpeg")
+                self.send_header("Cache-Control", "public, max-age=86400")  # Cache for 1 day
                 self.end_headers()
                 self.wfile.write(out_io.getvalue())
 
@@ -893,6 +894,7 @@ class GalleryHandler(http.server.BaseHTTPRequestHandler):
 
 class ThreadingTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
     """Handle each request in a separate thread to prevent blocking."""
+
     allow_reuse_address = True
     daemon_threads = True
     # Timeout for socket operations - prevents hung client connections from blocking threads forever

@@ -14,13 +14,7 @@ import generate
 
 def test_validate_generation_params_valid():
     """Test parameter validation with valid values."""
-    is_valid, error = generate.validate_generation_params(
-        steps=20,
-        cfg=7.5,
-        denoise=0.75,
-        width=512,
-        height=512
-    )
+    is_valid, error = generate.validate_generation_params(steps=20, cfg=7.5, denoise=0.75, width=512, height=512)
     assert is_valid is True
     assert error is None
     print("[OK] Valid parameters pass validation")
@@ -94,24 +88,13 @@ def test_modify_sampler_params():
     workflow = {
         "1": {
             "class_type": "KSampler",
-            "inputs": {
-                "steps": 20,
-                "cfg": 7.0,
-                "seed": 0,
-                "sampler_name": "euler",
-                "scheduler": "normal"
-            }
+            "inputs": {"steps": 20, "cfg": 7.0, "seed": 0, "sampler_name": "euler", "scheduler": "normal"},
         }
     }
 
     # Modify all parameters
     result = generate.modify_sampler_params(
-        workflow,
-        steps=30,
-        cfg=8.5,
-        seed=12345,
-        sampler_name="dpmpp_2m_sde",
-        scheduler="karras"
+        workflow, steps=30, cfg=8.5, seed=12345, sampler_name="dpmpp_2m_sde", scheduler="karras"
     )
 
     assert result["1"]["inputs"]["steps"] == 30
@@ -127,22 +110,12 @@ def test_modify_sampler_params_partial():
     workflow = {
         "1": {
             "class_type": "KSampler",
-            "inputs": {
-                "steps": 20,
-                "cfg": 7.0,
-                "seed": 0,
-                "sampler_name": "euler",
-                "scheduler": "normal"
-            }
+            "inputs": {"steps": 20, "cfg": 7.0, "seed": 0, "sampler_name": "euler", "scheduler": "normal"},
         }
     }
 
     # Modify only steps and cfg
-    result = generate.modify_sampler_params(
-        workflow,
-        steps=50,
-        cfg=7.5
-    )
+    result = generate.modify_sampler_params(workflow, steps=50, cfg=7.5)
 
     assert result["1"]["inputs"]["steps"] == 50
     assert result["1"]["inputs"]["cfg"] == 7.5
@@ -155,16 +128,7 @@ def test_modify_sampler_params_partial():
 
 def test_modify_dimensions():
     """Test modifying EmptyLatentImage dimensions."""
-    workflow = {
-        "1": {
-            "class_type": "EmptyLatentImage",
-            "inputs": {
-                "width": 512,
-                "height": 512,
-                "batch_size": 1
-            }
-        }
-    }
+    workflow = {"1": {"class_type": "EmptyLatentImage", "inputs": {"width": 512, "height": 512, "batch_size": 1}}}
 
     result = generate.modify_dimensions(workflow, width=768, height=1024)
 
@@ -176,16 +140,7 @@ def test_modify_dimensions():
 
 def test_modify_dimensions_partial():
     """Test modifying only width or height."""
-    workflow = {
-        "1": {
-            "class_type": "EmptyLatentImage",
-            "inputs": {
-                "width": 512,
-                "height": 512,
-                "batch_size": 1
-            }
-        }
-    }
+    workflow = {"1": {"class_type": "EmptyLatentImage", "inputs": {"width": 512, "height": 512, "batch_size": 1}}}
 
     # Modify only width
     result = generate.modify_dimensions(workflow, width=768)
@@ -193,16 +148,7 @@ def test_modify_dimensions_partial():
     assert result["1"]["inputs"]["height"] == 512
 
     # Create a fresh workflow for second test
-    workflow2 = {
-        "1": {
-            "class_type": "EmptyLatentImage",
-            "inputs": {
-                "width": 512,
-                "height": 512,
-                "batch_size": 1
-            }
-        }
-    }
+    workflow2 = {"1": {"class_type": "EmptyLatentImage", "inputs": {"width": 512, "height": 512, "batch_size": 1}}}
 
     # Modify only height
     result = generate.modify_dimensions(workflow2, height=1024)
@@ -214,7 +160,7 @@ def test_modify_dimensions_partial():
 def test_load_presets():
     """Test loading presets from YAML."""
     # Create a temporary presets file
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as f:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
         f.write("""
 presets:
   test-preset:
@@ -229,8 +175,8 @@ presets:
 
     try:
         # Temporarily replace the presets path
-        with patch.object(Path, 'parent', Path(temp_path).parent):
-            with patch('generate.Path') as mock_path:
+        with patch.object(Path, "parent", Path(temp_path).parent):
+            with patch("generate.Path") as mock_path:
                 mock_path.return_value.parent = Path(temp_path).parent
                 mock_path.return_value.__truediv__.return_value = Path(temp_path)
 
@@ -242,12 +188,7 @@ presets:
 
 def test_no_ksampler_node():
     """Test handling workflow without KSampler node."""
-    workflow = {
-        "1": {
-            "class_type": "SomeOtherNode",
-            "inputs": {}
-        }
-    }
+    workflow = {"1": {"class_type": "SomeOtherNode", "inputs": {}}}
 
     # Should not crash, just do nothing
     result = generate.modify_sampler_params(workflow, steps=30)
@@ -257,12 +198,7 @@ def test_no_ksampler_node():
 
 def test_no_empty_latent_node():
     """Test handling workflow without EmptyLatentImage node."""
-    workflow = {
-        "1": {
-            "class_type": "SomeOtherNode",
-            "inputs": {}
-        }
-    }
+    workflow = {"1": {"class_type": "SomeOtherNode", "inputs": {}}}
 
     # Should not crash, just do nothing
     result = generate.modify_dimensions(workflow, width=768)

@@ -18,20 +18,21 @@ async def test_generate_image_signature():
     import inspect
 
     from comfygen.tools import generation
+
     sig = inspect.signature(generation.generate_image)
     params = sig.parameters
 
     # Check that validation parameters exist
-    assert 'validate' in params, "Missing 'validate' parameter"
-    assert 'auto_retry' in params, "Missing 'auto_retry' parameter"
-    assert 'retry_limit' in params, "Missing 'retry_limit' parameter"
-    assert 'positive_threshold' in params, "Missing 'positive_threshold' parameter"
+    assert "validate" in params, "Missing 'validate' parameter"
+    assert "auto_retry" in params, "Missing 'auto_retry' parameter"
+    assert "retry_limit" in params, "Missing 'retry_limit' parameter"
+    assert "positive_threshold" in params, "Missing 'positive_threshold' parameter"
 
     # Check defaults
-    assert params['validate'].default, "validate default should be True"
-    assert params['auto_retry'].default, "auto_retry default should be True"
-    assert params['retry_limit'].default == 3, "retry_limit default should be 3"
-    assert params['positive_threshold'].default == 0.25, "positive_threshold default should be 0.25"
+    assert params["validate"].default, "validate default should be True"
+    assert params["auto_retry"].default, "auto_retry default should be True"
+    assert params["retry_limit"].default == 3, "retry_limit default should be 3"
+    assert params["positive_threshold"].default == 0.25, "positive_threshold default should be 0.25"
 
     print("[OK] generate_image has correct validation parameters")
 
@@ -47,10 +48,10 @@ async def test_mcp_tool_signature():
     params = sig.parameters
 
     # Check that validation parameters exist
-    assert 'validate' in params, "MCP tool missing 'validate' parameter"
-    assert 'auto_retry' in params, "MCP tool missing 'auto_retry' parameter"
-    assert 'retry_limit' in params, "MCP tool missing 'retry_limit' parameter"
-    assert 'positive_threshold' in params, "MCP tool missing 'positive_threshold' parameter"
+    assert "validate" in params, "MCP tool missing 'validate' parameter"
+    assert "auto_retry" in params, "MCP tool missing 'auto_retry' parameter"
+    assert "retry_limit" in params, "MCP tool missing 'retry_limit' parameter"
+    assert "positive_threshold" in params, "MCP tool missing 'positive_threshold' parameter"
 
     print("[OK] MCP tool wrapper has correct validation parameters")
 
@@ -66,12 +67,10 @@ async def test_adjust_prompt_for_retry():
     adj_pos, adj_neg = _adjust_prompt_for_retry(positive, negative, 1)
 
     # Check that "single car" gets weighted
-    assert "(single car" in adj_pos.lower(), \
-        f"Expected weight on 'single car', got: {adj_pos}"
+    assert "(single car" in adj_pos.lower(), f"Expected weight on 'single car', got: {adj_pos}"
 
     # Check that negative terms are added
-    assert "duplicate" in adj_neg.lower(), \
-        f"Expected 'duplicate' in negative prompt, got: {adj_neg}"
+    assert "duplicate" in adj_neg.lower(), f"Expected 'duplicate' in negative prompt, got: {adj_neg}"
 
     print("[OK] Prompt adjustment works")
     print(f"     Adjusted positive: {adj_pos}")
@@ -82,6 +81,7 @@ async def test_validation_module_import():
     """Test that validation module can be imported."""
     try:
         from comfy_gen.validation import validate_image  # noqa: F401
+
         print("[OK] Validation module imported successfully")
         return True
     except ImportError as e:
@@ -98,13 +98,7 @@ async def test_generate_with_validation_disabled():
     mock_comfyui = MagicMock()
     mock_comfyui.check_availability.return_value = True
     mock_comfyui.queue_prompt.return_value = "test_prompt_id"
-    mock_comfyui.wait_for_completion.return_value = {
-        "outputs": {
-            "1": {
-                "images": [{"filename": "test_image.png"}]
-            }
-        }
-    }
+    mock_comfyui.wait_for_completion.return_value = {"outputs": {"1": {"images": [{"filename": "test_image.png"}]}}}
 
     mock_minio = MagicMock()
     mock_minio.endpoint = "192.168.1.215:9000"
@@ -117,20 +111,15 @@ async def test_generate_with_validation_disabled():
     mock_workflow_mgr.set_seed.return_value = {"1": {"class_type": "KSampler"}}
     mock_workflow_mgr.set_sampler_params.return_value = {"1": {"class_type": "KSampler"}}
 
-    with patch('comfygen.tools.generation._get_comfyui', return_value=mock_comfyui), \
-         patch('comfygen.tools.generation._get_minio', return_value=mock_minio), \
-         patch('comfygen.tools.generation._get_workflow_mgr', return_value=mock_workflow_mgr):
-
-        result = await generation.generate_image(
-            prompt="test prompt",
-            validate=False
-        )
+    with patch("comfygen.tools.generation._get_comfyui", return_value=mock_comfyui), patch(
+        "comfygen.tools.generation._get_minio", return_value=mock_minio
+    ), patch("comfygen.tools.generation._get_workflow_mgr", return_value=mock_workflow_mgr):
+        result = await generation.generate_image(prompt="test prompt", validate=False)
 
         # Check result structure
-        assert result['status'] == 'success', f"Expected success, got: {result.get('status')}"
-        assert 'url' in result, "Result should have 'url' key"
-        assert 'validation' not in result or result.get('validation') is None, \
-            "Validation should not run when disabled"
+        assert result["status"] == "success", f"Expected success, got: {result.get('status')}"
+        assert "url" in result, "Result should have 'url' key"
+        assert "validation" not in result or result.get("validation") is None, "Validation should not run when disabled"
 
         print("[OK] Generation with validation disabled works")
 
@@ -143,13 +132,7 @@ async def test_validation_unavailable_handling():
     mock_comfyui = MagicMock()
     mock_comfyui.check_availability.return_value = True
     mock_comfyui.queue_prompt.return_value = "test_prompt_id"
-    mock_comfyui.wait_for_completion.return_value = {
-        "outputs": {
-            "1": {
-                "images": [{"filename": "test_image.png"}]
-            }
-        }
-    }
+    mock_comfyui.wait_for_completion.return_value = {"outputs": {"1": {"images": [{"filename": "test_image.png"}]}}}
 
     mock_minio = MagicMock()
     mock_minio.endpoint = "192.168.1.215:9000"
@@ -163,22 +146,20 @@ async def test_validation_unavailable_handling():
     mock_workflow_mgr.set_sampler_params.return_value = {"1": {"class_type": "KSampler"}}
 
     # Mock validation import to fail
-    with patch('comfygen.tools.generation._get_comfyui', return_value=mock_comfyui), \
-         patch('comfygen.tools.generation._get_minio', return_value=mock_minio), \
-         patch('comfygen.tools.generation._get_workflow_mgr', return_value=mock_workflow_mgr), \
-         patch.dict('sys.modules', {'comfy_gen.validation': None}):
-
-        result = await generation.generate_image(
-            prompt="test prompt",
-            validate=True
-        )
+    with patch("comfygen.tools.generation._get_comfyui", return_value=mock_comfyui), patch(
+        "comfygen.tools.generation._get_minio", return_value=mock_minio
+    ), patch("comfygen.tools.generation._get_workflow_mgr", return_value=mock_workflow_mgr), patch.dict(
+        "sys.modules", {"comfy_gen.validation": None}
+    ):
+        result = await generation.generate_image(prompt="test prompt", validate=True)
 
         # Should succeed but indicate validation unavailable
-        assert result['status'] == 'success', f"Expected success, got: {result}"
-        if 'validation' in result:
-            assert result['validation'].get('passed') is None or \
-                   'not available' in result['validation'].get('reason', '').lower(), \
-                   f"Expected validation unavailable message, got: {result['validation']}"
+        assert result["status"] == "success", f"Expected success, got: {result}"
+        if "validation" in result:
+            assert (
+                result["validation"].get("passed") is None
+                or "not available" in result["validation"].get("reason", "").lower()
+            ), f"Expected validation unavailable message, got: {result['validation']}"
 
         print("[OK] Graceful handling when validation unavailable")
 
@@ -208,13 +189,14 @@ async def run_all_tests():
         except Exception as e:
             print(f"[FAILED] {test_name}: {e}")
             import traceback
+
             traceback.print_exc()
             failed += 1
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"Tests passed: {passed}/{len(tests)}")
     print(f"Tests failed: {failed}/{len(tests)}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     return 0 if failed == 0 else 1
 

@@ -26,8 +26,9 @@ def test_enable_transparency_basic():
 
     # Check that nodes were added (should add 3 nodes: SAMLoader, SAMDetector, Composite)
     final_node_count = len(modified_workflow)
-    assert final_node_count == initial_node_count + 3, \
+    assert final_node_count == initial_node_count + 3, (
         f"Expected 3 new nodes, got {final_node_count - initial_node_count}"
+    )
 
     # Check that SAMModelLoader node exists
     sam_loader_found = False

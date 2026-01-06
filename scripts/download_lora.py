@@ -100,7 +100,7 @@ def download_url(url, filename=None):
     print(f"[INFO] Downloading: {filename}")
     print(f"[INFO] From: {url[:80]}...")
 
-    target = f'{LORA_PATH}\\{filename}'
+    target = f"{LORA_PATH}\\{filename}"
 
     # Use curl which is more reliable for large files
     cmd = ["ssh", "moira", f'curl -L -o "{target}" "{url}"']
@@ -109,13 +109,10 @@ def download_url(url, filename=None):
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
         if result.returncode == 0:
             # Verify file exists
-            check = subprocess.run(
-                ["ssh", "moira", f'dir "{target}"'],
-                capture_output=True, text=True
-            )
+            check = subprocess.run(["ssh", "moira", f'dir "{target}"'], capture_output=True, text=True)
             if check.returncode == 0:
                 print(f"[OK] Downloaded: {filename}")
-                print(f"[OK] Use: --lora \"{filename}:0.8\"")
+                print(f'[OK] Use: --lora "{filename}:0.8"')
                 return True
 
         print("[ERROR] Download failed")
@@ -178,43 +175,43 @@ HF_LORAS = [
         "name": "Hyper-FLUX.1-dev-8steps-lora",
         "url": "https://huggingface.co/ByteDance/Hyper-SD/resolve/main/Hyper-FLUX.1-dev-8steps-lora.safetensors",
         "description": "Faster generation (8 steps instead of 20+)",
-        "size": "1.3GB"
+        "size": "1.3GB",
     },
     {
         "name": "realism_lora",
         "url": "https://huggingface.co/XLabs-AI/flux-lora-collection/resolve/main/realism_lora.safetensors",
         "description": "Photorealistic enhancement",
-        "size": "22MB"
+        "size": "22MB",
     },
     {
         "name": "scenery_lora",
         "url": "https://huggingface.co/XLabs-AI/flux-lora-collection/resolve/main/scenery_lora.safetensors",
         "description": "Landscape and scenery improvement",
-        "size": "43MB"
+        "size": "43MB",
     },
     {
         "name": "mjv6_lora",
         "url": "https://huggingface.co/XLabs-AI/flux-lora-collection/resolve/main/mjv6_lora.safetensors",
         "description": "Midjourney v6 style",
-        "size": "43MB"
+        "size": "43MB",
     },
     {
         "name": "art_lora",
         "url": "https://huggingface.co/XLabs-AI/flux-lora-collection/resolve/main/art_lora.safetensors",
         "description": "Artistic style",
-        "size": "43MB"
+        "size": "43MB",
     },
     {
         "name": "anime_lora",
         "url": "https://huggingface.co/XLabs-AI/flux-lora-collection/resolve/main/anime_lora.safetensors",
         "description": "Anime style",
-        "size": "43MB"
+        "size": "43MB",
     },
     {
         "name": "disney_lora",
         "url": "https://huggingface.co/XLabs-AI/flux-lora-collection/resolve/main/disney_lora.safetensors",
         "description": "Disney animation style",
-        "size": "43MB"
+        "size": "43MB",
     },
 ]
 
@@ -225,7 +222,7 @@ def list_hf_loras():
     print("-" * 80)
 
     for i, lora in enumerate(HF_LORAS):
-        print(f"  [{i+1}] {lora['name']}")
+        print(f"  [{i + 1}] {lora['name']}")
         print(f"      {lora['description']} ({lora['size']})")
         print()
 

@@ -27,19 +27,12 @@ def create_sample_metadata():
     return {
         "timestamp": "2026-01-05T10:30:00",
         "generation_id": "example-550e8400",
-
         "input": {
             "prompt": "a majestic lion in the savanna at sunset, cinematic lighting, photorealistic, 8k quality",
             "negative_prompt": "cartoon, anime, illustration, low quality, blurry, distorted",
-            "preset": "high-quality"
+            "preset": "high-quality",
         },
-
-        "workflow": {
-            "name": "flux-dev.json",
-            "model": "flux1-dev-fp8.safetensors",
-            "vae": "ae.safetensors"
-        },
-
+        "workflow": {"name": "flux-dev.json", "model": "flux1-dev-fp8.safetensors", "vae": "ae.safetensors"},
         "parameters": {
             "seed": 1001,
             "steps": 80,
@@ -49,25 +42,23 @@ def create_sample_metadata():
             "resolution": [1024, 1024],
             "loras": [
                 {"name": "photorealistic-v2.safetensors", "strength": 0.8},
-                {"name": "detail-enhancer.safetensors", "strength": 0.5}
-            ]
+                {"name": "detail-enhancer.safetensors", "strength": 0.5},
+            ],
         },
-
         "quality": {
             "composite_score": 8.7,
             "grade": "A",
             "technical": {"brisque": 6.5, "niqe": 7.2},
             "aesthetic": {"laion": 8.9},
             "prompt_adherence": {"clip": 0.92},
-            "detail": {"topiq": 8.5}
+            "detail": {"topiq": 8.5},
         },
-
         "storage": {
             "minio_url": "http://192.168.1.215:9000/comfy-gen/lion_sunset.png",
             "file_size_bytes": 3456789,
             "format": "png",
-            "generation_time_seconds": 52.3
-        }
+            "generation_time_seconds": 52.3,
+        },
     }
 
 
@@ -77,8 +68,8 @@ def main():
     # Create sample image
     image_path = "/tmp/example_with_metadata.png"
     print(f"[1] Creating sample image at {image_path}")
-    img = Image.new('RGB', (1024, 1024), color='#ff8800')
-    img.save(image_path, 'PNG')
+    img = Image.new("RGB", (1024, 1024), color="#ff8800")
+    img.save(image_path, "PNG")
     print(f"[OK] Created {1024}x{1024} image\n")
 
     # Create metadata
@@ -121,7 +112,7 @@ def main():
         ("Seed", read_meta["parameters"]["seed"] == metadata["parameters"]["seed"]),
         ("Model", read_meta["workflow"]["model"] == metadata["workflow"]["model"]),
         ("Quality Score", read_meta["quality"]["composite_score"] == metadata["quality"]["composite_score"]),
-        ("LoRAs Count", len(read_meta["parameters"]["loras"]) == len(metadata["parameters"]["loras"]))
+        ("LoRAs Count", len(read_meta["parameters"]["loras"]) == len(metadata["parameters"]["loras"])),
     ]
 
     for check_name, passed in checks:

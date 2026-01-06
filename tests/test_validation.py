@@ -16,6 +16,7 @@ from comfy_gen.validation import CLIP_AVAILABLE, YOLO_AVAILABLE
 def test_validation_import():
     """Test that validation module can be imported."""
     from comfy_gen import validation
+
     assert validation is not None
     print("[OK] Validation module imported successfully")
 
@@ -167,9 +168,9 @@ if __name__ == "__main__":
             traceback.print_exc()
             failed += 1
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"Tests passed: {passed}/{len(tests)}")
     print(f"Tests failed: {failed}/{len(tests)}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     sys.exit(0 if failed == 0 else 1)

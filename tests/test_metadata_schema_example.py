@@ -17,36 +17,17 @@ def demonstrate_metadata_schema():
 
     # Create a sample workflow
     workflow = {
-        "1": {
-            "class_type": "CheckpointLoaderSimple",
-            "inputs": {"ckpt_name": "flux1-dev-fp8.safetensors"}
-        },
-        "2": {
-            "class_type": "VAELoader",
-            "inputs": {"vae_name": "ae.safetensors"}
-        },
-        "3": {
-            "class_type": "EmptyLatentImage",
-            "inputs": {"width": 1024, "height": 1024, "batch_size": 1}
-        },
+        "1": {"class_type": "CheckpointLoaderSimple", "inputs": {"ckpt_name": "flux1-dev-fp8.safetensors"}},
+        "2": {"class_type": "VAELoader", "inputs": {"vae_name": "ae.safetensors"}},
+        "3": {"class_type": "EmptyLatentImage", "inputs": {"width": 1024, "height": 1024, "batch_size": 1}},
         "4": {
             "class_type": "KSampler",
-            "inputs": {
-                "seed": 42,
-                "steps": 80,
-                "cfg": 8.5,
-                "sampler_name": "dpmpp_2m",
-                "scheduler": "normal"
-            }
+            "inputs": {"seed": 42, "steps": 80, "cfg": 8.5, "sampler_name": "dpmpp_2m", "scheduler": "normal"},
         },
         "5": {
             "class_type": "LoraLoader",
-            "inputs": {
-                "lora_name": "automotive_detail.safetensors",
-                "strength_model": 0.8,
-                "strength_clip": 0.8
-            }
-        }
+            "inputs": {"lora_name": "automotive_detail.safetensors", "strength_model": 0.8, "strength_clip": 0.8},
+        },
     }
 
     # Extract workflow parameters
@@ -54,7 +35,7 @@ def demonstrate_metadata_schema():
     loras = generate.extract_loras_from_workflow(workflow)
 
     # Create a temporary file to simulate output
-    with tempfile.NamedTemporaryFile(mode='wb', suffix='.png', delete=False) as f:
+    with tempfile.NamedTemporaryFile(mode="wb", suffix=".png", delete=False) as f:
         # Write some fake image data
         f.write(b"PNG fake image content" * 100000)
         temp_output_path = f.name
@@ -72,7 +53,7 @@ def demonstrate_metadata_schema():
             minio_url="http://192.168.1.215:9000/comfy-gen/20260104_153000_output.png",
             workflow=workflow,
             output_path=temp_output_path,
-            generation_time_seconds=45.2
+            generation_time_seconds=45.2,
         )
 
         # Display the metadata structure

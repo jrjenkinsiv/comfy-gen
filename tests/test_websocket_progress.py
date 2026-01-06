@@ -31,7 +31,7 @@ def test_progress_tracker_quiet_mode():
     tracker = generate.ProgressTracker("test_prompt_123", quiet=True)
 
     # Capture stdout
-    with patch('sys.stdout', new=StringIO()) as fake_out:
+    with patch("sys.stdout", new=StringIO()) as fake_out:
         tracker._log("Test message")
         output = fake_out.getvalue()
 
@@ -44,12 +44,8 @@ def test_progress_tracker_json_progress():
     tracker = generate.ProgressTracker("test_prompt_123", json_progress=True)
 
     # Capture stdout
-    with patch('sys.stdout', new=StringIO()) as fake_out:
-        tracker._log_progress({
-            "step": 10,
-            "max_steps": 20,
-            "eta_seconds": 5.5
-        })
+    with patch("sys.stdout", new=StringIO()) as fake_out:
+        tracker._log_progress({"step": 10, "max_steps": 20, "eta_seconds": 5.5})
         output = fake_out.getvalue().strip()
 
     # Should output valid JSON
@@ -64,14 +60,9 @@ def test_progress_tracker_on_message_execution_start():
     """Test handling execution_start message."""
     tracker = generate.ProgressTracker("test_prompt_123")
 
-    message = json.dumps({
-        "type": "execution_start",
-        "data": {
-            "prompt_id": "test_prompt_123"
-        }
-    })
+    message = json.dumps({"type": "execution_start", "data": {"prompt_id": "test_prompt_123"}})
 
-    with patch('sys.stdout', new=StringIO()) as fake_out:
+    with patch("sys.stdout", new=StringIO()) as fake_out:
         tracker._on_message(None, message)
         output = fake_out.getvalue()
 
@@ -85,16 +76,9 @@ def test_progress_tracker_on_message_progress():
     tracker = generate.ProgressTracker("test_prompt_123")
     tracker.start_time = time.time() - 10  # Started 10 seconds ago
 
-    message = json.dumps({
-        "type": "progress",
-        "data": {
-            "prompt_id": "test_prompt_123",
-            "value": 10,
-            "max": 20
-        }
-    })
+    message = json.dumps({"type": "progress", "data": {"prompt_id": "test_prompt_123", "value": 10, "max": 20}})
 
-    with patch('sys.stdout', new=StringIO()) as fake_out:
+    with patch("sys.stdout", new=StringIO()) as fake_out:
         tracker._on_message(None, message)
         output = fake_out.getvalue()
 
@@ -108,15 +92,9 @@ def test_progress_tracker_on_message_executing_complete():
     tracker = generate.ProgressTracker("test_prompt_123")
     tracker.start_time = time.time()
 
-    message = json.dumps({
-        "type": "executing",
-        "data": {
-            "prompt_id": "test_prompt_123",
-            "node": None
-        }
-    })
+    message = json.dumps({"type": "executing", "data": {"prompt_id": "test_prompt_123", "node": None}})
 
-    with patch('sys.stdout', new=StringIO()) as fake_out:
+    with patch("sys.stdout", new=StringIO()) as fake_out:
         tracker._on_message(None, message)
         output = fake_out.getvalue()
 
@@ -129,15 +107,11 @@ def test_progress_tracker_on_message_execution_cached():
     """Test handling execution_cached message."""
     tracker = generate.ProgressTracker("test_prompt_123")
 
-    message = json.dumps({
-        "type": "execution_cached",
-        "data": {
-            "prompt_id": "test_prompt_123",
-            "nodes": ["node1", "node2", "node3"]
-        }
-    })
+    message = json.dumps(
+        {"type": "execution_cached", "data": {"prompt_id": "test_prompt_123", "nodes": ["node1", "node2", "node3"]}}
+    )
 
-    with patch('sys.stdout', new=StringIO()) as fake_out:
+    with patch("sys.stdout", new=StringIO()) as fake_out:
         tracker._on_message(None, message)
         output = fake_out.getvalue()
 
@@ -150,14 +124,9 @@ def test_progress_tracker_ignores_other_prompts():
     """Test that tracker ignores messages for other prompt IDs."""
     tracker = generate.ProgressTracker("my_prompt_123")
 
-    message = json.dumps({
-        "type": "execution_start",
-        "data": {
-            "prompt_id": "different_prompt_456"
-        }
-    })
+    message = json.dumps({"type": "execution_start", "data": {"prompt_id": "different_prompt_456"}})
 
-    with patch('sys.stdout', new=StringIO()) as fake_out:
+    with patch("sys.stdout", new=StringIO()) as fake_out:
         tracker._on_message(None, message)
         output = fake_out.getvalue()
 
@@ -186,17 +155,9 @@ def test_wait_for_completion_with_websocket():
     # Mock requests to simulate completion
     mock_response = Mock()
     mock_response.status_code = 200
-    mock_response.json.return_value = {
-        prompt_id: {
-            "outputs": {
-                "node1": {"images": []}
-            }
-        }
-    }
+    mock_response.json.return_value = {prompt_id: {"outputs": {"node1": {"images": []}}}}
 
-    with patch('generate.ProgressTracker') as MockTracker, \
-         patch('requests.get', return_value=mock_response):
-
+    with patch("generate.ProgressTracker") as MockTracker, patch("requests.get", return_value=mock_response):
         MockTracker.return_value = mock_tracker
 
         result = generate.wait_for_completion(prompt_id, quiet=True)
@@ -216,15 +177,9 @@ def test_wait_for_completion_quiet_mode():
 
     mock_response = Mock()
     mock_response.status_code = 200
-    mock_response.json.return_value = {
-        prompt_id: {
-            "outputs": {}
-        }
-    }
+    mock_response.json.return_value = {prompt_id: {"outputs": {}}}
 
-    with patch('generate.ProgressTracker') as MockTracker, \
-         patch('requests.get', return_value=mock_response):
-
+    with patch("generate.ProgressTracker") as MockTracker, patch("requests.get", return_value=mock_response):
         mock_tracker = Mock()
         MockTracker.return_value = mock_tracker
 
@@ -243,15 +198,9 @@ def test_wait_for_completion_json_progress_mode():
 
     mock_response = Mock()
     mock_response.status_code = 200
-    mock_response.json.return_value = {
-        prompt_id: {
-            "outputs": {}
-        }
-    }
+    mock_response.json.return_value = {prompt_id: {"outputs": {}}}
 
-    with patch('generate.ProgressTracker') as MockTracker, \
-         patch('requests.get', return_value=mock_response):
-
+    with patch("generate.ProgressTracker") as MockTracker, patch("requests.get", return_value=mock_response):
         mock_tracker = Mock()
         MockTracker.return_value = mock_tracker
 
@@ -269,17 +218,11 @@ def test_run_generation_passes_flags():
     workflow = {"test": "workflow"}
     output_path = "/tmp/test.png"
 
-    with patch('generate.queue_workflow', return_value="test_prompt_123"), \
-         patch('generate.wait_for_completion', return_value=None) as mock_wait, \
-         patch('generate.download_output', return_value=False):
-
+    with patch("generate.queue_workflow", return_value="test_prompt_123"), patch(
+        "generate.wait_for_completion", return_value=None
+    ) as mock_wait, patch("generate.download_output", return_value=False):
         # Call with quiet and json_progress
-        generate.run_generation(
-            workflow,
-            output_path,
-            quiet=True,
-            json_progress=True
-        )
+        generate.run_generation(workflow, output_path, quiet=True, json_progress=True)
 
         # Verify flags were passed to wait_for_completion
         mock_wait.assert_called_once_with("test_prompt_123", quiet=True, json_progress=True)
@@ -317,12 +260,13 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"[FAILED] {test.__name__}: {e}")
             import traceback
+
             traceback.print_exc()
             failed += 1
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"Tests passed: {passed}/{len(tests)}")
     print(f"Tests failed: {failed}/{len(tests)}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     sys.exit(0 if failed == 0 else 1)

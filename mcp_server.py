@@ -59,6 +59,7 @@ config_loader = None
 presets_config = None
 lora_catalog = None
 
+
 def _ensure_config_loaded():
     """Ensure configuration is loaded (lazy loading)."""
     global config_loader, presets_config, lora_catalog
@@ -161,6 +162,7 @@ def check_comfyui_service_status() -> str:
 # IMAGE GENERATION TOOLS
 # ============================================================================
 
+
 @mcp.tool()
 async def generate_image(
     prompt: str,
@@ -222,7 +224,7 @@ async def generate_image(
         if not preset_params:
             return {
                 "status": "error",
-                "error": f"Preset '{preset}' not found. Available: {', '.join(presets_config.get('presets', {}).keys())}"
+                "error": f"Preset '{preset}' not found. Available: {', '.join(presets_config.get('presets', {}).keys())}",
             }
 
     # Load LoRA preset if specified
@@ -245,10 +247,10 @@ async def generate_image(
                     strength = lora_info.get("recommended_strength", 1.0) if lora_info else 1.0
                     loras.append({"name": lora_filename, "strength": strength})
         else:
-            available_presets = ', '.join(lora_catalog.get('model_suggestions', {}).keys())
+            available_presets = ", ".join(lora_catalog.get("model_suggestions", {}).keys())
             return {
                 "status": "error",
-                "error": f"LoRA preset '{lora_preset}' not found in model_suggestions. Available LoRA presets: {available_presets}"
+                "error": f"LoRA preset '{lora_preset}' not found in model_suggestions. Available LoRA presets: {available_presets}",
             }
 
     # Apply defaults from config and preset (CLI args > preset > config defaults)
@@ -264,16 +266,31 @@ async def generate_image(
     final_cfg = cfg if cfg is not None else preset_params.get("cfg", 7.0)
     final_sampler = sampler if sampler is not None else preset_params.get("sampler", "euler")
     final_scheduler = scheduler if scheduler is not None else preset_params.get("scheduler", "normal")
-    final_validate = validate if validate is not None else preset_params.get("validate", validation_config.get("enabled", True))
-    final_auto_retry = auto_retry if auto_retry is not None else preset_params.get("auto_retry", validation_config.get("auto_retry", True))
-    final_retry_limit = retry_limit if retry_limit is not None else preset_params.get("retry_limit", validation_config.get("retry_limit", 3))
-    final_positive_threshold = positive_threshold if positive_threshold is not None else preset_params.get("positive_threshold", validation_config.get("positive_threshold", 0.25))
+    final_validate = (
+        validate if validate is not None else preset_params.get("validate", validation_config.get("enabled", True))
+    )
+    final_auto_retry = (
+        auto_retry
+        if auto_retry is not None
+        else preset_params.get("auto_retry", validation_config.get("auto_retry", True))
+    )
+    final_retry_limit = (
+        retry_limit
+        if retry_limit is not None
+        else preset_params.get("retry_limit", validation_config.get("retry_limit", 3))
+    )
+    final_positive_threshold = (
+        positive_threshold
+        if positive_threshold is not None
+        else preset_params.get("positive_threshold", validation_config.get("positive_threshold", 0.25))
+    )
 
     # Set up progress callback if json_progress is enabled
     progress_updates = []
     progress_callback = None
 
     if json_progress:
+
         def capture_progress(update: dict):
             """Capture progress updates for JSON output."""
             progress_updates.append(update)
@@ -298,7 +315,7 @@ async def generate_image(
         validate=final_validate,
         auto_retry=final_auto_retry,
         retry_limit=final_retry_limit,
-        positive_threshold=final_positive_threshold
+        positive_threshold=final_positive_threshold,
     )
 
     # Add progress updates to result if json_progress was enabled
@@ -342,13 +359,14 @@ async def img2img(
         model=model,
         steps=steps,
         cfg=cfg,
-        seed=seed
+        seed=seed,
     )
 
 
 # ============================================================================
 # VIDEO GENERATION TOOLS
 # ============================================================================
+
 
 @mcp.tool()
 async def generate_video(
@@ -387,7 +405,7 @@ async def generate_video(
         fps=fps,
         steps=steps,
         cfg=cfg,
-        seed=seed
+        seed=seed,
     )
 
 
@@ -425,13 +443,14 @@ async def image_to_video(
         frames=frames,
         fps=fps,
         steps=steps,
-        seed=seed
+        seed=seed,
     )
 
 
 # ============================================================================
 # MODEL MANAGEMENT TOOLS
 # ============================================================================
+
 
 @mcp.tool()
 async def list_models() -> dict:
@@ -527,18 +546,14 @@ async def search_civitai(
         Dictionary with search results
     """
     return await models.search_civitai(
-        query=query,
-        model_type=model_type,
-        base_model=base_model,
-        sort=sort,
-        nsfw=nsfw,
-        limit=limit
+        query=query, model_type=model_type, base_model=base_model, sort=sort, nsfw=nsfw, limit=limit
     )
 
 
 # ============================================================================
 # GALLERY & HISTORY TOOLS
 # ============================================================================
+
 
 @mcp.tool()
 async def list_images(
@@ -602,6 +617,7 @@ async def get_history(limit: int = 10) -> dict:
 # PROMPT ENGINEERING TOOLS
 # ============================================================================
 
+
 @mcp.tool()
 async def build_prompt(
     subject: str,
@@ -650,6 +666,7 @@ async def analyze_prompt(prompt: str) -> dict:
 # ============================================================================
 # PROGRESS & CONTROL TOOLS
 # ============================================================================
+
 
 @mcp.tool()
 async def get_progress(prompt_id: str = None) -> dict:
@@ -733,23 +750,18 @@ async def validate_workflow(
         from comfygen.workflows import WorkflowManager
 
         # Get clients
-        comfyui = ComfyUIClient(
-            host=os.getenv("COMFYUI_HOST", "http://192.168.1.215:8188")
-        )
+        comfyui = ComfyUIClient(host=os.getenv("COMFYUI_HOST", "http://192.168.1.215:8188"))
         workflow_mgr = WorkflowManager()
 
         # Check server availability
         if not comfyui.check_availability():
-            return {
-                "status": "error",
-                "error": "ComfyUI server is not available"
-            }
+            return {"status": "error", "error": "ComfyUI server is not available"}
 
         # Load appropriate workflow
         workflow_map = {
             "sd15": "flux-dev.json",  # TODO: Update to use sd15-specific workflow when available
             "flux": "flux-dev.json",
-            "sdxl": "flux-dev.json"   # TODO: Update to use sdxl-specific workflow when available
+            "sdxl": "flux-dev.json",  # TODO: Update to use sdxl-specific workflow when available
         }
         workflow_file = workflow_map.get(model, "flux-dev.json")
 
@@ -758,7 +770,7 @@ async def validate_workflow(
             return {
                 "status": "invalid",
                 "workflow_file": workflow_file,
-                "error": f"Failed to load workflow: {workflow_file}"
+                "error": f"Failed to load workflow: {workflow_file}",
             }
 
         # Apply test parameters to workflow (to validate parameter application)
@@ -771,14 +783,11 @@ async def validate_workflow(
         return {
             "status": "valid" if validation_result["is_valid"] else "invalid",
             "workflow_file": workflow_file,
-            **validation_result
+            **validation_result,
         }
 
     except Exception as e:
-        return {
-            "status": "error",
-            "error": str(e)
-        }
+        return {"status": "error", "error": str(e)}
 
 
 if __name__ == "__main__":

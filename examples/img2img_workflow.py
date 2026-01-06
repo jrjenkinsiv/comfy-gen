@@ -88,7 +88,7 @@ def main():
     print("\n[4/7] Preprocessing and uploading input image...")
 
     # Create temp copy for preprocessing
-    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix='.png')
+    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
     temp_file.close()
     shutil.copy(INPUT_IMAGE_PATH, temp_file.name)
 
@@ -134,6 +134,7 @@ def main():
 
         # Upload to MinIO
         import datetime
+
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         object_name = f"{timestamp}_img2img_example.png"
 

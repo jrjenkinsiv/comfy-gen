@@ -84,6 +84,7 @@ def test_cli_entrypoint() -> int:
 
     try:
         from comfy_gen.cli import main as cli_main  # noqa: F401
+
         print("[OK] CLI entrypoint 'main' is importable")
         return 0
     except ImportError as e:

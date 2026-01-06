@@ -24,6 +24,7 @@ MINIO_ACCESS_KEY = "minioadmin"
 MINIO_SECRET_KEY = "minioadmin"
 BUCKET_NAME = "comfy-gen"
 
+
 def get_images(client: Minio, pattern: str = None) -> List[Dict]:
     """Get list of images from MinIO bucket.
 
@@ -45,33 +46,36 @@ def get_images(client: Minio, pattern: str = None) -> List[Dict]:
                 continue
 
             # Get file extension
-            if '.' not in obj.object_name:
+            if "." not in obj.object_name:
                 continue
-            ext = obj.object_name.lower().rsplit('.', 1)[-1]
+            ext = obj.object_name.lower().rsplit(".", 1)[-1]
 
             # Separate images and videos
-            is_image = ext in ['png', 'jpg', 'jpeg', 'gif', 'webp']
-            is_video = ext in ['mp4', 'webm']
+            is_image = ext in ["png", "jpg", "jpeg", "gif", "webp"]
+            is_video = ext in ["mp4", "webm"]
 
             if not (is_image or is_video):
                 continue
 
-            images.append({
-                'filename': obj.object_name,
-                'size': obj.size,
-                'last_modified': obj.last_modified,
-                'url': f"http://{MINIO_ENDPOINT}/{BUCKET_NAME}/{obj.object_name}",
-                'type': 'image' if is_image else 'video'
-            })
+            images.append(
+                {
+                    "filename": obj.object_name,
+                    "size": obj.size,
+                    "last_modified": obj.last_modified,
+                    "url": f"http://{MINIO_ENDPOINT}/{BUCKET_NAME}/{obj.object_name}",
+                    "type": "image" if is_image else "video",
+                }
+            )
 
         # Sort by date, newest first
-        images.sort(key=lambda x: x['last_modified'], reverse=True)
+        images.sort(key=lambda x: x["last_modified"], reverse=True)
 
     except S3Error as e:
         print(f"[ERROR] MinIO error: {e}")
         sys.exit(1)
 
     return images
+
 
 def generate_gallery_html(images: List[Dict]) -> str:
     """Generate HTML gallery page.
@@ -202,19 +206,19 @@ def generate_gallery_html(images: List[Dict]) -> str:
 
         for img in images:
             # Format size
-            size_kb = img['size'] / 1024
+            size_kb = img["size"] / 1024
             if size_kb > 1024:
-                size_str = f"{size_kb/1024:.2f} MB"
+                size_str = f"{size_kb / 1024:.2f} MB"
             else:
                 size_str = f"{size_kb:.2f} KB"
 
             # Format date
-            date_str = img['last_modified'].strftime("%Y-%m-%d %H:%M")
+            date_str = img["last_modified"].strftime("%Y-%m-%d %H:%M")
 
             html.append("    <div class='gallery-item'>")
             html.append("      <div class='media-container'>")
 
-            if img['type'] == 'video':
+            if img["type"] == "video":
                 html.append(f"        <video src='{img['url']}' controls></video>")
                 html.append("        <div class='video-badge'>VIDEO</div>")
             else:
@@ -236,30 +240,19 @@ def generate_gallery_html(images: List[Dict]) -> str:
 
     return "\n".join(html)
 
+
 def main():
     parser = argparse.ArgumentParser(
         description="Generate HTML gallery of MinIO comfy-gen bucket",
-        formatter_class=argparse.RawDescriptionHelpFormatter
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument(
-        "--output",
-        default="gallery.html",
-        help="Output HTML file (default: gallery.html)"
-    )
-    parser.add_argument(
-        "--pattern",
-        help="Filter by filename pattern (case-insensitive)"
-    )
+    parser.add_argument("--output", default="gallery.html", help="Output HTML file (default: gallery.html)")
+    parser.add_argument("--pattern", help="Filter by filename pattern (case-insensitive)")
     args = parser.parse_args()
 
     # Connect to MinIO
     try:
-        client = Minio(
-            MINIO_ENDPOINT,
-            access_key=MINIO_ACCESS_KEY,
-            secret_key=MINIO_SECRET_KEY,
-            secure=False
-        )
+        client = Minio(MINIO_ENDPOINT, access_key=MINIO_ACCESS_KEY, secret_key=MINIO_SECRET_KEY, secure=False)
 
         # Check if bucket exists
         if not client.bucket_exists(BUCKET_NAME):
@@ -278,7 +271,7 @@ def main():
 
     # Write to file
     try:
-        with open(args.output, 'w', encoding='utf-8') as f:
+        with open(args.output, "w", encoding="utf-8") as f:
             f.write(html)
         abs_path = os.path.abspath(args.output)
         print(f"[OK] Generated gallery: {args.output}")
@@ -287,6 +280,7 @@ def main():
     except Exception as e:
         print(f"[ERROR] Failed to write gallery file: {e}")
         return 1
+
 
 if __name__ == "__main__":
     sys.exit(main())

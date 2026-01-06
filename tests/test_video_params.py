@@ -30,7 +30,9 @@ def test_video_node_structure():
     assert "height" in video_node["inputs"], "Should have height parameter"
     assert "length" in video_node["inputs"], "Should have length parameter"
 
-    print(f"[OK] Found EmptyLatentVideo node with dimensions: {video_node['inputs']['width']}x{video_node['inputs']['height']}, {video_node['inputs']['length']} frames")
+    print(
+        f"[OK] Found EmptyLatentVideo node with dimensions: {video_node['inputs']['width']}x{video_node['inputs']['height']}, {video_node['inputs']['length']} frames"
+    )
 
 
 def test_video_combine_node_structure():
@@ -115,7 +117,9 @@ def test_video_presets_structure():
     assert "length" in video_fast, "video-fast should have length parameter"
     assert "fps" in video_fast, "video-fast should have fps parameter"
     assert video_fast["steps"] == 4, "video-fast should use 4 steps"
-    print(f"[OK] video-fast preset: {video_fast['steps']} steps, {video_fast['length']} frames, {video_fast['fps']} fps")
+    print(
+        f"[OK] video-fast preset: {video_fast['steps']} steps, {video_fast['length']} frames, {video_fast['fps']} fps"
+    )
 
     # Check video-quality
     assert "video-quality" in presets, "Should have video-quality preset"
@@ -154,7 +158,9 @@ def test_video_parameter_modification():
             assert node["inputs"]["height"] == 720, "Height modification should work"
             assert node["inputs"]["length"] == 161, "Length modification should work"
 
-            print(f"[OK] Successfully modified video params: {original_width}x{original_height}@{original_length} -> 1280x720@161")
+            print(
+                f"[OK] Successfully modified video params: {original_width}x{original_height}@{original_length} -> 1280x720@161"
+            )
             break
 
     # Find and modify VHS_VideoCombine node
@@ -178,11 +184,11 @@ def test_video_resolution_parsing():
         ("1280x720", (1280, 720)),
         ("1920x1080", (1920, 1080)),
         ("640x360", (640, 360)),
-        ("3840x2160", (3840, 2160))  # 4K
+        ("3840x2160", (3840, 2160)),  # 4K
     ]
 
     for input_str, expected in test_cases:
-        width, height = map(int, input_str.split('x'))
+        width, height = map(int, input_str.split("x"))
         assert (width, height) == expected, f"Failed to parse {input_str}"
 
     print(f"[OK] Video resolution parsing works for {len(test_cases)} formats")
@@ -191,11 +197,11 @@ def test_video_resolution_parsing():
 def test_duration_math():
     """Test frame count to duration calculation."""
     test_cases = [
-        (81, 16, 5.0625),   # ~5 seconds
-        (161, 16, 10.0625), # ~10 seconds
-        (241, 16, 15.0625), # ~15 seconds
-        (81, 24, 3.375),    # ~3.4 seconds at 24fps
-        (81, 30, 2.7)       # ~2.7 seconds at 30fps
+        (81, 16, 5.0625),  # ~5 seconds
+        (161, 16, 10.0625),  # ~10 seconds
+        (241, 16, 15.0625),  # ~15 seconds
+        (81, 24, 3.375),  # ~3.4 seconds at 24fps
+        (81, 30, 2.7),  # ~2.7 seconds at 30fps
     ]
 
     for frames, fps, expected_duration in test_cases:
@@ -221,4 +227,3 @@ if __name__ == "__main__":
     print("=" * 60)
     print("[OK] All video integration tests passed!")
     print("=" * 60)
-

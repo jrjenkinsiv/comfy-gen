@@ -61,91 +61,52 @@ Examples:
     --strengths 0.5,0.7,0.9 \\
     --grid \\
     --output-dir /tmp/lora_tests
-        """
+        """,
     )
 
-    parser.add_argument(
-        "--workflow",
-        required=True,
-        help="Path to workflow JSON file"
-    )
-    parser.add_argument(
-        "--prompt",
-        required=True,
-        help="Positive text prompt (same for all generations)"
-    )
-    parser.add_argument(
-        "--negative-prompt",
-        "-n",
-        default="",
-        help="Negative text prompt (optional)"
-    )
+    parser.add_argument("--workflow", required=True, help="Path to workflow JSON file")
+    parser.add_argument("--prompt", required=True, help="Positive text prompt (same for all generations)")
+    parser.add_argument("--negative-prompt", "-n", default="", help="Negative text prompt (optional)")
     parser.add_argument(
         "--lora",
         action="append",
         metavar="LORA_FILE",
         required=True,
-        help="LoRA filename (e.g., zy_AmateurStyle_v2.safetensors). Can be repeated for multiple LoRAs."
+        help="LoRA filename (e.g., zy_AmateurStyle_v2.safetensors). Can be repeated for multiple LoRAs.",
     )
     parser.add_argument(
         "--strengths",
         required=True,
-        help="Comma-separated list of strength values to test (e.g., '0.4,0.6,0.8,1.0,1.2')"
+        help="Comma-separated list of strength values to test (e.g., '0.4,0.6,0.8,1.0,1.2')",
     )
     parser.add_argument(
         "--seed",
         type=int,
         default=None,
-        help="Random seed for reproducibility (optional, generates random if not specified)"
+        help="Random seed for reproducibility (optional, generates random if not specified)",
     )
     parser.add_argument(
         "--output-dir",
         default="/tmp/lora_strength_test",
-        help="Output directory for generated images (default: /tmp/lora_strength_test)"
+        help="Output directory for generated images (default: /tmp/lora_strength_test)",
     )
+    parser.add_argument("--prefix", default="test", help="Filename prefix for output images (default: 'test')")
+    parser.add_argument("--grid", action="store_true", help="Create a comparison grid image after generation")
     parser.add_argument(
-        "--prefix",
-        default="test",
-        help="Filename prefix for output images (default: 'test')"
-    )
-    parser.add_argument(
-        "--grid",
-        action="store_true",
-        help="Create a comparison grid image after generation"
-    )
-    parser.add_argument(
-        "--grid-cols",
-        type=int,
-        default=None,
-        help="Number of columns in grid (default: auto-calculate)"
+        "--grid-cols", type=int, default=None, help="Number of columns in grid (default: auto-calculate)"
     )
     parser.add_argument(
         "--steps",
         type=int,
         default=None,
-        help="Number of sampling steps (optional, uses workflow default if not specified)"
+        help="Number of sampling steps (optional, uses workflow default if not specified)",
     )
     parser.add_argument(
-        "--cfg",
-        type=float,
-        default=None,
-        help="CFG scale (optional, uses workflow default if not specified)"
+        "--cfg", type=float, default=None, help="CFG scale (optional, uses workflow default if not specified)"
     )
-    parser.add_argument(
-        "--sampler",
-        default=None,
-        help="Sampler algorithm (optional)"
-    )
-    parser.add_argument(
-        "--scheduler",
-        default=None,
-        help="Scheduler (optional)"
-    )
-    parser.add_argument(
-        "--quiet",
-        action="store_true",
-        help="Suppress progress output from generation"
-    )
+    parser.add_argument("--sampler", default=None, help="Sampler algorithm (optional)")
+    parser.add_argument("--scheduler", default=None, help="Scheduler (optional)")
+    parser.add_argument("--quiet", action="store_true", help="Suppress progress output from generation")
 
     return parser.parse_args()
 
@@ -163,7 +124,7 @@ def parse_strengths(strengths_str):
         ValueError: If parsing fails
     """
     try:
-        strengths = [float(s.strip()) for s in strengths_str.split(',')]
+        strengths = [float(s.strip()) for s in strengths_str.split(",")]
         if not strengths:
             raise ValueError("No strength values provided")
         for s in strengths:
@@ -185,7 +146,7 @@ def generate_image(
     cfg=None,
     sampler=None,
     scheduler=None,
-    quiet=False
+    quiet=False,
 ):
     """Generate a single image with specified LoRA strengths.
 
@@ -208,9 +169,12 @@ def generate_image(
     cmd = [
         sys.executable,
         str(GENERATE_PY),
-        "--workflow", str(workflow),
-        "--prompt", prompt,
-        "--output", str(output_path)
+        "--workflow",
+        str(workflow),
+        "--prompt",
+        prompt,
+        "--output",
+        str(output_path),
     ]
 
     # Add negative prompt if provided
@@ -236,12 +200,7 @@ def generate_image(
         cmd.append("--quiet")
 
     # Run generation
-    result = subprocess.run(
-        cmd,
-        cwd=str(COMFY_GEN_DIR),
-        capture_output=True,
-        text=True
-    )
+    result = subprocess.run(cmd, cwd=str(COMFY_GEN_DIR), capture_output=True, text=True)
 
     if result.returncode != 0:
         print(f"[ERROR] Generation failed: {result.stderr}")
@@ -286,7 +245,7 @@ def create_comparison_grid(image_paths, labels, output_path, cols=None):
         n_images = len(images)
         if cols is None:
             # Auto-calculate columns (prefer square-ish layout)
-            sqrt_n = n_images ** 0.5
+            sqrt_n = n_images**0.5
             cols = int(sqrt_n) + (1 if sqrt_n % 1 > 0 else 0)
             cols = max(1, min(cols, n_images))
 
@@ -298,7 +257,7 @@ def create_comparison_grid(image_paths, labels, output_path, cols=None):
         # Create grid canvas
         grid_width = cols * img_width + (cols + 1) * GRID_PADDING
         grid_height = rows * (img_height + GRID_LABEL_HEIGHT) + (rows + 1) * GRID_PADDING
-        grid = Image.new('RGB', (grid_width, grid_height), (255, 255, 255))
+        grid = Image.new("RGB", (grid_width, grid_height), (255, 255, 255))
 
         # Paste images into grid
         for idx, img in enumerate(images):
@@ -370,7 +329,7 @@ def main():
         lora_specs = [(lora_name, strength) for lora_name in args.lora]
 
         # Build output filename
-        strength_str = f"{strength:.1f}".replace('.', '_')
+        strength_str = f"{strength:.1f}".replace(".", "_")
         output_filename = f"{args.prefix}_strength_{strength_str}.png"
         output_path = output_dir / output_filename
 
@@ -387,7 +346,7 @@ def main():
             cfg=args.cfg,
             sampler=args.sampler,
             scheduler=args.scheduler,
-            quiet=args.quiet
+            quiet=args.quiet,
         )
 
         if success:

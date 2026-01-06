@@ -8,6 +8,7 @@ from pathlib import Path
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+
 async def main():
     """Test MCP server tools."""
     print("Testing Comprehensive MCP Server for ComfyUI")
@@ -30,7 +31,7 @@ async def main():
             "Model Management": [],
             "Gallery & History": [],
             "Prompt Engineering": [],
-            "Progress & Control": []
+            "Progress & Control": [],
         }
 
         for tool in tools:
@@ -41,7 +42,14 @@ async def main():
                 categories["Image Generation"].append(name)
             elif name in ["generate_video", "image_to_video"]:
                 categories["Video Generation"].append(name)
-            elif name in ["list_models", "list_loras", "get_model_info", "suggest_model", "suggest_loras", "search_civitai"]:
+            elif name in [
+                "list_models",
+                "list_loras",
+                "get_model_info",
+                "suggest_model",
+                "suggest_loras",
+                "search_civitai",
+            ]:
                 categories["Model Management"].append(name)
             elif name in ["list_images", "get_image_info", "delete_image", "get_history"]:
                 categories["Gallery & History"].append(name)
@@ -74,8 +82,10 @@ async def main():
     except Exception as e:
         print(f"[ERROR] Failed to load MCP server: {e}")
         import traceback
+
         traceback.print_exc()
         sys.exit(1)
+
 
 if __name__ == "__main__":
     asyncio.run(main())

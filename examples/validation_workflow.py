@@ -31,6 +31,7 @@ from generate import (
 
 try:
     from comfy_gen.validation import ImageValidator
+
     VALIDATION_AVAILABLE = True
 except ImportError:
     VALIDATION_AVAILABLE = False
@@ -84,11 +85,7 @@ def main():
 
         # Adjust prompts for retry
         if attempt > 1:
-            current_prompt, current_negative = adjust_prompt_for_retry(
-                initial_prompt,
-                initial_negative,
-                attempt - 1
-            )
+            current_prompt, current_negative = adjust_prompt_for_retry(initial_prompt, initial_negative, attempt - 1)
             print(f"[INFO] Adjusted positive: {current_prompt}")
             print(f"[INFO] Adjusted negative: {current_negative}")
         else:
@@ -117,23 +114,21 @@ def main():
         # Validate
         print("\n[VALIDATE] Running CLIP validation...")
         result = validator.validate_image(
-            output_path,
-            initial_prompt,
-            initial_negative,
-            positive_threshold=positive_threshold
+            output_path, initial_prompt, initial_negative, positive_threshold=positive_threshold
         )
 
         print(f"[VALIDATE] Positive score: {result['positive_score']:.3f}")
-        if result.get('negative_score'):
+        if result.get("negative_score"):
             print(f"[VALIDATE] Negative score: {result['negative_score']:.3f}")
             print(f"[VALIDATE] Delta: {result.get('score_delta', 0.0):.3f}")
         print(f"[VALIDATE] Threshold: {positive_threshold}")
 
-        if result['passed']:
+        if result["passed"]:
             print(f"\n[SUCCESS] Validation passed on attempt {attempt}!")
 
             # Upload final result
             import datetime
+
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
             object_name = f"{timestamp}_validated_example.png"
 

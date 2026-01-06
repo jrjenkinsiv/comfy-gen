@@ -67,14 +67,22 @@ def generate_test_prompt(subject, quality_booster):
 def run_generation(prompt, negative, steps, cfg, seed, output_path):
     """Run a single generation and capture validation score."""
     cmd = [
-        "python3", "generate.py",
-        "--workflow", "workflows/flux-dev.json",
-        "--prompt", prompt,
-        "--negative-prompt", negative,
-        "--steps", str(steps),
-        "--cfg", str(cfg),
-        "--seed", str(seed),
-        "--output", output_path,
+        "python3",
+        "generate.py",
+        "--workflow",
+        "workflows/flux-dev.json",
+        "--prompt",
+        prompt,
+        "--negative-prompt",
+        negative,
+        "--steps",
+        str(steps),
+        "--cfg",
+        str(cfg),
+        "--seed",
+        str(seed),
+        "--output",
+        output_path,
     ]
 
     try:
@@ -83,7 +91,7 @@ def run_generation(prompt, negative, steps, cfg, seed, output_path):
             capture_output=True,
             text=True,
             timeout=300,  # 5 minute timeout
-            cwd=str(Path(__file__).parent.parent)
+            cwd=str(Path(__file__).parent.parent),
         )
 
         # Parse validation score from output
@@ -126,7 +134,7 @@ def main():
     start_time = datetime.now()
 
     for i in range(NUM_TESTS):
-        test_id = f"{i+1:03d}"
+        test_id = f"{i + 1:03d}"
         seed = random.randint(1, 999999)
 
         # Random selections
@@ -163,7 +171,7 @@ def main():
             "full_prompt": prompt,
             "negative_prompt": negative,
             "output_path": output_path,
-            **gen_result
+            **gen_result,
         }
         results.append(test_result)
 
@@ -186,23 +194,23 @@ def main():
     passed = sum(1 for r in results if r.get("validation_passed"))
     scores = [r.get("validation_score") for r in results if r.get("validation_score") is not None]
 
-    print(f"\n{'='*50}")
+    print(f"\n{'=' * 50}")
     print("TEST SUMMARY")
-    print(f"{'='*50}")
+    print(f"{'=' * 50}")
     print(f"Total tests: {NUM_TESTS}")
     print(f"Successful generations: {successful}")
     print(f"Validation passed: {passed}")
     if scores:
-        print(f"Average score: {sum(scores)/len(scores):.3f}")
+        print(f"Average score: {sum(scores) / len(scores):.3f}")
         print(f"Min score: {min(scores):.3f}")
         print(f"Max score: {max(scores):.3f}")
     print(f"Elapsed time: {elapsed}")
     print(f"Results saved to: {results_path}")
 
     # Analyze by quality booster
-    print(f"\n{'='*50}")
+    print(f"\n{'=' * 50}")
     print("ANALYSIS BY QUALITY BOOSTER")
-    print(f"{'='*50}")
+    print(f"{'=' * 50}")
     booster_scores = {}
     for r in results:
         booster = r.get("quality_booster") or "(none)"
@@ -212,14 +220,14 @@ def main():
                 booster_scores[booster] = []
             booster_scores[booster].append(score)
 
-    for booster, scores in sorted(booster_scores.items(), key=lambda x: -sum(x[1])/len(x[1]) if x[1] else 0):
+    for booster, scores in sorted(booster_scores.items(), key=lambda x: -sum(x[1]) / len(x[1]) if x[1] else 0):
         avg = sum(scores) / len(scores) if scores else 0
         print(f"  {booster[:40]:40} avg: {avg:.3f} (n={len(scores)})")
 
     # Analyze by negative preset
-    print(f"\n{'='*50}")
+    print(f"\n{'=' * 50}")
     print("ANALYSIS BY NEGATIVE PRESET")
-    print(f"{'='*50}")
+    print(f"{'=' * 50}")
     neg_scores = {}
     for r in results:
         neg = r.get("negative_preset", "unknown")
@@ -229,7 +237,7 @@ def main():
                 neg_scores[neg] = []
             neg_scores[neg].append(score)
 
-    for neg, scores in sorted(neg_scores.items(), key=lambda x: -sum(x[1])/len(x[1]) if x[1] else 0):
+    for neg, scores in sorted(neg_scores.items(), key=lambda x: -sum(x[1]) / len(x[1]) if x[1] else 0):
         avg = sum(scores) / len(scores) if scores else 0
         print(f"  {neg:20} avg: {avg:.3f} (n={len(scores)})")
 

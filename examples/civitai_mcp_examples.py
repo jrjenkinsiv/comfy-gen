@@ -25,16 +25,12 @@ async def example_1_search_loras():
     print("\n=== Example 1: Search for Realistic Portrait LoRAs ===\n")
 
     result = await civitai_search_models(
-        query="realistic portrait",
-        model_type="LORA",
-        base_model="SD 1.5",
-        sort="Most Downloaded",
-        limit=5
+        query="realistic portrait", model_type="LORA", base_model="SD 1.5", sort="Most Downloaded", limit=5
     )
 
-    if result['status'] == 'success':
+    if result["status"] == "success":
         print(f"Found {result['count']} results:\n")
-        for model in result['results']:
+        for model in result["results"]:
             print(f"  {model['name']}")
             print(f"    ID: {model['id']}")
             print(f"    Base: {model['base_model']}")
@@ -58,25 +54,25 @@ async def example_2_verify_lora_compatibility():
 
     result = await civitai_lookup_hash(example_hash)
 
-    if result['status'] == 'success':
+    if result["status"] == "success":
         print(f"Model: {result['model_name']}")
         print(f"Base Model: {result['base_model']}")
         print(f"Version: {result['version_name']}")
         print(f"Trained Words: {', '.join(result['trained_words'])}")
 
         # Check compatibility
-        base = result['base_model']
-        if 'SD 1.5' in base or 'SD1.5' in base:
+        base = result["base_model"]
+        if "SD 1.5" in base or "SD1.5" in base:
             print("\n[OK] Compatible with SD 1.5 image generation")
-        elif 'Wan Video' in base or 'WAN' in base:
+        elif "Wan Video" in base or "WAN" in base:
             print("\n[WARN] Video-only LoRA - DO NOT use for image generation")
-        elif 'SDXL' in base:
+        elif "SDXL" in base:
             print("\n[OK] Compatible with SDXL image generation")
         else:
             print(f"\n[?] Unknown base model: {base}")
     else:
         print(f"Error: {result['error']}")
-        if "Not found" in result['error']:
+        if "Not found" in result["error"]:
             print("This LoRA may be custom or not on CivitAI")
 
 
@@ -89,8 +85,8 @@ async def example_3_get_model_details():
 
     result = await civitai_get_model(model_id)
 
-    if result['status'] == 'success':
-        model = result['model']
+    if result["status"] == "success":
+        model = result["model"]
         print(f"Name: {model['name']}")
         print(f"Type: {model['type']}")
         print(f"Creator: {model['creator']['username']}")
@@ -100,7 +96,7 @@ async def example_3_get_model_details():
         print(f"  Rating: {model['stats']['rating']:.2f}")
         print(f"  Favorites: {model['stats']['favoriteCount']:,}")
         print("\nVersions:")
-        for version in model['modelVersions'][:3]:  # Show first 3
+        for version in model["modelVersions"][:3]:  # Show first 3
             print(f"  - {version['name']} (Base: {version['baseModel']})")
     else:
         print(f"Error: {result['error']}")
@@ -113,15 +109,12 @@ async def example_4_download_workflow():
     # Step 1: Search for models
     print("Step 1: Search for 'anime style' checkpoints\n")
     search_result = await civitai_search_models(
-        query="anime style",
-        model_type="Checkpoint",
-        base_model="SD 1.5",
-        limit=3
+        query="anime style", model_type="Checkpoint", base_model="SD 1.5", limit=3
     )
 
-    if search_result['status'] == 'success' and search_result['results']:
+    if search_result["status"] == "success" and search_result["results"]:
         # Step 2: Pick first result
-        chosen = search_result['results'][0]
+        chosen = search_result["results"][0]
         print(f"Chosen model: {chosen['name']}")
         print(f"  ID: {chosen['id']}")
         print(f"  Version ID: {chosen['version_id']}")
@@ -129,16 +122,13 @@ async def example_4_download_workflow():
 
         # Step 3: Get download URL
         print("Step 2: Get download URL\n")
-        download_result = await civitai_get_download_url(
-            chosen['id'],
-            chosen['version_id']
-        )
+        download_result = await civitai_get_download_url(chosen["id"], chosen["version_id"])
 
-        if download_result['status'] == 'success':
+        if download_result["status"] == "success":
             print(f"Download URL: {download_result['download_url']}")
             print(f"Requires Auth: {download_result['requires_auth']}")
 
-            if download_result['requires_auth']:
+            if download_result["requires_auth"]:
                 print("\n[INFO] Set CIVITAI_API_KEY environment variable to download")
             else:
                 print("\n[OK] Ready to download")
@@ -161,11 +151,11 @@ async def example_5_batch_verify_loras():
     loras_to_verify = [
         {
             "filename": "realistic_skin.safetensors",
-            "hash": "HASH1_REPLACE_WITH_REAL_64_CHAR_HASH_FROM_MOIRA_000000000000000"
+            "hash": "HASH1_REPLACE_WITH_REAL_64_CHAR_HASH_FROM_MOIRA_000000000000000",
         },
         {
             "filename": "anime_style.safetensors",
-            "hash": "HASH2_REPLACE_WITH_REAL_64_CHAR_HASH_FROM_MOIRA_000000000000000"
+            "hash": "HASH2_REPLACE_WITH_REAL_64_CHAR_HASH_FROM_MOIRA_000000000000000",
         },
     ]
 
@@ -178,21 +168,21 @@ async def example_5_batch_verify_loras():
     for lora in loras_to_verify:
         print(f"Checking: {lora['filename']}")
 
-        result = await civitai_lookup_hash(lora['hash'])
+        result = await civitai_lookup_hash(lora["hash"])
 
-        if result['status'] == 'success':
-            base = result['base_model']
+        if result["status"] == "success":
+            base = result["base_model"]
             print(f"  Base Model: {base}")
 
-            if 'SD 1.5' in base:
-                compatible_sd15.append(lora['filename'])
-            elif 'Wan Video' in base:
-                compatible_wan.append(lora['filename'])
+            if "SD 1.5" in base:
+                compatible_sd15.append(lora["filename"])
+            elif "Wan Video" in base:
+                compatible_wan.append(lora["filename"])
             else:
-                unknown.append(lora['filename'])
+                unknown.append(lora["filename"])
         else:
             print(f"  Error: {result['error']}")
-            unknown.append(lora['filename'])
+            unknown.append(lora["filename"])
 
         print()
 

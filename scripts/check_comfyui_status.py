@@ -29,7 +29,7 @@ def check_status():
         "process_running": process_running is not None,
         "process_id": process_running,
         "api_healthy": api_healthy,
-        "url": COMFYUI_URL
+        "url": COMFYUI_URL,
     }
 
     # Print status

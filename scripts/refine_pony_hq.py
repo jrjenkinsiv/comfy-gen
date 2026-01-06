@@ -50,30 +50,37 @@ def refine_image(input_path: str, output_path: str, denoise: float, steps: int, 
     lora_string = f"{BASE_LORA}:{lora_strength}"
 
     cmd = [
-        "python3", "generate.py",
-        "--workflow", WORKFLOW,
-        "--input-image", input_path,
-        "--prompt", REFINE_POSITIVE,
-        "--negative-prompt", REFINE_NEGATIVE,
-        "--steps", str(steps),
-        "--cfg", str(DEFAULT_CFG),
-        "--denoise", str(denoise),
-        "--lora", lora_string,
-        "--output", output_path
+        "python3",
+        "generate.py",
+        "--workflow",
+        WORKFLOW,
+        "--input-image",
+        input_path,
+        "--prompt",
+        REFINE_POSITIVE,
+        "--negative-prompt",
+        REFINE_NEGATIVE,
+        "--steps",
+        str(steps),
+        "--cfg",
+        str(DEFAULT_CFG),
+        "--denoise",
+        str(denoise),
+        "--lora",
+        lora_string,
+        "--output",
+        output_path,
     ]
 
     try:
         result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            cmd, capture_output=True, text=True, cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         )
 
         if result.returncode == 0:
             # Extract score if present
-            for line in result.stdout.split('\n'):
-                if 'score' in line.lower():
+            for line in result.stdout.split("\n"):
+                if "score" in line.lower():
                     print(f"      {line.strip()}")
             return True
         else:
@@ -88,7 +95,9 @@ def refine_image(input_path: str, output_path: str, denoise: float, steps: int, 
 def main():
     parser = argparse.ArgumentParser(description="Refine Pony HQ images")
     parser.add_argument("--passes", type=int, default=2, help="Number of refinement passes (default: 2)")
-    parser.add_argument("--denoise", type=float, default=DEFAULT_DENOISE, help=f"Denoise strength (default: {DEFAULT_DENOISE})")
+    parser.add_argument(
+        "--denoise", type=float, default=DEFAULT_DENOISE, help=f"Denoise strength (default: {DEFAULT_DENOISE})"
+    )
     parser.add_argument("--steps", type=int, default=DEFAULT_STEPS, help=f"Sampling steps (default: {DEFAULT_STEPS})")
     parser.add_argument("--lora-strength", type=float, default=0.6, help="Amateur LoRA strength (default: 0.6)")
     parser.add_argument("--pattern", type=str, default="pony_hq_", help="Object name pattern to match")
@@ -102,20 +111,22 @@ def main():
     # Connect to MinIO
     mc = Minio(
         MINIO_ENDPOINT,
-        access_key=os.environ.get('MINIO_ACCESS_KEY', 'minioadmin'),
-        secret_key=os.environ.get('MINIO_SECRET_KEY', 'minioadmin'),
-        secure=False
+        access_key=os.environ.get("MINIO_ACCESS_KEY", "minioadmin"),
+        secret_key=os.environ.get("MINIO_SECRET_KEY", "minioadmin"),
+        secure=False,
     )
 
     # Find matching images
     objects = list(mc.list_objects(BUCKET))
-    hq_images = [obj.object_name for obj in objects if args.pattern in obj.object_name and obj.object_name.endswith('.png')]
+    hq_images = [
+        obj.object_name for obj in objects if args.pattern in obj.object_name and obj.object_name.endswith(".png")
+    ]
 
     # Sort by number for consistent processing
     hq_images.sort()
 
     if args.limit > 0:
-        hq_images = hq_images[:args.limit]
+        hq_images = hq_images[: args.limit]
 
     print(f"Found {len(hq_images)} images matching '{args.pattern}'")
 
@@ -159,7 +170,7 @@ def main():
             else:
                 # All passes completed successfully
                 # Generate output name
-                base_name = obj_name.replace('.png', '')
+                base_name = obj_name.replace(".png", "")
                 refined_name = f"{base_name}_refined.png"
 
                 # The refined image is at current_input, it will auto-upload via generate.py

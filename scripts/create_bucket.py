@@ -12,16 +12,12 @@ MINIO_ACCESS_KEY = "minioadmin"
 MINIO_SECRET_KEY = "minioadmin"
 BUCKET_NAME = "comfy-gen"
 
+
 def main():
     print(f"Connecting to MinIO at {MINIO_ENDPOINT}...")
 
     try:
-        client = Minio(
-            MINIO_ENDPOINT,
-            access_key=MINIO_ACCESS_KEY,
-            secret_key=MINIO_SECRET_KEY,
-            secure=False
-        )
+        client = Minio(MINIO_ENDPOINT, access_key=MINIO_ACCESS_KEY, secret_key=MINIO_SECRET_KEY, secure=False)
 
         # Check if bucket exists
         if client.bucket_exists(BUCKET_NAME):
@@ -44,6 +40,7 @@ def main():
     except Exception as e:
         print(f"[ERROR] Connection failed: {e}")
         return 1
+
 
 if __name__ == "__main__":
     exit(main())

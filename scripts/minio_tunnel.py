@@ -28,12 +28,7 @@ def main():
     # Create SSH tunnel
     # -N: don't execute remote command
     # -L: local port forwarding
-    cmd = [
-        "ssh",
-        "-N",
-        "-L", f"{LOCAL_PORT}:localhost:{REMOTE_PORT}",
-        MOIRA_HOST
-    ]
+    cmd = ["ssh", "-N", "-L", f"{LOCAL_PORT}:localhost:{REMOTE_PORT}", MOIRA_HOST]
 
     try:
         process = subprocess.Popen(cmd)

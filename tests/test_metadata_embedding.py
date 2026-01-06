@@ -20,8 +20,8 @@ from comfy_gen.metadata import (
 
 def create_test_png(path):
     """Create a simple test PNG file."""
-    img = Image.new('RGB', (100, 100), color='red')
-    img.save(path, 'PNG')
+    img = Image.new("RGB", (100, 100), color="red")
+    img.save(path, "PNG")
     return path
 
 
@@ -31,16 +31,8 @@ def test_embed_and_read_metadata():
     metadata = {
         "timestamp": "2026-01-05T10:00:00",
         "generation_id": "test-123",
-        "input": {
-            "prompt": "a beautiful sunset",
-            "negative_prompt": "ugly, blurry",
-            "preset": "high-quality"
-        },
-        "workflow": {
-            "name": "flux-dev.json",
-            "model": "flux1-dev-fp8.safetensors",
-            "vae": "ae.safetensors"
-        },
+        "input": {"prompt": "a beautiful sunset", "negative_prompt": "ugly, blurry", "preset": "high-quality"},
+        "workflow": {"name": "flux-dev.json", "model": "flux1-dev-fp8.safetensors", "vae": "ae.safetensors"},
         "parameters": {
             "seed": 42,
             "steps": 30,
@@ -48,24 +40,19 @@ def test_embed_and_read_metadata():
             "sampler": "euler",
             "scheduler": "normal",
             "resolution": [1024, 768],
-            "loras": [
-                {"name": "style.safetensors", "strength": 0.8}
-            ]
+            "loras": [{"name": "style.safetensors", "strength": 0.8}],
         },
-        "quality": {
-            "composite_score": 7.5,
-            "grade": "B"
-        },
+        "quality": {"composite_score": 7.5, "grade": "B"},
         "storage": {
             "minio_url": "http://192.168.1.215:9000/comfy-gen/test.png",
             "file_size_bytes": 1024000,
             "format": "png",
-            "generation_time_seconds": 45.2
-        }
+            "generation_time_seconds": 45.2,
+        },
     }
 
     # Create temporary PNG
-    with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as f:
+    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as f:
         temp_path = f.name
 
     try:
@@ -95,24 +82,16 @@ def test_embed_and_read_metadata():
 def test_civitai_format():
     """Test CivitAI parameter formatting."""
     metadata = {
-        "input": {
-            "prompt": "a beautiful landscape",
-            "negative_prompt": "ugly, bad quality"
-        },
-        "workflow": {
-            "model": "flux1-dev-fp8.safetensors",
-            "vae": "ae.safetensors"
-        },
+        "input": {"prompt": "a beautiful landscape", "negative_prompt": "ugly, bad quality"},
+        "workflow": {"model": "flux1-dev-fp8.safetensors", "vae": "ae.safetensors"},
         "parameters": {
             "seed": 12345,
             "steps": 30,
             "cfg": 7.5,
             "sampler": "euler",
             "resolution": [1024, 768],
-            "loras": [
-                {"name": "style.safetensors", "strength": 0.8}
-            ]
-        }
+            "loras": [{"name": "style.safetensors", "strength": 0.8}],
+        },
     }
 
     params = format_civitai_parameters(metadata)
@@ -134,13 +113,13 @@ def test_civitai_format():
 def test_read_individual_fields():
     """Test reading metadata from individual PNG text chunks."""
     # Create PNG with only individual fields (no full metadata)
-    with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as f:
+    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as f:
         temp_path = f.name
 
     try:
         from PIL.PngImagePlugin import PngInfo
 
-        img = Image.new('RGB', (100, 100), color='blue')
+        img = Image.new("RGB", (100, 100), color="blue")
         png_info = PngInfo()
 
         # Add individual fields (no comfygen_metadata)
@@ -178,26 +157,10 @@ def test_format_for_display():
     metadata = {
         "timestamp": "2026-01-05T10:00:00",
         "generation_id": "test-123",
-        "input": {
-            "prompt": "a sunset",
-            "negative_prompt": "ugly",
-            "preset": "draft"
-        },
-        "workflow": {
-            "name": "flux-dev.json",
-            "model": "flux1-dev-fp8.safetensors"
-        },
-        "parameters": {
-            "seed": 42,
-            "steps": 20,
-            "cfg": 7.0,
-            "resolution": [512, 512],
-            "loras": []
-        },
-        "storage": {
-            "file_size_bytes": 1048576,
-            "generation_time_seconds": 30.5
-        }
+        "input": {"prompt": "a sunset", "negative_prompt": "ugly", "preset": "draft"},
+        "workflow": {"name": "flux-dev.json", "model": "flux1-dev-fp8.safetensors"},
+        "parameters": {"seed": 42, "steps": 20, "cfg": 7.0, "resolution": [512, 512], "loras": []},
+        "storage": {"file_size_bytes": 1048576, "generation_time_seconds": 30.5},
     }
 
     display = format_metadata_for_display(metadata)
@@ -216,13 +179,13 @@ def test_format_for_display():
 
 def test_non_png_file():
     """Test that non-PNG files return None."""
-    with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as f:
+    with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as f:
         temp_path = f.name
 
     try:
         # Create a JPEG using PIL
-        img = Image.new('RGB', (100, 100), color='green')
-        img.save(temp_path, 'JPEG')
+        img = Image.new("RGB", (100, 100), color="green")
+        img.save(temp_path, "JPEG")
 
         metadata = read_metadata_from_png(temp_path)
         assert metadata is None, "Should return None for non-PNG files"
@@ -236,22 +199,19 @@ def test_non_png_file():
 
 def test_embed_preserves_image():
     """Test that embedding metadata doesn't corrupt the image."""
-    with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as f:
+    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as f:
         temp_path = f.name
 
     try:
         # Create test image
-        original = Image.new('RGB', (200, 150), color='purple')
-        original.save(temp_path, 'PNG')
+        original = Image.new("RGB", (200, 150), color="purple")
+        original.save(temp_path, "PNG")
 
         # Get original size
         original_size = original.size
 
         # Embed metadata
-        metadata = {
-            "input": {"prompt": "test"},
-            "parameters": {"seed": 123}
-        }
+        metadata = {"input": {"prompt": "test"}, "parameters": {"seed": 123}}
 
         embed_metadata_in_png(temp_path, metadata)
 
