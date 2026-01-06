@@ -81,23 +81,23 @@ def start_comfyui() -> bool:
     
     # Start ComfyUI as detached process
     try:
-        log_file = open(COMFYUI_LOG, "w")
-        creation_flags = DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP | CREATE_NO_WINDOW
-        
-        process = subprocess.Popen(
-            [COMFYUI_PYTHON, "main.py", "--listen", "0.0.0.0", "--port", "8188"],
-            stdout=log_file,
-            stderr=subprocess.STDOUT,
-            creationflags=creation_flags,
-            cwd=COMFYUI_PATH,
-        )
+        with open(COMFYUI_LOG, "w") as log_file:
+            creation_flags = DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP | CREATE_NO_WINDOW
+            
+            process = subprocess.Popen(
+                [COMFYUI_PYTHON, "main.py", "--listen", "0.0.0.0", "--port", "8188"],
+                stdout=log_file,
+                stderr=subprocess.STDOUT,
+                creationflags=creation_flags,
+                cwd=COMFYUI_PATH,
+            )
         
         print(f"[OK] ComfyUI process started (PID: {process.pid})")
         print(f"[INFO] Log file: {COMFYUI_LOG}")
         
         # Wait for service to become healthy
         print("[....] Waiting for ComfyUI API to respond...")
-        for i in range(30):  # Wait up to 30 seconds
+        for _ in range(30):  # Wait up to 30 seconds
             time.sleep(1)
             if check_comfyui_health():
                 print(f"[OK] ComfyUI API is healthy at {COMFYUI_URL}")
@@ -136,15 +136,15 @@ def start_minio() -> bool:
     
     # Start MinIO as detached process
     try:
-        log_file = open(MINIO_LOG, "w")
-        creation_flags = DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP | CREATE_NO_WINDOW
-        
-        process = subprocess.Popen(
-            [MINIO_EXE, "server", MINIO_DATA_DIR, "--console-address", f":{MINIO_CONSOLE_PORT}"],
-            stdout=log_file,
-            stderr=subprocess.STDOUT,
-            creationflags=creation_flags,
-        )
+        with open(MINIO_LOG, "w") as log_file:
+            creation_flags = DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP | CREATE_NO_WINDOW
+            
+            process = subprocess.Popen(
+                [MINIO_EXE, "server", MINIO_DATA_DIR, "--console-address", f":{MINIO_CONSOLE_PORT}"],
+                stdout=log_file,
+                stderr=subprocess.STDOUT,
+                creationflags=creation_flags,
+            )
         
         print(f"[OK] MinIO process started (PID: {process.pid})")
         print(f"[INFO] Log file: {MINIO_LOG}")
@@ -152,7 +152,7 @@ def start_minio() -> bool:
         
         # Wait for service to become healthy
         print("[....] Waiting for MinIO API to respond...")
-        for i in range(20):  # Wait up to 20 seconds
+        for _ in range(20):  # Wait up to 20 seconds
             time.sleep(1)
             if check_minio_health():
                 print(f"[OK] MinIO API is healthy at {MINIO_URL}")
