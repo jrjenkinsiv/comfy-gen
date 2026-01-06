@@ -417,6 +417,7 @@ python3 generate.py \
 |------|------|---------|-------------|
 | `--validate` | Boolean | False | Run validation after generation |
 | `--validate-person-count` | Boolean | False | Validate person count using YOLO (requires `--validate`) |
+| `--validate-pose` | Boolean | False | Validate pose/skeleton coherence using MediaPipe (requires `--validate`) |
 | `--auto-retry` | Boolean | False | Retry if validation fails |
 | `--retry-limit` | Integer | 3 | Maximum retry attempts |
 | `--positive-threshold` | Float | 0.25 | Minimum CLIP score (0-1) |
@@ -463,6 +464,80 @@ pip install ultralytics
 [INFO] Expected persons: 1
 [INFO] Validation result: Person count mismatch: expected 1, detected 2
 [WARN] Image failed validation: Person count mismatch: expected 1, detected 2
+```
+
+---
+
+### Pose Validation
+
+Pose validation uses MediaPipe to detect skeleton/pose coherence in generated images. This catches anatomy issues that CLIP and YOLO cannot detect:
+- Detached limbs or impossible poses
+- Missing key body parts
+- Fragmented skeletons
+
+**Multi-Person Support:**
+Pose validation fully supports multiple people. It uses YOLO to detect all persons in the image, then runs MediaPipe pose estimation on each person separately.
+
+```bash
+# Validate single person pose
+python3 generate.py \
+    --workflow workflows/flux-dev.json \
+    --prompt "solo woman, full body, standing pose" \
+    --output /tmp/portrait.png \
+    --validate-pose
+
+# Validate multi-person poses
+python3 generate.py \
+    --workflow workflows/flux-dev.json \
+    --prompt "two women dancing, full body" \
+    --output /tmp/dancers.png \
+    --validate-pose
+
+# Combine all validations
+python3 generate.py \
+    --workflow workflows/flux-dev.json \
+    --prompt "solo woman standing" \
+    --output /tmp/test.png \
+    --validate --validate-person-count --validate-pose --auto-retry
+```
+
+**Installation:**
+```bash
+pip install mediapipe opencv-python
+```
+
+**How It Works:**
+1. YOLO detects all persons in the image (bounding boxes)
+2. MediaPipe Pose Landmarker runs on each person crop
+3. Validates key joint visibility (shoulders, hips, elbows, wrists, knees)
+4. Reports coherence score per person (0-1 scale)
+5. Overall validation passes if all detected persons have coherent poses
+
+**Key Landmarks Checked:**
+- Shoulders (left/right)
+- Hips (left/right)
+- Elbows (left/right)
+- Wrists (left/right)
+- Knees (left/right)
+
+A pose is "coherent" if:
+- Core joints (both shoulders + both hips) are visible
+- At least 60% of key landmarks are visible
+
+**Example Output:**
+```
+[INFO] Pose validation: Validation passed: 2 person(s) with coherent poses
+[INFO] Persons detected: 2
+[INFO] Coherent poses: 2/2
+```
+
+**Standalone Testing:**
+```bash
+# Test pose validation directly
+python3 comfy_gen/pose_validation.py /path/to/image.png 1
+
+# With visualization output
+python3 comfy_gen/pose_validation.py /path/to/image.png 2 --visualize annotated.png
 ```
 
 ---
