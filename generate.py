@@ -939,6 +939,52 @@ def modify_dimensions(workflow, width=None, height=None):
                     print(f"[OK] Updated height in node {node_id}: {height}")
     return workflow
 
+
+def modify_video_params(workflow, width=None, height=None, length=None):
+    """Modify video parameters in EmptyLatentVideo node.
+    
+    Args:
+        workflow: The workflow dictionary
+        width: Video width in pixels (optional)
+        height: Video height in pixels (optional)
+        length: Number of frames (optional)
+    
+    Returns:
+        dict: Modified workflow
+    """
+    for node_id, node in workflow.items():
+        if node.get("class_type") == "EmptyLatentVideo":
+            if "inputs" in node:
+                if width is not None:
+                    node["inputs"]["width"] = width
+                    print(f"[OK] Updated video width in node {node_id}: {width}")
+                if height is not None:
+                    node["inputs"]["height"] = height
+                    print(f"[OK] Updated video height in node {node_id}: {height}")
+                if length is not None:
+                    node["inputs"]["length"] = length
+                    print(f"[OK] Updated video length in node {node_id}: {length} frames")
+    return workflow
+
+
+def modify_video_fps(workflow, fps=None):
+    """Modify frame rate in VHS_VideoCombine node.
+    
+    Args:
+        workflow: The workflow dictionary
+        fps: Frames per second (optional)
+    
+    Returns:
+        dict: Modified workflow
+    """
+    for node_id, node in workflow.items():
+        if node.get("class_type") == "VHS_VideoCombine":
+            if "inputs" in node:
+                if fps is not None:
+                    node["inputs"]["frame_rate"] = fps
+                    print(f"[OK] Updated video FPS in node {node_id}: {fps}")
+    return workflow
+
 def enable_transparency(workflow, sam_model="sam_vit_b_01ec64.pth"):
     """Enable transparent background by injecting SAM nodes into workflow.
     
@@ -1967,6 +2013,11 @@ def main():
     parser.add_argument("--scheduler", help="Noise scheduler (e.g., normal, karras, exponential)")
     parser.add_argument("--preset", help="Use a generation preset (draft, balanced, high-quality)")
     
+    # Video-specific parameters
+    parser.add_argument("--length", "--frames", type=int, dest="length", help="Video length in frames (default: 81 = ~5s at 16fps)")
+    parser.add_argument("--fps", type=int, help="Video frame rate (default: 16)")
+    parser.add_argument("--video-resolution", help="Video resolution as WxH (e.g., 848x480, 1280x720)")
+    
     args = parser.parse_args()
     
     # Enforce --validate when --validate-person-count is used
@@ -2410,6 +2461,30 @@ def main():
     # Apply dimension parameters to workflow
     if width is not None or height is not None:
         workflow = modify_dimensions(workflow, width=width, height=height)
+    
+    # Apply video-specific parameters if provided
+    # Parse --video-resolution if provided (overrides --width/--height for video)
+    video_width = None
+    video_height = None
+    if args.video_resolution:
+        try:
+            video_width, video_height = map(int, args.video_resolution.split('x'))
+        except ValueError:
+            print(f"[ERROR] Invalid video resolution format: {args.video_resolution}. Use WxH (e.g., 848x480)")
+            sys.exit(EXIT_CONFIG_ERROR)
+    
+    # Apply video parameters to workflow if any video params are set
+    if args.length is not None or video_width is not None or video_height is not None:
+        workflow = modify_video_params(
+            workflow,
+            width=video_width,
+            height=video_height,
+            length=args.length
+        )
+    
+    # Apply video FPS if provided
+    if args.fps is not None:
+        workflow = modify_video_fps(workflow, fps=args.fps)
     
     # Apply transparency if requested
     if args.transparent:
