@@ -79,9 +79,17 @@ magneto (git push) --> GitHub --> ant-man (runner) --> moira (ComfyUI)
 | Machine | Role | IP |
 |---------|------|-----|
 | magneto | Development workstation | 192.168.1.124 |
-| cerebro | Persistent services (Gallery, MLflow, PostgreSQL) | 192.168.1.162 |
-| moira | ComfyUI server + MinIO + GPU (RTX 5090) | 192.168.1.215 |
+| cerebro | PostgreSQL database | 192.168.1.162 |
+| moira | ComfyUI + MinIO + MLflow + Gallery + GPU (RTX 5090) | 192.168.1.215 |
 | ant-man | GitHub Actions runner (ARM64) | 192.168.1.253 |
+
+**Service Ports on moira:**
+| Service | Port | URL |
+|---------|------|-----|
+| ComfyUI | 8188 | http://192.168.1.215:8188 |
+| MinIO | 9000 | http://192.168.1.215:9000 |
+| MLflow | 5000 | http://192.168.1.215:5000 |
+| Gallery | 8080 | http://192.168.1.215:8080 |
 
 ## 3. Issue-Driven Workflow
 1.  **Create Issue:** Use standard template (Context, Acceptance Criteria, Notes).

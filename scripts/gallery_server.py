@@ -831,6 +831,16 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
 
 class GalleryHandler(http.server.BaseHTTPRequestHandler):
+    # Disable HTTP keepalive - close connection after each request
+    # This prevents browsers from holding connections open and blocking threads
+    protocol_version = "HTTP/1.0"
+    
+    def log_message(self, format, *args):
+        """Enable logging for debugging."""
+        import sys
+        sys.stderr.write(f"[{self.client_address[0]}:{self.client_address[1]}] {format % args}\n")
+        sys.stderr.flush()
+    
     def do_GET(self):
         if self.path == '/' or self.path == '/index.html':
             content = HTML_TEMPLATE.encode('utf-8')
@@ -881,9 +891,6 @@ class GalleryHandler(http.server.BaseHTTPRequestHandler):
                 self.send_error(500, f"Internal Server Error: {e}")
         else:
             self.send_error(404)
-    
-    def log_message(self, format, *args):
-        pass  # Suppress logging
 
 
 class ThreadingTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
@@ -892,6 +899,8 @@ class ThreadingTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
     daemon_threads = True
     # Timeout for socket operations - prevents hung client connections from blocking threads forever
     timeout = 30  # Server-level timeout (for accept())
+    # Increase listen backlog to handle burst of incoming connections
+    request_queue_size = 128
 
     def finish_request(self, request, client_address):
         """Override to set socket timeout on each request."""
