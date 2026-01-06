@@ -107,32 +107,8 @@ jobs:
       - name: Workflow JSON validation
         run: |
           echo "Validating workflow JSON files..."
-          python3 -c "
-import json
-import sys
-from pathlib import Path
+          python3 scripts/validate_workflows.py
 
-workflows_dir = Path('workflows')
-if not workflows_dir.exists():
-    print('[WARN] No workflows directory found')
-    sys.exit(0)
-
-errors = []
-for wf in workflows_dir.glob('*.json'):
-    try:
-        with open(wf) as f:
-            json.load(f)
-        print(f'[OK] {wf.name}')
-    except json.JSONDecodeError as e:
-        print(f'[ERROR] {wf.name}: {e}')
-        errors.append(wf.name)
-
-if errors:
-    print(f'[ERROR] {len(errors)} workflow(s) have invalid JSON')
-    sys.exit(1)
-else:
-    print('[OK] All workflow JSON files are valid')
-"
 
   # ============================================================================
   # Phase 4: Unit Tests
