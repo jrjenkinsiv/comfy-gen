@@ -374,13 +374,59 @@ curl "https://civitai.com/api/v1/model-versions/by-hash/<HASH>"
 
 ## Experiment Log
 
-### Observations (Updated 2026-01-05)
+### Massive Experiment Results (2026-01-05)
+
+**Run Summary:**
+- **Total experiments:** 250
+- **Successful generations:** 18 (7.2%)
+- **Primary failure cause:** ComfyUI server disconnected mid-run
+
+**Successful Parameters (18 images that worked):**
+
+| Scenario | Ethnicity | Sampler | Steps | LoRA Preset |
+|----------|-----------|---------|-------|-------------|
+| nude_portrait | middle_eastern | euler | 120 | amateur_grainy |
+| lingerie_tease | korean | dpmpp_2s_ancestral | 30 | amateur_grainy |
+| wet_shower | brazilian | dpmpp_sde | 50 | realism_basic |
+| facefuck | russian | dpmpp_2s_ancestral | 30 | amateur_grainy |
+| two_hand_blowjob | russian | euler_ancestral | 150 | nsfw_action |
+| sloppy_blowjob | chinese | dpmpp_2s_ancestral | 30 | realism_enhanced |
+| facefuck | african_american | dpmpp_2m_sde | 80 | nsfw_detailed |
+| spooning | japanese | dpmpp_2s_ancestral | 120 | nsfw_detailed |
+| standing_sex | caucasian_redhead | dpmpp_sde | 30 | skin_focus |
+| doggy_style | mediterranean | dpmpp_2s_ancestral | 80 | nsfw_detailed |
+| cowgirl | korean | dpmpp_2m | 80 | nsfw_detailed |
+| doggy_style | thai | dpmpp_sde | 30 | nsfw_action |
+| reverse_cowgirl | caucasian_blonde | uni_pc | 150 | nsfw_detailed |
+| cum_on_back | african_american | dpmpp_2m_sde | 30 | cumshot_realistic |
+| cum_on_tits | vietnamese | dpmpp_2s_ancestral | 50 | cumshot_heavy |
+| cum_on_ass | vietnamese | dpmpp_sde | 30 | cumshot_heavy |
+| lesbian_kiss | thai | ddim | 30 | high_detail |
+
+**Key Learnings:**
+
+1. **Sampler patterns:** `dpmpp_2s_ancestral` and `dpmpp_sde` appear most frequently in successful runs
+2. **Step range:** 30-120 steps produced good results; no clear correlation with quality
+3. **LoRA presets:** `nsfw_detailed`, `amateur_grainy`, and `cumshot_*` presets worked well
+4. **Ethnicities:** Korean, Vietnamese, Russian, Thai appeared frequently in successes
+5. **Auto-upload:** `generate.py` automatically uploads to MinIO - no separate uploader needed
+
+**Technical Issues Identified:**
+
+| Issue | Cause | Mitigation |
+|-------|-------|------------|
+| 92.8% failure rate | ComfyUI crashed/disconnected | Add health checks before each generation |
+| Empty error messages | Script didn't capture stderr properly | Improve error capture in experiment scripts |
+| No retry mechanism | Single-pass design | Add `--retry-failed` flag to experiment scripts |
+
+### Previous Observations (2026-01-04)
 
 **Models Tested:**
 
 | Model | Type | Result |
 |-------|------|--------|
 | MajicMix Realistic v7 | SD 1.5 | Realistic skin/lighting. Some duplicate person issues. |
+| Pony Realism | SDXL/Pony | **Best results.** Photorealistic, good anatomy, no merge issues. |
 | Pony V6 | SDXL | More stylized. Consistent faces. |
 
 **Known Issues:**
@@ -389,18 +435,26 @@ curl "https://civitai.com/api/v1/model-versions/by-hash/<HASH>"
 - Higher CFG alone does not prevent duplicates
 
 **What Works:**
+- **Pony Realism workflow** - Most consistent photorealistic results
 - POV prompting significantly reduces two-body issues
 - Portrait orientation helps with single-subject
 - Skin LoRAs at moderate strength (0.4-0.6) improve realism
+- Anti-TS negative: `trans, transgender, futanari, futa, hermaphrodite, shemale, dickgirl`
 
-**Open Questions:**
-- Would ControlNet with pose reference help enforce single-person?
-- Need systematic comparison across more models
-- Validation threshold may need adjustment based on batch data
+### Running Experiments
 
-### Future Experiments
+See [EXPERIMENTS.md](EXPERIMENTS.md) for:
+- How to run batch experiments
+- Retrying failed experiments
+- Analyzing results
+- MLflow integration
+
+### Open Issues
 
 See GitHub issues:
+- #131 - Video generation pipeline integration
+- #129 - LoRA strength experimentation script
+- #127 - Find SDXL/Pony realistic penis LoRA
 - #82 - Test ControlNet for single-person enforcement
 - #83 - Test additional realistic models
 - #80 - Analyze validation threshold
