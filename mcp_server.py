@@ -37,19 +37,19 @@ from pathlib import Path
 scripts_dir = Path(__file__).parent / "scripts"
 sys.path.insert(0, str(scripts_dir))
 
-import check_comfyui_status
-import restart_comfyui
+import check_comfyui_status  # noqa: E402
+import restart_comfyui  # noqa: E402
 
 # Import our service management scripts
-import start_comfyui
-import stop_comfyui
-from mcp.server import FastMCP
+import start_comfyui  # noqa: E402
+import stop_comfyui  # noqa: E402
+from mcp.server import FastMCP  # noqa: E402
 
 # Import config loader
-from comfygen.config import get_config_loader
+from comfygen.config import get_config_loader  # noqa: E402
 
 # Import generation tools
-from comfygen.tools import control, gallery, generation, models, prompts, video
+from comfygen.tools import control, gallery, generation, models, prompts, video  # noqa: E402
 
 # Initialize FastMCP server
 mcp = FastMCP("ComfyUI Comprehensive Generation Server")

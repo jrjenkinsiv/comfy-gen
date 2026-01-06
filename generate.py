@@ -2348,6 +2348,19 @@ def main():
     if args.denoise is not None:
         workflow = modify_denoise(workflow, args.denoise)
 
+    # Handle generation preset (must be before LoRA processing to use preset LoRAs)
+    preset_params = {}
+    if args.preset:
+        presets = load_presets()
+        if args.preset in presets:
+            preset_params = presets[args.preset]
+            print(f"[OK] Loaded preset '{args.preset}': {preset_params}")
+        else:
+            available_presets = ', '.join(presets.keys()) if presets else 'none'
+            print(f"[ERROR] Preset not found: {args.preset}")
+            print(f"[ERROR] Available presets: {available_presets}")
+            sys.exit(EXIT_CONFIG_ERROR)
+
     # Process LoRA arguments
     lora_specs = []
 
@@ -2423,19 +2436,6 @@ def main():
         available_models = get_available_models()
         available_loras = available_models.get("loras", []) if available_models else []
         workflow = inject_lora_chain(workflow, lora_specs, available_loras)
-
-    # Handle generation preset
-    preset_params = {}
-    if args.preset:
-        presets = load_presets()
-        if args.preset in presets:
-            preset_params = presets[args.preset]
-            print(f"[OK] Loaded preset '{args.preset}': {preset_params}")
-        else:
-            available_presets = ', '.join(presets.keys()) if presets else 'none'
-            print(f"[ERROR] Preset not found: {args.preset}")
-            print(f"[ERROR] Available presets: {available_presets}")
-            sys.exit(EXIT_CONFIG_ERROR)
 
     # Merge preset with CLI args (CLI args override preset)
     steps = args.steps if args.steps is not None else preset_params.get('steps')
