@@ -12,7 +12,7 @@ from unittest.mock import MagicMock, patch
 scripts_dir = Path(__file__).parent.parent / "scripts"
 sys.path.insert(0, str(scripts_dir))
 
-import start_all_services
+import start_all_services  # noqa: E402
 
 
 class TestStartAllServicesStructure(unittest.TestCase):

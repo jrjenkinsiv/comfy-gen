@@ -171,7 +171,7 @@ def parse_strengths(strengths_str):
                 raise ValueError(f"Strength must be non-negative: {s}")
         return strengths
     except ValueError as e:
-        raise ValueError(f"Invalid strength values: {e}")
+        raise ValueError(f"Invalid strength values: {e}") from e
 
 
 def generate_image(

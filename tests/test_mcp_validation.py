@@ -81,7 +81,7 @@ async def test_adjust_prompt_for_retry():
 async def test_validation_module_import():
     """Test that validation module can be imported."""
     try:
-        from comfy_gen.validation import validate_image
+        from comfy_gen.validation import validate_image  # noqa: F401
         print("[OK] Validation module imported successfully")
         return True
     except ImportError as e:

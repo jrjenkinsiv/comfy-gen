@@ -44,6 +44,16 @@ include = ["comfy_gen*", "comfygen*"]
 [tool.ruff]
 target-version = "py38"
 line-length = 120
+# Exclude experimental batch scripts and generated files
+exclude = [
+    "scripts/batch_*.py",
+    "scripts/iterative_enhance.py", 
+    "scripts/massive_experiment*.py",
+    "scripts/minio_uploader.py",
+    "scripts/moira_services/",
+    "scripts/civitai_audit.py",
+    "tests/manual_test_*.py",
+]
 
 [tool.ruff.lint]
 select = [
@@ -56,6 +66,7 @@ select = [
 ]
 ignore = [
     "E501",  # line too long (handled by formatter)
+    "E741",  # ambiguous variable name (l in comprehensions is fine)
 ]
 
 [tool.ruff.lint.isort]

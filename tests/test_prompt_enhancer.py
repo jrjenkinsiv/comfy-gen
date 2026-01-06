@@ -203,12 +203,12 @@ class TestPromptEnhancerAPI:
         mock_enhancer_class.return_value = mock_enhancer
 
         with patch('comfy_gen.prompt_enhancer.TRANSFORMERS_AVAILABLE', True):
-            from comfy_gen.prompt_enhancer import reset_enhancer
+            from comfy_gen.prompt_enhancer import enhance_prompt, reset_enhancer
 
             # Reset to clean state
             reset_enhancer()
 
-            result = enhancer.enhance("a cat", style="photorealistic")
+            result = enhance_prompt("a cat", style="photorealistic")
 
             # Should create enhancer and call enhance
             mock_enhancer_class.assert_called()

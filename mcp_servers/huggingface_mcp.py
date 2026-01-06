@@ -19,9 +19,9 @@ from typing import Optional
 parent_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(parent_dir))
 
-from mcp.server import FastMCP
+from mcp.server import FastMCP  # noqa: E402
 
-from comfygen.huggingface_client import HuggingFaceClient
+from comfygen.huggingface_client import HuggingFaceClient  # noqa: E402
 
 # Initialize FastMCP server
 mcp = FastMCP("HuggingFace Hub Model Discovery Server")
