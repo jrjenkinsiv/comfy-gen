@@ -202,7 +202,7 @@ def watch_directory(
     print(f"\n\n{'='*60}")
     print(f"[COMPLETE] Total uploaded: {total_uploaded}")
     print(f"[COMPLETE] Total failed: {total_failed}")
-    print("[COMPLETE] Gallery URL: http://192.168.1.215:8080")
+    print("[COMPLETE] Gallery URL: http://192.168.1.162:8080")
 
 
 def main():

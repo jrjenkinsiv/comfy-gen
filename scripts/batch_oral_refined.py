@@ -11,7 +11,7 @@ from pathlib import Path
 
 import mlflow
 
-MLFLOW_URI = "http://192.168.1.215:5000"
+MLFLOW_URI = "http://192.168.1.162:5001"
 EXPERIMENT_NAME = "comfy-gen-oral-refined"
 COMFY_GEN_DIR = Path(__file__).parent.parent
 GENERATE_PY = COMFY_GEN_DIR / "generate.py"

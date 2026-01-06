@@ -37,7 +37,7 @@ import mlflow
 # CONFIGURATION
 # =============================================================================
 
-MLFLOW_URI = "http://192.168.1.215:5000"
+MLFLOW_URI = "http://192.168.1.162:5001"
 EXPERIMENT_NAME = "comfygen-massive-sweep"
 COMFYUI_URL = "http://192.168.1.215:8188"
 OUTPUT_DIR = Path("/tmp/massive_experiments")

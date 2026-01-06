@@ -34,8 +34,8 @@ from typing import Dict, List, Optional
 import mlflow
 import requests
 
-# MLflow server on moira (migrated from cerebro 2026-01-05)
-MLFLOW_URI = "http://192.168.1.215:5000"
+# MLflow server on cerebro (permanent home for ancillary services)
+MLFLOW_URI = "http://192.168.1.162:5001"
 EXPERIMENT_NAME = "comfygen-pony-realism"
 
 
@@ -448,7 +448,7 @@ def main():
     print(f"\n{'='*60}")
     print("[OK] All experiments logged successfully!")
     print("")
-    print("View experiments: http://192.168.1.215:5000/#/experiments")
+    print("View experiments: http://192.168.1.162:5001/#/experiments")
     print(f"Experiment name:  {EXPERIMENT_NAME}")
     print(f"Session ID:       {session_id}")
     print("")
