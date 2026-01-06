@@ -37,3 +37,65 @@ dev = [
 
 [tool.setuptools.packages.find]
 include = ["comfy_gen*", "comfygen*"]
+
+# =============================================================================
+# Ruff Configuration
+# =============================================================================
+[tool.ruff]
+target-version = "py38"
+line-length = 120
+# Exclude experimental batch scripts and generated files
+exclude = [
+    "scripts/batch_*.py",
+    "scripts/iterative_enhance.py", 
+    "scripts/massive_experiment*.py",
+    "scripts/minio_uploader.py",
+    "scripts/moira_services/",
+    "scripts/civitai_audit.py",
+    "tests/manual_test_*.py",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+]
+ignore = [
+    "E501",  # line too long (handled by formatter)
+    "E741",  # ambiguous variable name (l in comprehensions is fine)
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["comfy_gen", "comfygen"]
+
+# =============================================================================
+# Mypy Configuration
+# =============================================================================
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = false
+warn_unused_configs = true
+disallow_untyped_defs = false  # Gradually enable as codebase matures
+ignore_missing_imports = true   # Many ML libs lack stubs
+exclude = [
+    "tests/",
+    "build/",
+    "dist/",
+]
+
+# =============================================================================
+# Pytest Configuration
+# =============================================================================
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "integration: tests requiring ComfyUI server connection",
+    "slow: tests that take a long time to run",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]

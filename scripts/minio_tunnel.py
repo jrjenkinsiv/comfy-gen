@@ -12,8 +12,6 @@ Then access MinIO at:
 
 import subprocess
 import sys
-import signal
-import os
 
 MOIRA_HOST = "moira"  # Uses SSH config
 LOCAL_PORT = 9000
@@ -30,17 +28,12 @@ def main():
     # Create SSH tunnel
     # -N: don't execute remote command
     # -L: local port forwarding
-    cmd = [
-        "ssh",
-        "-N",
-        "-L", f"{LOCAL_PORT}:localhost:{REMOTE_PORT}",
-        MOIRA_HOST
-    ]
+    cmd = ["ssh", "-N", "-L", f"{LOCAL_PORT}:localhost:{REMOTE_PORT}", MOIRA_HOST]
 
     try:
         process = subprocess.Popen(cmd)
         print(f"[OK] Tunnel established (PID: {process.pid})")
-        
+
         # Wait for Ctrl+C
         process.wait()
     except KeyboardInterrupt:

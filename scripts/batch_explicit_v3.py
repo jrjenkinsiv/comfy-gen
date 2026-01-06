@@ -30,10 +30,9 @@ KEY PROMPT PATTERNS FOR CONTACT:
 - Licking: "(tongue touching cock head:1.3)", "(tongue on shaft:1.3)"
 """
 
-import subprocess
 import random
+import subprocess
 import sys
-from pathlib import Path
 from datetime import datetime
 
 sys.stdout.reconfigure(line_buffering=True)
@@ -41,7 +40,7 @@ sys.stderr.reconfigure(line_buffering=True)
 
 # Ethnicities - Asian focus
 ETHNICITIES = [
-    "japanese", "korean", "chinese", "vietnamese", "thai", "filipino", 
+    "japanese", "korean", "chinese", "vietnamese", "thai", "filipino",
     "taiwanese", "singaporean", "malaysian", "indonesian",
     "indian", "pakistani", "bangladeshi", "sri lankan",
     "persian", "arab", "lebanese", "turkish",
@@ -97,7 +96,7 @@ SCENARIOS = [
         "loras": [("realora_skin.safetensors", 0.5), ("more_details.safetensors", 0.3)],
         "uses_penis_lora": False
     },
-    
+
     # -----------------------------------------
     # POV ORAL - IMPROVED WITH EXPLICIT CONTACT
     # Key additions: "lips sealed around", "cock inside mouth", weighted emphasis
@@ -198,7 +197,7 @@ SCENARIOS = [
         "loras": [("airoticart_penis.safetensors", 0.85), ("polyhedron_skin.safetensors", 0.4)],
         "uses_penis_lora": True
     },
-    
+
     # -----------------------------------------
     # POV HANDJOB - IMPROVED WITH GRIP CONTACT
     # Key additions: "fingers wrapped around", "hand gripping", "stroking motion"
@@ -249,7 +248,7 @@ SCENARIOS = [
         "loras": [("airoticart_penis.safetensors", 0.85), ("polyhedron_skin.safetensors", 0.4)],
         "uses_penis_lora": True
     },
-    
+
     # -----------------------------------------
     # POV BALL HANDLING - NEW SCENARIOS
     # Key patterns: "hand cupping balls", "fingers touching testicles"
@@ -322,7 +321,7 @@ SCENARIOS = [
         "loras": [("airoticart_penis.safetensors", 0.85), ("polyhedron_skin.safetensors", 0.4)],
         "uses_penis_lora": True
     },
-    
+
     # -----------------------------------------
     # COMBINED ACTIONS - Hand on cock + licking/sucking
     # -----------------------------------------
@@ -372,7 +371,7 @@ SCENARIOS = [
         "loras": [("airoticart_penis.safetensors", 0.85), ("polyhedron_skin.safetensors", 0.4)],
         "uses_penis_lora": True
     },
-    
+
     # -----------------------------------------
     # POV TITJOB - IMPROVED WITH CONTACT
     # -----------------------------------------
@@ -399,7 +398,7 @@ SCENARIOS = [
         "loras": [("airoticart_penis.safetensors", 0.85), ("polyhedron_skin.safetensors", 0.4)],
         "uses_penis_lora": True
     },
-    
+
     # -----------------------------------------
     # POST-ACT CUM SHOTS - Same as V2
     # -----------------------------------------
@@ -444,7 +443,7 @@ SCENARIOS = [
         "loras": [("polyhedron_skin.safetensors", 0.5), ("more_details.safetensors", 0.4)],
         "uses_penis_lora": False
     },
-    
+
     # -----------------------------------------
     # SOLO POSES
     # -----------------------------------------
@@ -505,15 +504,15 @@ def generate_image(idx: int, ethnicity: str, scenario: dict, resolution: tuple, 
     negative = scenario["negative"]
     scenario_name = scenario["name"]
     loras = scenario.get("loras", [])
-    
+
     width, height = resolution
-    
+
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     eth_short = ethnicity.replace(" ", "_")[:10]
-    
+
     output_name = f"{timestamp}_explicit_v3_{idx:03d}_{eth_short}_{scenario_name}"
     output_path = f"/tmp/{output_name}.png"
-    
+
     # Use higher steps (70) for better quality with explicit content
     # CFG 9.0 for stricter prompt adherence
     cmd = [
@@ -528,15 +527,15 @@ def generate_image(idx: int, ethnicity: str, scenario: dict, resolution: tuple, 
         "--height", str(height),
         "--output", output_path,
     ]
-    
+
     for lora_file, strength in loras:
         cmd.extend(["--lora", f"{lora_file}:{strength}"])
-    
+
     print(f"\n[{idx:03d}] {ethnicity} - {scenario_name}")
     print(f"  Resolution: {width}x{height}, Seed: {seed}")
     print(f"  Category: {scenario['category']}")
     print(f"  LoRAs: {loras}")
-    
+
     try:
         result = subprocess.run(
             cmd,
@@ -545,7 +544,7 @@ def generate_image(idx: int, ethnicity: str, scenario: dict, resolution: tuple, 
             timeout=600,
             cwd="/Users/jrjenkinsiv/Development/comfy-gen"
         )
-        
+
         if result.returncode == 0:
             url = None
             for line in result.stdout.split('\n'):
@@ -556,9 +555,9 @@ def generate_image(idx: int, ethnicity: str, scenario: dict, resolution: tuple, 
         else:
             print(f"  [ERROR] {result.stderr[-300:] if result.stderr else 'Unknown error'}")
             return False, None
-            
+
     except subprocess.TimeoutExpired:
-        print(f"  [TIMEOUT]")
+        print("  [TIMEOUT]")
         return False, None
     except Exception as e:
         print(f"  [ERROR] {e}")
@@ -574,7 +573,7 @@ def main():
     parser.add_argument("--category", type=str, help="Filter by category")
     parser.add_argument("--list", action="store_true", help="List scenarios")
     args = parser.parse_args()
-    
+
     if args.list:
         print("V3 Scenarios (with improved contact descriptions):")
         print("-" * 70)
@@ -583,7 +582,7 @@ def main():
         print("-" * 70)
         print("Categories: solo, pov_oral, pov_touch, pov_combo, cum, solo_pose")
         return
-    
+
     print("=" * 70)
     print("Explicit NSFW Batch Generation - V3 (Improved Contact Prompts)")
     print("=" * 70)
@@ -593,15 +592,15 @@ def main():
     print("  - Combo actions (handjob + licking)")
     print("  - Negative prompts for NON-contact to prevent hovering")
     print("=" * 70)
-    
+
     scenarios = SCENARIOS
     if args.category:
         scenarios = [s for s in SCENARIOS if s['category'] == args.category]
         print(f"Filtered to: {args.category} ({len(scenarios)} scenarios)")
-    
+
     queue = []
     idx = args.start
-    
+
     while len(queue) < args.count:
         for scenario in scenarios:
             if len(queue) >= args.count:
@@ -611,20 +610,20 @@ def main():
             seed = random.randint(1, 999999)
             queue.append((idx, ethnicity, scenario, resolution, seed))
             idx += 1
-    
+
     print(f"\nGenerating {len(queue)} images...")
-    
+
     success = 0
     failed = 0
     urls = []
-    
+
     for item in queue:
         idx, ethnicity, scenario, resolution, seed = item
-        
+
         if args.dry_run:
             print(f"\n[DRY RUN] {idx}: {ethnicity} - {scenario['name']}")
             continue
-            
+
         ok, url = generate_image(idx, ethnicity, scenario, resolution, seed)
         if ok:
             success += 1
@@ -632,12 +631,12 @@ def main():
                 urls.append(url)
         else:
             failed += 1
-    
+
     print("\n" + "=" * 70)
     print(f"Success: {success}, Failed: {failed}")
-    
+
     if urls:
-        print(f"\nLast 10 URLs:")
+        print("\nLast 10 URLs:")
         for url in urls[-10:]:
             print(f"  {url}")
 

@@ -9,14 +9,14 @@ Usage:
     python start_gallery.py --background
 """
 
-import http.server
-import socketserver
-import urllib.request
-import urllib.parse
-import json
 import argparse
+import http.server
+import json
+import socketserver
 import subprocess
 import sys
+import urllib.parse
+import urllib.request
 from datetime import datetime
 
 # Configuration
@@ -27,15 +27,15 @@ BUCKET = "comfy-gen"
 
 class GalleryHandler(http.server.BaseHTTPRequestHandler):
     """HTTP handler for gallery requests."""
-    
+
     def log_message(self, format, *args):
         """Custom logging format."""
         print(f"[{datetime.now().strftime('%H:%M:%S')}] {args[0]}")
-    
+
     def do_GET(self):
         """Handle GET requests."""
         path = urllib.parse.urlparse(self.path).path
-        
+
         if path == "/" or path == "/index.html":
             self.serve_gallery()
         elif path == "/api/images":
@@ -49,7 +49,7 @@ class GalleryHandler(http.server.BaseHTTPRequestHandler):
             self.wfile.write(b'{"status":"healthy"}')
         else:
             self.send_error(404)
-    
+
     def serve_gallery(self):
         """Serve the gallery HTML page."""
         html = '''<!DOCTYPE html>
@@ -58,13 +58,13 @@ class GalleryHandler(http.server.BaseHTTPRequestHandler):
     <title>ComfyGen Gallery</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { 
+        body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             background: #1a1a2e; color: #eee; padding: 20px;
         }
         h1 { text-align: center; margin-bottom: 20px; color: #00d4ff; }
-        .gallery { 
-            display: grid; 
+        .gallery {
+            display: grid;
             grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
             gap: 20px; max-width: 1600px; margin: 0 auto;
         }
@@ -73,11 +73,11 @@ class GalleryHandler(http.server.BaseHTTPRequestHandler):
             box-shadow: 0 4px 15px rgba(0,0,0,0.3);
             transition: transform 0.2s, box-shadow 0.2s;
         }
-        .image-card:hover { 
-            transform: translateY(-5px); 
+        .image-card:hover {
+            transform: translateY(-5px);
             box-shadow: 0 8px 25px rgba(0,212,255,0.2);
         }
-        .image-card img { 
+        .image-card img {
             width: 100%; height: 300px; object-fit: cover; cursor: pointer;
         }
         .image-info { padding: 12px; font-size: 12px; color: #888; }
@@ -113,17 +113,17 @@ class GalleryHandler(http.server.BaseHTTPRequestHandler):
                 const images = await resp.json();
                 const gallery = document.getElementById('gallery');
                 const stats = document.getElementById('stats');
-                
+
                 stats.textContent = `${images.length} images`;
-                
+
                 if (images.length === 0) {
                     gallery.innerHTML = '<div class="loading">No images yet</div>';
                     return;
                 }
-                
+
                 gallery.innerHTML = images.map(img => `
                     <div class="image-card">
-                        <img src="/images/${img.name}" alt="${img.name}" 
+                        <img src="/images/${img.name}" alt="${img.name}"
                              onclick="openModal('/images/${img.name}')" loading="lazy">
                         <div class="image-info">
                             <div class="filename">${img.name}</div>
@@ -132,25 +132,25 @@ class GalleryHandler(http.server.BaseHTTPRequestHandler):
                     </div>
                 `).join('');
             } catch (e) {
-                document.getElementById('gallery').innerHTML = 
+                document.getElementById('gallery').innerHTML =
                     '<div class="loading">Error loading images: ' + e.message + '</div>';
             }
         }
-        
+
         function openModal(src) {
             document.getElementById('modal-img').src = src;
             document.getElementById('modal').classList.add('active');
         }
-        
+
         function closeModal() {
             document.getElementById('modal').classList.remove('active');
         }
-        
+
         document.getElementById('modal').onclick = e => {
             if (e.target.id === 'modal') closeModal();
         };
         document.onkeydown = e => { if (e.key === 'Escape') closeModal(); };
-        
+
         loadImages();
     </script>
 </body>
@@ -160,7 +160,7 @@ class GalleryHandler(http.server.BaseHTTPRequestHandler):
         self.send_header("Content-Length", len(html))
         self.end_headers()
         self.wfile.write(html.encode())
-    
+
     def serve_image_list(self):
         """Get list of images from MinIO."""
         try:
@@ -168,7 +168,7 @@ class GalleryHandler(http.server.BaseHTTPRequestHandler):
             url = f"{MINIO_URL}/{BUCKET}/?list-type=2"
             with urllib.request.urlopen(url, timeout=5) as resp:
                 data = resp.read().decode()
-            
+
             # Parse XML response (simple parsing)
             images = []
             import re
@@ -183,10 +183,10 @@ class GalleryHandler(http.server.BaseHTTPRequestHandler):
                         except:
                             pass
                     images.append({"name": name, "date": date})
-            
+
             # Sort by name (which includes timestamp) descending
             images.sort(key=lambda x: x["name"], reverse=True)
-            
+
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.end_headers()
@@ -196,7 +196,7 @@ class GalleryHandler(http.server.BaseHTTPRequestHandler):
             self.send_header("Content-Type", "application/json")
             self.end_headers()
             self.wfile.write(json.dumps({"error": str(e)}).encode())
-    
+
     def proxy_image(self, filename):
         """Proxy image from MinIO."""
         try:
@@ -204,7 +204,7 @@ class GalleryHandler(http.server.BaseHTTPRequestHandler):
             with urllib.request.urlopen(url, timeout=30) as resp:
                 data = resp.read()
                 content_type = resp.headers.get('Content-Type', 'image/png')
-            
+
             self.send_response(200)
             self.send_header("Content-Type", content_type)
             self.send_header("Content-Length", len(data))
@@ -217,7 +217,7 @@ class GalleryHandler(http.server.BaseHTTPRequestHandler):
 
 def start_gallery(port: int = DEFAULT_PORT, background: bool = False):
     """Start gallery server."""
-    
+
     if background:
         # Run detached (Windows)
         CREATE_NEW_PROCESS_GROUP = 0x00000200
@@ -230,7 +230,7 @@ def start_gallery(port: int = DEFAULT_PORT, background: bool = False):
         )
         print(f"[OK] Gallery started in background on port {port}")
         return
-    
+
     with socketserver.TCPServer(("0.0.0.0", port), GalleryHandler) as httpd:
         print(f"[OK] Gallery server running on http://0.0.0.0:{port}")
         print(f"     MinIO backend: {MINIO_URL}/{BUCKET}")
@@ -246,7 +246,7 @@ def main():
     parser.add_argument("--port", type=int, default=DEFAULT_PORT, help="Port to run on")
     parser.add_argument("--background", action="store_true", help="Run in background")
     args = parser.parse_args()
-    
+
     start_gallery(port=args.port, background=args.background)
 
 

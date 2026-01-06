@@ -20,10 +20,8 @@ Usage:
 
 import argparse
 import json
-import os
 import subprocess
 import sys
-from pathlib import Path
 from typing import Any, Dict, Optional
 
 import requests
@@ -109,9 +107,9 @@ def lookup_huggingface_repo(repo_id: str) -> Optional[Dict[str, Any]]:
 def check_catalog_source(filename: str, catalog_path: str = "lora_catalog.yaml") -> Optional[Dict[str, Any]]:
     """Check if a LoRA has source info in the catalog."""
     try:
-        with open(catalog_path, "r") as f:
+        with open(catalog_path) as f:
             catalog = yaml.safe_load(f)
-        
+
         for lora in catalog.get("loras", []):
             if lora.get("filename") == filename:
                 source = lora.get("source")
@@ -148,7 +146,7 @@ def list_loras_on_moira() -> list[str]:
 def audit_lora(filename: str, catalog_path: str = "lora_catalog.yaml") -> dict[str, Any]:
     """Audit a single LoRA file against CivitAI and HuggingFace."""
     result = {"filename": filename}
-    
+
     # First check catalog for existing source info (HuggingFace entries)
     catalog_info = check_catalog_source(filename, catalog_path)
     if catalog_info and catalog_info.get("hf_repo_id"):
@@ -163,7 +161,7 @@ def audit_lora(filename: str, catalog_path: str = "lora_catalog.yaml") -> dict[s
             result["catalog_source"] = catalog_info.get("catalog_source")
             result["status"] = "hf_unverified"
             return result
-    
+
     # Try CivitAI hash lookup
     hash_val = get_hash_from_moira(filename)
     if not hash_val:
@@ -171,9 +169,9 @@ def audit_lora(filename: str, catalog_path: str = "lora_catalog.yaml") -> dict[s
         if catalog_info:
             result["catalog_source"] = catalog_info.get("catalog_source", "unknown")
         return result
-    
+
     result["sha256"] = hash_val
-    
+
     civitai_info = lookup_civitai_by_hash(hash_val)
     if civitai_info and "base_model" in civitai_info:
         result.update(civitai_info)
@@ -184,7 +182,7 @@ def audit_lora(filename: str, catalog_path: str = "lora_catalog.yaml") -> dict[s
         result["status"] = "catalog_only"
     else:
         result["status"] = "unknown"
-    
+
     return result
 
 
@@ -192,9 +190,9 @@ def categorize_base_model(base_model: Optional[str]) -> str:
     """Categorize base model into simple categories."""
     if not base_model:
         return "unknown"
-    
+
     base_lower = base_model.lower()
-    
+
     if "wan" in base_lower:
         return "video"  # Wan 2.x models are for video
     elif "sd 1" in base_lower or "sd1" in base_lower:
@@ -216,13 +214,13 @@ def print_audit_results(results: list[dict]) -> None:
     print("=" * 110)
     print(f"{'Filename':<45} | {'Source':<20} | {'Base Model':<20} | {'Status':<12}")
     print("-" * 110)
-    
+
     for r in sorted(results, key=lambda x: x.get("status", "zzz")):
         filename = r["filename"][:44]
         source = r.get("source", r.get("catalog_source", "unknown"))[:19] if r.get("source") or r.get("catalog_source") else "unknown"
         base = (r.get("base_model") or "-")[:19]
         status = r.get("status", "ERROR")
-        
+
         # Color coding via prefix
         status_icon = {
             "verified_civitai": "[OK]",
@@ -232,23 +230,23 @@ def print_audit_results(results: list[dict]) -> None:
             "unknown": "[?]",
             "hash_error": "[ERR]",
         }.get(status, "[?]")
-        
+
         print(f"{filename:<45} | {source:<20} | {base:<20} | {status_icon}")
-    
+
     # Summary
     print("\n" + "=" * 110)
     print("SUMMARY:")
-    
+
     status_counts = {}
     for r in results:
         status = r.get("status", "unknown")
         status_counts[status] = status_counts.get(status, 0) + 1
-    
+
     verified = status_counts.get("verified_civitai", 0) + status_counts.get("verified_hf", 0)
     catalog = status_counts.get("catalog_only", 0)
     unknown = status_counts.get("unknown", 0) + status_counts.get("hf_unverified", 0)
     errors = status_counts.get("hash_error", 0)
-    
+
     print(f"  [OK] Verified (CivitAI): {status_counts.get('verified_civitai', 0)}")
     print(f"  [OK] Verified (HuggingFace): {status_counts.get('verified_hf', 0)}")
     print(f"  [CATALOG] Catalog-only (community): {catalog}")
@@ -261,19 +259,18 @@ def print_audit_results(results: list[dict]) -> None:
 def update_catalog(results: list[dict], catalog_path: str = "lora_catalog.yaml") -> None:
     """Update lora_catalog.yaml with CivitAI verification data."""
     # Read existing catalog
-    with open(catalog_path, "r") as f:
+    with open(catalog_path) as f:
         catalog = yaml.safe_load(f)
-    
+
     if "loras" not in catalog:
         print("[ERROR] No 'loras' key found in catalog")
         return
-    
+
     # Build lookup from audit results
     audit_map = {r["filename"]: r for r in results}
-    
+
     updated = 0
-    added = 0
-    
+
     # Update existing entries
     for lora in catalog["loras"]:
         filename = lora.get("filename")
@@ -290,20 +287,20 @@ def update_catalog(results: list[dict], catalog_path: str = "lora_catalog.yaml")
             else:
                 lora["civitai_verified"] = False
                 lora["civitai_base_model"] = "unknown (not on CivitAI)"
-    
+
     # Find LoRAs on moira not in catalog
     catalog_filenames = {l.get("filename") for l in catalog["loras"]}
     missing = [r for r in results if r["filename"] not in catalog_filenames]
-    
+
     if missing:
         print(f"\n[WARN] {len(missing)} LoRAs on moira not in catalog:")
         for m in missing:
             print(f"  - {m['filename']} ({m.get('base_model', 'unknown')})")
-    
+
     # Write updated catalog
     with open(catalog_path, "w") as f:
         yaml.dump(catalog, f, default_flow_style=False, allow_unicode=True, sort_keys=False)
-    
+
     print(f"\n[OK] Updated {updated} entries in {catalog_path}")
     print(f"[INFO] {len(missing)} LoRAs not in catalog (add manually if needed)")
 
@@ -311,14 +308,14 @@ def update_catalog(results: list[dict], catalog_path: str = "lora_catalog.yaml")
 def verify_hf_sources(catalog_path: str = "lora_catalog.yaml") -> None:
     """Verify all HuggingFace sources in the catalog are reachable."""
     print("[INFO] Verifying HuggingFace sources in catalog...")
-    
+
     try:
-        with open(catalog_path, "r") as f:
+        with open(catalog_path) as f:
             catalog = yaml.safe_load(f)
     except Exception as e:
         print(f"[ERROR] Failed to read catalog: {e}")
         return
-    
+
     hf_sources = set()
     for lora in catalog.get("loras", []):
         source = lora.get("source", "")
@@ -327,9 +324,9 @@ def verify_hf_sources(catalog_path: str = "lora_catalog.yaml") -> None:
             repo_id = source.replace("HuggingFace ", "").strip()
             if "/" in repo_id:
                 hf_sources.add(repo_id)
-    
+
     print(f"[INFO] Found {len(hf_sources)} unique HuggingFace repos to verify")
-    
+
     for repo_id in sorted(hf_sources):
         info = lookup_huggingface_repo(repo_id)
         if info and info.get("hf_verified"):
@@ -347,21 +344,21 @@ def main():
     parser.add_argument("--verify-sources", action="store_true", help="Verify HuggingFace sources are reachable")
     parser.add_argument("--output", "-o", help="Output JSON file for results")
     args = parser.parse_args()
-    
+
     if args.verify_sources:
         verify_hf_sources()
         return
-    
+
     if args.file:
         result = audit_lora(args.file)
         print(json.dumps(result, indent=2))
         return
-    
+
     # Audit all LoRAs
     print("[INFO] Listing LoRAs on moira...")
     loras = list_loras_on_moira()
     print(f"[INFO] Found {len(loras)} LoRA files")
-    
+
     results = []
     for i, lora in enumerate(loras):
         print(f"[{i+1}/{len(loras)}] Auditing {lora}...", end=" ", flush=True)
@@ -370,12 +367,12 @@ def main():
         status = result.get("status", "?")
         source = result.get("source", result.get("catalog_source", ""))[:30]
         print(f"{status} ({source})")
-    
+
     print_audit_results(results)
-    
+
     if args.update_catalog:
         update_catalog(results)
-    
+
     if args.output:
         with open(args.output, "w") as f:
             json.dump(results, f, indent=2)

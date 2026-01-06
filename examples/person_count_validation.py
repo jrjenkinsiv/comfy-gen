@@ -16,12 +16,7 @@ from pathlib import Path
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from comfy_gen.validation import (
-    YOLO_AVAILABLE,
-    extract_expected_person_count,
-    count_persons_yolo,
-    validate_image
-)
+from comfy_gen.validation import YOLO_AVAILABLE, extract_expected_person_count
 
 
 def main():
@@ -29,7 +24,7 @@ def main():
     print("=" * 60)
     print("Person Count Validation Example")
     print("=" * 60)
-    
+
     # Check YOLO availability
     print("\n[1/3] Checking YOLO availability...")
     if not YOLO_AVAILABLE:
@@ -38,11 +33,11 @@ def main():
         print("\nThis example will show prompt parsing but not actual detection.")
     else:
         print("[OK] YOLO is available")
-    
+
     # Test prompt parsing
     print("\n[2/3] Testing person count extraction from prompts...")
     print("-" * 60)
-    
+
     test_prompts = [
         "solo woman standing in a field, detailed portrait",
         "single person walking down the street",
@@ -51,7 +46,7 @@ def main():
         "group of five children playing soccer",
         "landscape with mountains and trees",  # No person count
     ]
-    
+
     for prompt in test_prompts:
         expected_count = extract_expected_person_count(prompt)
         if expected_count is not None:
@@ -59,14 +54,14 @@ def main():
             print(f"     Expected persons: {expected_count}")
         else:
             print(f"[INFO] '{prompt[:50]}...'")
-            print(f"     No specific count detected")
+            print("     No specific count detected")
         print()
-    
+
     # Example validation workflow
     print("[3/3] Example validation usage...")
     print("-" * 60)
     print("\nTo use person count validation in generation:\n")
-    
+
     examples = [
         {
             "description": "Solo portrait validation",
@@ -74,7 +69,7 @@ def main():
     --workflow workflows/flux-dev.json \\
     --prompt "solo woman standing in a field, detailed portrait" \\
     --output /tmp/solo_portrait.png \\
-    --validate --validate-person-count"""
+    --validate --validate-person-count""",
         },
         {
             "description": "Two people validation",
@@ -82,7 +77,7 @@ def main():
     --workflow workflows/flux-dev.json \\
     --prompt "two women having a conversation, cafe setting" \\
     --output /tmp/conversation.png \\
-    --validate --validate-person-count"""
+    --validate --validate-person-count""",
         },
         {
             "description": "Person count with auto-retry",
@@ -91,15 +86,15 @@ def main():
     --prompt "solo person hiking on a mountain trail" \\
     --output /tmp/hiker.png \\
     --validate --validate-person-count \\
-    --auto-retry --retry-limit 3"""
-        }
+    --auto-retry --retry-limit 3""",
+        },
     ]
-    
+
     for i, example in enumerate(examples, 1):
         print(f"{i}. {example['description']}:")
         print(f"   {example['command']}")
         print()
-    
+
     # Show validation result structure
     print("\nValidation Result Structure:")
     print("-" * 60)
@@ -129,7 +124,7 @@ Example failed validation:
   [INFO] Expected persons: 1
   [WARN] Image failed validation: Person count mismatch
 """)
-    
+
     # Use cases
     print("\nCommon Use Cases:")
     print("-" * 60)
@@ -154,11 +149,11 @@ Example failed validation:
    - Batch generation with quality gates
    - Consistent subject count across generations
 """)
-    
+
     print("=" * 60)
     print("Example Complete")
     print("=" * 60)
-    
+
     return 0
 
 

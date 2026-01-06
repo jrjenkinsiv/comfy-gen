@@ -12,7 +12,6 @@ from pathlib import Path
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from comfygen.tools.generation import generate_image
 from comfygen.config import get_config_loader
 
 
@@ -21,13 +20,13 @@ async def example_default_negative_prompt():
     print("\n" + "=" * 60)
     print("EXAMPLE 1: Default Negative Prompt")
     print("=" * 60)
-    
+
     config_loader = get_config_loader()
     default_neg = config_loader.get_default_negative_prompt()
-    
-    print(f"\nDefault negative prompt from presets.yaml:")
+
+    print("\nDefault negative prompt from presets.yaml:")
     print(f"  {default_neg}")
-    
+
     print("\nWhen you call generate_image with empty negative_prompt:")
     print("  generate_image(prompt='a cat', negative_prompt='')")
     print("\nMCP will automatically use the default negative prompt from presets.yaml")
@@ -39,9 +38,9 @@ async def example_using_preset():
     print("\n" + "=" * 60)
     print("EXAMPLE 2: Using Generation Presets")
     print("=" * 60)
-    
+
     config_loader = get_config_loader()
-    
+
     # Show available presets
     presets = config_loader.load_presets()["presets"]
     print("\nAvailable presets:")
@@ -51,9 +50,9 @@ async def example_using_preset():
         print(f"    cfg: {config['cfg']}")
         print(f"    sampler: {config['sampler']}")
         print(f"    scheduler: {config['scheduler']}")
-        if 'validate' in config:
+        if "validate" in config:
             print(f"    validate: {config['validate']}")
-    
+
     print("\n" + "-" * 60)
     print("To use a preset, call generate_image with preset parameter:")
     print("  generate_image(")
@@ -74,23 +73,23 @@ async def example_using_lora_preset():
     print("\n" + "=" * 60)
     print("EXAMPLE 3: Using LoRA Presets")
     print("=" * 60)
-    
+
     config_loader = get_config_loader()
-    
+
     # Show available LoRA presets
     catalog = config_loader.load_lora_catalog()
     suggestions = catalog["model_suggestions"]
-    
+
     print("\nAvailable LoRA presets:")
     for name, config in suggestions.items():
         print(f"\n  {name}:")
         print(f"    model: {config['model']}")
         print(f"    workflow: {config['workflow']}")
-        if config.get('default_loras'):
-            print(f"    default LoRAs:")
-            for lora in config['default_loras']:
+        if config.get("default_loras"):
+            print("    default LoRAs:")
+            for lora in config["default_loras"]:
                 print(f"      - {lora}")
-    
+
     print("\n" + "-" * 60)
     print("To use a LoRA preset, call generate_image with lora_preset parameter:")
     print("  generate_image(")
@@ -106,12 +105,12 @@ async def example_parameter_precedence():
     print("\n" + "=" * 60)
     print("EXAMPLE 4: Parameter Precedence")
     print("=" * 60)
-    
+
     print("\nParameter precedence order:")
     print("  1. User-provided parameters (highest priority)")
     print("  2. Preset values")
     print("  3. Config defaults from presets.yaml (lowest priority)")
-    
+
     print("\nExample scenario:")
     print("  presets.yaml has:")
     print("    - default validation.enabled: true")
@@ -131,32 +130,32 @@ async def example_cli_mcp_parity():
     print("\n" + "=" * 60)
     print("EXAMPLE 5: CLI and MCP Parity")
     print("=" * 60)
-    
+
     print("\nCLI command:")
     print("  python generate.py \\")
     print("    --workflow workflows/flux-dev.json \\")
     print("    --prompt 'a cat' \\")
     print("    --preset draft")
-    
+
     print("\nEquivalent MCP call:")
     print("  generate_image(")
     print("    prompt='a cat',")
     print("    preset='draft'")
     print("  )")
-    
+
     print("\nBoth will use:")
     print("  - Same default negative prompt from presets.yaml")
     print("  - Same preset parameters (steps, cfg, sampler, scheduler)")
     print("  - Same validation settings")
     print("  - Same LoRA catalog")
-    
+
     print("\n" + "-" * 60)
     print("CLI command with LoRA preset:")
     print("  python generate.py \\")
     print("    --workflow workflows/flux-dev.json \\")
     print("    --prompt 'a cat' \\")
     print("    --lora-preset simple_image")
-    
+
     print("\nEquivalent MCP call:")
     print("  generate_image(")
     print("    prompt='a cat',")
@@ -171,13 +170,13 @@ async def run_examples():
     print("=" * 70)
     print("\nThese examples demonstrate the new preset integration that makes")
     print("MCP and CLI behavior consistent by sharing presets.yaml configuration.")
-    
+
     await example_default_negative_prompt()
     await example_using_preset()
     await example_using_lora_preset()
     await example_parameter_precedence()
     await example_cli_mcp_parity()
-    
+
     print("\n" + "=" * 70)
     print("END OF EXAMPLES")
     print("=" * 70)

@@ -44,10 +44,7 @@ def main():
                 "Effect": "Allow",
                 "Principal": {"AWS": ["*"]},
                 "Action": ["s3:GetObject", "s3:ListBucket"],
-                "Resource": [
-                    f"arn:aws:s3:::{BUCKET_NAME}",
-                    f"arn:aws:s3:::{BUCKET_NAME}/*"
-                ],
+                "Resource": [f"arn:aws:s3:::{BUCKET_NAME}", f"arn:aws:s3:::{BUCKET_NAME}/*"],
             }
         ],
     }

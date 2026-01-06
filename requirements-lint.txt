@@ -1,0 +1,10 @@
+# Linting and type checking dependencies
+# Keep in sync with comfy-gen CI
+
+ruff>=0.8.0
+mypy>=1.8.0
+
+# Type stubs for mypy
+types-requests
+types-PyYAML
+types-Pillow

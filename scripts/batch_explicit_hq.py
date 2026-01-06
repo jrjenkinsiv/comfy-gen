@@ -4,11 +4,10 @@ Batch generation of 100 explicit NSFW images - HIGH QUALITY VERSION
 Higher resolution, better LoRAs for realism and explicit content.
 """
 
-import subprocess
 import random
-import time
+import subprocess
 import sys
-from pathlib import Path
+import time
 
 # Unbuffered output
 sys.stdout.reconfigure(line_buffering=True)
@@ -17,9 +16,9 @@ sys.stderr.reconfigure(line_buffering=True)
 # Ethnicities - expanded to include browner skin tones
 ETHNICITIES = [
     # East Asian
-    "japanese", "korean", "chinese", "vietnamese", "thai", "filipino", 
+    "japanese", "korean", "chinese", "vietnamese", "thai", "filipino",
     "taiwanese", "singaporean", "malaysian", "indonesian",
-    # South Asian  
+    # South Asian
     "indian", "pakistani", "bangladeshi", "sri lankan", "nepali",
     # Middle Eastern
     "persian", "arab", "jordanian", "lebanese", "turkish", "egyptian",
@@ -134,15 +133,15 @@ def generate_image(idx: int, ethnicity: str, scenario: dict, resolution: tuple, 
     negative = scenario["negative"]
     scenario_name = scenario["name"]
     loras = scenario.get("loras", [])
-    
+
     width, height = resolution
-    
+
     # Build filename
     eth_short = ethnicity.replace(" ", "_")[:10]
-    
+
     output_name = f"explicit_hq_{idx:03d}_{eth_short}_{scenario_name}"
     output_path = f"/tmp/{output_name}.png"
-    
+
     # Build command
     cmd = [
         "python3", "generate.py",
@@ -156,15 +155,15 @@ def generate_image(idx: int, ethnicity: str, scenario: dict, resolution: tuple, 
         "--height", str(height),
         "--output", output_path,
     ]
-    
+
     # Add LoRAs from scenario
     for lora_file, strength in loras:
         cmd.extend(["--lora", f"{lora_file}:{strength}"])
-    
+
     print(f"\n[{idx:03d}/100] {ethnicity} - {scenario_name}")
     print(f"  Resolution: {width}x{height}, Seed: {seed}")
     print(f"  LoRAs: {loras}")
-    
+
     try:
         result = subprocess.run(
             cmd,
@@ -173,16 +172,16 @@ def generate_image(idx: int, ethnicity: str, scenario: dict, resolution: tuple, 
             timeout=600,  # Longer timeout for higher res
             cwd="/Users/jrjenkinsiv/Development/comfy-gen"
         )
-        
+
         if result.returncode == 0:
-            print(f"  [OK] Generated successfully")
+            print("  [OK] Generated successfully")
             return True
         else:
             print(f"  [ERROR] {result.stderr[-300:] if result.stderr else 'Unknown error'}")
             return False
-            
+
     except subprocess.TimeoutExpired:
-        print(f"  [TIMEOUT] Generation took too long")
+        print("  [TIMEOUT] Generation took too long")
         return False
     except Exception as e:
         print(f"  [ERROR] {e}")
@@ -194,26 +193,26 @@ def main():
     print("Explicit NSFW Batch Generation - HIGH QUALITY")
     print("Higher resolution, better LoRAs for realism")
     print("=" * 60)
-    
+
     total = 100
     success = 0
     failed = 0
-    
+
     for i in range(1, total + 1):
         # Random selections
         ethnicity = random.choice(ETHNICITIES)
         scenario = random.choice(SCENARIOS)
         resolution = random.choice(RESOLUTIONS)
         seed = random.randint(1, 999999999)
-        
+
         if generate_image(i, ethnicity, scenario, resolution, seed):
             success += 1
         else:
             failed += 1
-        
+
         # Small delay between generations
         time.sleep(2)
-    
+
     print("\n" + "=" * 60)
     print(f"COMPLETE: {success} successful, {failed} failed out of {total}")
     print("=" * 60)

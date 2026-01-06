@@ -4,11 +4,10 @@ Batch generation using Pony Realism + Amateur LoRA
 The winning combination for photorealistic NSFW content
 """
 
-import subprocess
 import random
-import time
+import subprocess
 import sys
-from pathlib import Path
+import time
 
 # Configuration
 WORKFLOW = "workflows/pony-realism.json"
@@ -34,7 +33,7 @@ BODY_TYPES = [
     "hourglass figure woman",
 ]
 
-# Ethnicities  
+# Ethnicities
 ETHNICITIES = [
     "caucasian",
     "latina",
@@ -192,20 +191,20 @@ def generate_prompt(scenario: dict) -> tuple[str, str]:
     body = random.choice(BODY_TYPES)
     ethnicity = random.choice(ETHNICITIES)
     hair = random.choice(HAIR)
-    
+
     # Build prompt
     base_prompt = scenario["prompt"].format(body=body, ethnicity=ethnicity, hair=hair)
     setting = scenario["setting"]
-    
+
     full_prompt = f"{QUALITY_TAGS}, {STYLE_TAGS}, {base_prompt}, {setting}"
-    
+
     return full_prompt, scenario["name"]
 
 
 def run_generation(prompt: str, name: str, seed: int, index: int):
     """Run a single generation"""
     output_file = f"/tmp/pony_batch_{index:03d}_{name}.png"
-    
+
     cmd = [
         "python3", "generate.py",
         "--workflow", WORKFLOW,
@@ -217,12 +216,12 @@ def run_generation(prompt: str, name: str, seed: int, index: int):
         "--seed", str(seed),
         "--output", output_file
     ]
-    
+
     print(f"\n[{index}/100] Generating: {name} (seed {seed})")
     print(f"  Prompt: {prompt[:80]}...")
-    
+
     result = subprocess.run(cmd, capture_output=True, text=True)
-    
+
     if result.returncode == 0:
         # Extract score from output
         for line in result.stdout.split('\n'):
@@ -234,7 +233,7 @@ def run_generation(prompt: str, name: str, seed: int, index: int):
                 print(f"  URL: {url}")
         return True
     else:
-        print(f"  [ERROR] Generation failed")
+        print("  [ERROR] Generation failed")
         print(result.stderr[-500:] if result.stderr else "No error output")
         return False
 
@@ -247,28 +246,28 @@ def main():
     print(f"LoRA: {LORA}")
     print(f"Steps: {STEPS}, CFG: {CFG}")
     print("=" * 60)
-    
+
     # Parse arguments
     start_index = 1
     count = 100
-    
+
     if len(sys.argv) > 1:
         start_index = int(sys.argv[1])
     if len(sys.argv) > 2:
         count = int(sys.argv[2])
-    
+
     print(f"Generating {count} images starting from index {start_index}")
     print("=" * 60)
-    
+
     success_count = 0
     fail_count = 0
-    
+
     for i in range(start_index, start_index + count):
         # Pick random scenario
         scenario = random.choice(SCENARIOS)
         prompt, name = generate_prompt(scenario)
         seed = BASE_SEED + i
-        
+
         try:
             if run_generation(prompt, name, seed, i):
                 success_count += 1
@@ -280,10 +279,10 @@ def main():
         except Exception as e:
             print(f"  [ERROR] {e}")
             fail_count += 1
-        
+
         # Small delay between generations
         time.sleep(1)
-    
+
     print("\n" + "=" * 60)
     print(f"BATCH COMPLETE: {success_count} success, {fail_count} failed")
     print("=" * 60)

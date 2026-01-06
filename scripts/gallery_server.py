@@ -8,14 +8,12 @@ Shows thumbnails, metadata, and allows filtering/searching.
 """
 
 import http.server
-import json
-import socket
-import sys
-import socketserver
-import urllib.request
-import xml.etree.ElementTree as ET
-from urllib.parse import parse_qs, urlparse
 import io
+import socket
+import socketserver
+import sys
+from urllib.parse import parse_qs, urlparse
+
 import requests
 from PIL import Image
 
@@ -30,9 +28,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         * { box-sizing: border-box; }
-        body { 
+        body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #1a1a2e; 
+            background: #1a1a2e;
             color: #eee;
             margin: 0;
             padding: 20px;
@@ -78,9 +76,9 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             font-size: 14px;
         }
         input:focus, select:focus { border-color: #00d9ff; outline: none; }
-        button { 
-            background: #00d9ff; 
-            color: #000; 
+        button {
+            background: #00d9ff;
+            color: #000;
             cursor: pointer;
             font-weight: bold;
         }
@@ -282,7 +280,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             <button class="view-btn" onclick="setViewMode('list', null)">List</button>
         </div>
     </div>
-    
+
     <div class="controls">
         <input type="text" id="search" placeholder="Search prompts..." style="flex: 1; min-width: 200px;">
         <select id="filter">
@@ -312,7 +310,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         </select>
         <button onclick="loadGallery()">Refresh</button>
     </div>
-    
+
     <div class="action-bar" id="actionBar">
         <span id="selectedCount">0 selected</span>
         <button class="secondary" onclick="toggleFavoriteSelected()">Toggle Favorite</button>
@@ -320,20 +318,20 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         <button class="danger" onclick="deleteSelected()">Delete</button>
         <button class="secondary" onclick="clearSelection()">Clear Selection</button>
     </div>
-    
+
     <div class="pagination" id="paginationTop"></div>
-    
+
     <div class="gallery grid-medium" id="gallery">
         <div class="loading">Loading gallery...</div>
     </div>
-    
+
     <div class="pagination" id="paginationBottom"></div>
-    
+
     <div class="modal" id="modal" onclick="closeModal()">
         <span class="modal-close">&times;</span>
         <img id="modal-img" src="">
     </div>
-    
+
     <script>
         const MINIO = '__MINIO_ENDPOINT__';
         const BUCKET = '__BUCKET__';
@@ -343,7 +341,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         let viewMode = { type: 'grid', size: 'medium' };
         let currentPage = 1;
         let perPage = 20;
-        
+
         // Load preferences from localStorage
         function loadPreferences() {
             const saved = localStorage.getItem('galleryPreferences');
@@ -352,7 +350,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     const prefs = JSON.parse(saved);
                     viewMode = prefs.viewMode || viewMode;
                     favorites = new Set(prefs.favorites || []);
-                    
+
                     // Restore filters and sort
                     if (prefs.filter) document.getElementById('filter').value = prefs.filter;
                     if (prefs.qualityFilter) document.getElementById('qualityFilter').value = prefs.qualityFilter;
@@ -367,7 +365,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             }
             applyViewMode();
         }
-        
+
         // Save preferences to localStorage
         function savePreferences() {
             const prefs = {
@@ -380,22 +378,22 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             };
             localStorage.setItem('galleryPreferences', JSON.stringify(prefs));
         }
-        
+
         // Set view mode and update UI
         function setViewMode(type, size) {
             viewMode = { type, size };
             applyViewMode();
             savePreferences();
         }
-        
+
         function applyViewMode() {
             const gallery = document.getElementById('gallery');
             const buttons = document.querySelectorAll('.view-btn');
-            
+
             // Clear existing classes
             gallery.className = 'gallery';
             buttons.forEach(btn => btn.classList.remove('active'));
-            
+
             // Apply new mode
             if (viewMode.type === 'list') {
                 gallery.classList.add('list-view');
@@ -405,45 +403,45 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 document.querySelector(`[onclick*="'${viewMode.size}'"]`).classList.add('active');
             }
         }
-        
+
         async function loadGallery() {
             const gallery = document.getElementById('gallery');
             gallery.innerHTML = '<div class="loading">Loading images...</div>';
-            
+
             try {
                 // Fetch ALL bucket objects using S3 continuation token pagination
                 let keys = [];
                 let continuationToken = null;
                 let pageCount = 0;
-                
+
                 do {
                     let url = `${MINIO}/${BUCKET}/?list-type=2&max-keys=1000`;
                     if (continuationToken) {
                         url += `&continuation-token=${encodeURIComponent(continuationToken)}`;
                     }
-                    
+
                     const resp = await fetch(url);
                     const xml = await resp.text();
                     const parser = new DOMParser();
                     const doc = parser.parseFromString(xml, 'text/xml');
-                    
+
                     // Get keys from this page
                     const pageKeys = Array.from(doc.querySelectorAll('Key')).map(k => k.textContent);
                     keys = keys.concat(pageKeys);
-                    
+
                     // Check for more pages
                     const isTruncated = doc.querySelector('IsTruncated')?.textContent === 'true';
                     continuationToken = isTruncated ? doc.querySelector('NextContinuationToken')?.textContent : null;
                     pageCount++;
-                    
+
                     gallery.innerHTML = `<div class="loading">Loading images... (${keys.length} objects found)</div>`;
                 } while (continuationToken);
-                
+
                 const pngFiles = keys.filter(k => k.endsWith('.png') && !k.endsWith('.png.json'));
                 const jsonKeys = new Set(keys.filter(k => k.endsWith('.json')));
-                
+
                 document.getElementById('stats').textContent = `${pngFiles.length} images in gallery`;
-                
+
                 // PERFORMANCE FIX: Only load metadata for first page, then lazy-load rest
                 // This prevents loading 558+ JSON files upfront
                 allImages = pngFiles.map(png => ({
@@ -452,27 +450,27 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     prompt: null, // Lazy-loaded
                     metadataLoaded: false
                 }));
-                
+
                 // Sort newest first by default (by filename which is timestamp-based)
                 allImages.sort((a, b) => b.key.localeCompare(a.key));
-                
+
                 renderGallery();
             } catch (e) {
                 gallery.innerHTML = `<div class="loading">Error loading gallery: ${e.message}</div>`;
             }
         }
-        
+
         // Lazy-load metadata for a specific image
         async function loadMetadata(img) {
             if (img.metadataLoaded) return img;
-            
+
             const jsonKey = img.key + '.json';
             let meta = { prompt: 'No metadata', loras: [], validation_score: null, quality_grade: null, quality_score: null };
-            
+
             try {
                 const metaResp = await fetch(`${MINIO}/${BUCKET}/${jsonKey}`);
                 const rawMeta = await metaResp.json();
-            
+
                 // Handle both old flat format and new nested format
                 if (rawMeta.input) {
                     // New nested format
@@ -511,24 +509,24 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             } catch (e) {
                 console.error(`Failed to load metadata for ${img.key}:`, e);
             }
-            
+
             // Update the image object with metadata
             Object.assign(img, meta, { metadataLoaded: true });
             return img;
         }
-        
+
         function renderGallery() {
             const search = document.getElementById('search').value.toLowerCase();
             const filter = document.getElementById('filter').value;
             const qualityFilter = document.getElementById('qualityFilter').value;
             const sort = document.getElementById('sort').value;
-            
+
             let filtered = allImages.filter(img => {
                 if (search && !img.prompt?.toLowerCase().includes(search)) return false;
                 if (filter === 'lora' && (!img.loras || img.loras.length === 0)) return false;
                 if (filter === 'validated' && (img.validation_score === null || img.validation_score < 0.9)) return false;
                 if (filter === 'favorites' && !favorites.has(img.key)) return false;
-                
+
                 // Quality grade filter
                 if (qualityFilter !== 'all' && img.quality_grade) {
                     const grade = img.quality_grade.toLowerCase();
@@ -537,10 +535,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     if (qualityFilter === 'c' && !['a', 'b', 'c'].includes(grade)) return false;
                     if (qualityFilter === 'd' && !['a', 'b', 'c', 'd'].includes(grade)) return false;
                 }
-                
+
                 return true;
             });
-            
+
             // Apply sorting
             if (sort === 'oldest') {
                 filtered.sort((a, b) => a.key.localeCompare(b.key));
@@ -551,50 +549,50 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             } else if (sort === 'name') {
                 filtered.sort((a, b) => a.key.localeCompare(b.key));
             }
-            
+
             const gallery = document.getElementById('gallery');
-            
+
             if (filtered.length === 0) {
                 gallery.innerHTML = '<div class="loading">No images match your filters</div>';
                 document.getElementById('paginationTop').innerHTML = '';
                 document.getElementById('paginationBottom').innerHTML = '';
                 return;
             }
-            
+
             // Pagination
             const totalPages = Math.ceil(filtered.length / perPage);
             if (currentPage > totalPages) currentPage = totalPages;
             if (currentPage < 1) currentPage = 1;
-            
+
             const startIdx = (currentPage - 1) * perPage;
             const endIdx = Math.min(startIdx + perPage, filtered.length);
             const pageImages = filtered.slice(startIdx, endIdx);
-            
+
             // Lazy-load metadata for current page only
             Promise.all(pageImages.map(img => loadMetadata(img))).then(() => {
                 // Re-render after metadata loads to show prompts/loras
                 renderCurrentPage(pageImages, currentPage, totalPages, filtered.length, startIdx, endIdx);
             });
-            
+
             // Render immediately with placeholders, metadata will update when loaded
             renderCurrentPage(pageImages, currentPage, totalPages, filtered.length, startIdx, endIdx);
         }
-        
+
         function renderCurrentPage(pageImages, currentPage, totalPages, filteredLength, startIdx, endIdx) {
             const gallery = document.getElementById('gallery');
-            
+
             // Render pagination controls
             const paginationHtml = renderPagination(currentPage, totalPages, filteredLength, startIdx, endIdx);
             document.getElementById('paginationTop').innerHTML = paginationHtml;
             document.getElementById('paginationBottom').innerHTML = paginationHtml;
-            
+
             gallery.innerHTML = pageImages.map(img => {
                 const isFavorite = favorites.has(img.key);
                 const isSelected = selectedImages.has(img.key);
                 const qualityScore = typeof img.quality_score === 'number' ? img.quality_score.toFixed(1) : null;
                 const clipScore = typeof img.validation_score === 'number' ? img.validation_score.toFixed(2) : null;
                 return `
-                <div class="card ${isSelected ? 'selected' : ''} ${isFavorite ? 'favorited' : ''}" 
+                <div class="card ${isSelected ? 'selected' : ''} ${isFavorite ? 'favorited' : ''}"
                      data-key="${img.key}"
                      onclick="handleCardClick(event, '${img.key}')">
                     ${img.quality_grade ? `<div class="quality-overlay grade-${img.quality_grade.toLowerCase()}">${img.quality_grade}</div>` : ''}
@@ -614,16 +612,16 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     </div>
                 </div>
             `;}).join('');
-            
+
             updateActionBar();
         }
-        
+
         function handleCardClick(event, key) {
             // Don't select if clicking on image (modal) or favorite tag
             if (event.target.tagName === 'IMG' || event.target.classList.contains('favorite')) {
                 return;
             }
-            
+
             if (event.ctrlKey || event.metaKey) {
                 // Ctrl/Cmd click: toggle selection
                 if (selectedImages.has(key)) {
@@ -637,10 +635,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 const lastSelected = Array.from(selectedImages).pop();
                 const lastIndex = cards.findIndex(c => c.dataset.key === lastSelected);
                 const currentIndex = cards.findIndex(c => c.dataset.key === key);
-                
+
                 const start = Math.min(lastIndex, currentIndex);
                 const end = Math.max(lastIndex, currentIndex);
-                
+
                 for (let i = start; i <= end; i++) {
                     selectedImages.add(cards[i].dataset.key);
                 }
@@ -649,10 +647,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 selectedImages.clear();
                 selectedImages.add(key);
             }
-            
+
             renderGallery();
         }
-        
+
         function toggleFavorite(event, key) {
             event.stopPropagation();
             if (favorites.has(key)) {
@@ -663,13 +661,13 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             savePreferences();
             renderGallery();
         }
-        
+
         function toggleFavoriteSelected() {
             if (selectedImages.size === 0) {
                 alert('No images selected');
                 return;
             }
-            
+
             selectedImages.forEach(key => {
                 if (favorites.has(key)) {
                     favorites.delete(key);
@@ -677,20 +675,20 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     favorites.add(key);
                 }
             });
-            
+
             savePreferences();
             renderGallery();
         }
-        
+
         function clearSelection() {
             selectedImages.clear();
             renderGallery();
         }
-        
+
         function updateActionBar() {
             const actionBar = document.getElementById('actionBar');
             const selectedCount = document.getElementById('selectedCount');
-            
+
             if (selectedImages.size > 0) {
                 actionBar.classList.add('visible');
                 selectedCount.textContent = `${selectedImages.size} selected`;
@@ -698,64 +696,64 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 actionBar.classList.remove('visible');
             }
         }
-        
+
         async function downloadSelected() {
             if (selectedImages.size === 0) {
                 alert('No images selected');
                 return;
             }
-            
+
             alert('Download ZIP feature: This would download ' + selectedImages.size + ' images as a ZIP file.\\n\\nNote: This requires server-side implementation to create ZIP archives.');
         }
-        
+
         async function deleteSelected() {
             if (selectedImages.size === 0) {
                 alert('No images selected');
                 return;
             }
-            
+
             const confirmed = confirm(`Delete ${selectedImages.size} selected image(s)?\\n\\nWarning: This action cannot be undone.`);
             if (!confirmed) return;
-            
+
             alert('Delete feature: This would delete ' + selectedImages.size + ' images from MinIO.\\n\\nNote: This requires server-side implementation with MinIO delete API.');
         }
-        
+
         function escapeHtml(text) {
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
         }
-        
+
         function renderPagination(current, total, totalItems, startIdx, endIdx) {
             if (total <= 1) return '';
-            
+
             let html = `<span class="page-info">Showing ${startIdx + 1}-${endIdx} of ${totalItems}</span>`;
-            
+
             // Previous button
             html += `<button class="page-btn" onclick="goToPage(${current - 1})" ${current === 1 ? 'disabled' : ''}>&laquo; Prev</button>`;
-            
+
             // Page numbers with ellipsis
             const pages = [];
             const maxVisible = 7;
-            
+
             if (total <= maxVisible) {
                 for (let i = 1; i <= total; i++) pages.push(i);
             } else {
                 pages.push(1);
                 if (current > 3) pages.push('...');
-                
+
                 let start = Math.max(2, current - 1);
                 let end = Math.min(total - 1, current + 1);
-                
+
                 if (current <= 3) end = 4;
                 if (current >= total - 2) start = total - 3;
-                
+
                 for (let i = start; i <= end; i++) pages.push(i);
-                
+
                 if (current < total - 2) pages.push('...');
                 pages.push(total);
             }
-            
+
             for (const p of pages) {
                 if (p === '...') {
                     html += `<span class="page-info">...</span>`;
@@ -763,29 +761,29 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                     html += `<button class="page-btn ${p === current ? 'active' : ''}" onclick="goToPage(${p})">${p}</button>`;
                 }
             }
-            
+
             // Next button
             html += `<button class="page-btn" onclick="goToPage(${current + 1})" ${current === total ? 'disabled' : ''}>Next &raquo;</button>`;
-            
+
             return html;
         }
-        
+
         function goToPage(page) {
             currentPage = page;
             renderGallery();
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
-        
+
         function openModal(event, url) {
             event.stopPropagation();
             document.getElementById('modal-img').src = url;
             document.getElementById('modal').classList.add('active');
         }
-        
+
         function closeModal() {
             document.getElementById('modal').classList.remove('active');
         }
-        
+
         // Event listeners
         document.getElementById('search').addEventListener('input', () => {
             currentPage = 1;  // Reset to first page on search
@@ -811,7 +809,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             renderGallery();
             savePreferences();
         });
-        document.addEventListener('keydown', e => { 
+        document.addEventListener('keydown', e => {
             if (e.key === 'Escape') {
                 if (document.getElementById('modal').classList.contains('active')) {
                     closeModal();
@@ -820,44 +818,45 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 }
             }
         });
-        
+
         // Initialize
         loadPreferences();
         loadGallery();
     </script>
 </body>
 </html>
-""".replace('__MINIO_ENDPOINT__', MINIO_ENDPOINT).replace('__BUCKET__', BUCKET)
+""".replace("__MINIO_ENDPOINT__", MINIO_ENDPOINT).replace("__BUCKET__", BUCKET)
 
 
 class GalleryHandler(http.server.BaseHTTPRequestHandler):
     # Disable HTTP keepalive - close connection after each request
     # This prevents browsers from holding connections open and blocking threads
     protocol_version = "HTTP/1.0"
-    
+
     def log_message(self, format, *args):
         """Enable logging for debugging."""
         import sys
+
         sys.stderr.write(f"[{self.client_address[0]}:{self.client_address[1]}] {format % args}\n")
         sys.stderr.flush()
-    
+
     def do_GET(self):
-        if self.path == '/' or self.path == '/index.html':
-            content = HTML_TEMPLATE.encode('utf-8')
+        if self.path == "/" or self.path == "/index.html":
+            content = HTML_TEMPLATE.encode("utf-8")
             self.send_response(200)
-            self.send_header('Content-type', 'text/html; charset=utf-8')
-            self.send_header('Content-Length', len(content))
+            self.send_header("Content-type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", len(content))
             self.end_headers()
             self.wfile.write(content)
-        elif self.path == '/favicon.ico':
+        elif self.path == "/favicon.ico":
             self.send_response(204)
             self.end_headers()
-        elif self.path.startswith('/thumbnail'):
+        elif self.path.startswith("/thumbnail"):
             try:
                 query = urlparse(self.path).query
                 params = parse_qs(query)
-                img_url = params.get('url', [None])[0]
-                
+                img_url = params.get("url", [None])[0]
+
                 if not img_url:
                     self.send_error(400, "Missing 'url' parameter")
                     return
@@ -871,21 +870,21 @@ class GalleryHandler(http.server.BaseHTTPRequestHandler):
                 # Process image
                 img = Image.open(io.BytesIO(resp.content))
                 img.thumbnail((350, 350))  # Resize to max 350px (card width covers approx 300px)
-                
+
                 # Convert to RGB if necessary (e.g. if RGBA)
-                if img.mode in ('RGBA', 'P'):
-                    img = img.convert('RGB')
+                if img.mode in ("RGBA", "P"):
+                    img = img.convert("RGB")
 
                 out_io = io.BytesIO()
-                img.save(out_io, 'JPEG', quality=85)
+                img.save(out_io, "JPEG", quality=85)
                 out_io.seek(0)
-                
+
                 self.send_response(200)
-                self.send_header('Content-type', 'image/jpeg')
-                self.send_header('Cache-Control', 'public, max-age=86400')  # Cache for 1 day
+                self.send_header("Content-type", "image/jpeg")
+                self.send_header("Cache-Control", "public, max-age=86400")  # Cache for 1 day
                 self.end_headers()
                 self.wfile.write(out_io.getvalue())
-                
+
             except Exception as e:
                 print(f"[ERROR] Thumbnail generation failed: {e}")
                 self.send_error(500, f"Internal Server Error: {e}")
@@ -895,6 +894,7 @@ class GalleryHandler(http.server.BaseHTTPRequestHandler):
 
 class ThreadingTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
     """Handle each request in a separate thread to prevent blocking."""
+
     allow_reuse_address = True
     daemon_threads = True
     # Timeout for socket operations - prevents hung client connections from blocking threads forever

@@ -3,9 +3,9 @@
 Run via SSH to start ComfyUI as a background process.
 """
 
+import os
 import subprocess
 import sys
-import os
 
 COMFYUI_PATH = r"C:\Users\jrjen\AppData\Local\Programs\@comfyorgcomfyui-electron\resources\ComfyUI"
 PYTHON_PATH = r"C:\Users\jrjen\comfy\.venv\Scripts\python.exe"
@@ -13,7 +13,7 @@ LOG_FILE = r"C:\Users\jrjen\comfyui_server.log"
 
 
 def main():
-    print(f"[INFO] Starting ComfyUI server...")
+    print("[INFO] Starting ComfyUI server...")
     print(f"[INFO] ComfyUI path: {COMFYUI_PATH}")
     print(f"[INFO] Python path: {PYTHON_PATH}")
     print(f"[INFO] Log file: {LOG_FILE}")
@@ -40,7 +40,7 @@ def main():
 
     print(f"[OK] ComfyUI started with PID: {process.pid}")
     print(f"[INFO] Check log file: {LOG_FILE}")
-    print(f"[INFO] API should be available at http://192.168.1.215:8188")
+    print("[INFO] API should be available at http://192.168.1.215:8188")
 
     return 0
 

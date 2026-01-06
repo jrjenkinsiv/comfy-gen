@@ -12,10 +12,10 @@ Usage:
     python3 scripts/batch_pony_hq.py 1 20  # Generate all 20 images
 """
 
+import os
+import random
 import subprocess
 import sys
-import random
-import os
 
 # Base config
 WORKFLOW = "workflows/pony-realism.json"
@@ -51,7 +51,7 @@ SCENARIOS = [
         "prompt": "1girl, nude, (spread legs:1.3), (pussy focus:1.2), woman, on back, bedroom, POV, natural lighting",
         "loras": [(BASE_LORA, "{strength}")],
     },
-    
+
     # Blowjob scenes - Amateur + Cum for cum variants
     {
         "name": "blowjob_pov",
@@ -68,7 +68,7 @@ SCENARIOS = [
         "prompt": "1girl, (deepthroat:1.4), (side view:1.2), nude, woman, (cock in mouth:1.3), bedroom, grainy photo",
         "loras": [(BASE_LORA, "{strength}")],
     },
-    
+
     # Doggy scenes
     {
         "name": "doggy_pov",
@@ -85,7 +85,7 @@ SCENARIOS = [
         "prompt": "1girl, 1boy, (prone bone:1.4), nude, woman, (lying flat:1.2), (sex from behind:1.3), on bed, amateur photo",
         "loras": [(BASE_LORA, "{strength}")],
     },
-    
+
     # Missionary
     {
         "name": "missionary_pov",
@@ -97,7 +97,7 @@ SCENARIOS = [
         "prompt": "1girl, 1boy, (missionary:1.4), (legs up:1.3), nude, woman, (sex:1.3), on bed, passionate",
         "loras": [(BASE_LORA, "{strength}")],
     },
-    
+
     # Cowgirl
     {
         "name": "cowgirl_pov",
@@ -109,7 +109,7 @@ SCENARIOS = [
         "prompt": "1girl, (reverse cowgirl:1.4), (pov:1.3), nude, woman, (ass focus:1.2), (riding:1.3), bedroom",
         "loras": [(BASE_LORA, "{strength}")],
     },
-    
+
     # Cumshots - Use Real Cum LoRA
     {
         "name": "facial_cumshot",
@@ -131,7 +131,7 @@ SCENARIOS = [
         "prompt": "1girl, (creampie:1.5), (cum dripping from pussy:1.4), nude, woman, (legs spread:1.2), on back, bedroom, after sex",
         "loras": [(BASE_LORA, "{strength}"), (CUM_LORA, "0.7")],
     },
-    
+
     # Other positions
     {
         "name": "standing_sex",
@@ -152,7 +152,7 @@ SCENARIOS = [
 
 # Body type and ethnicity variations
 BODY_TYPES = [
-    "slim body", "curvy body", "athletic body", "busty", 
+    "slim body", "curvy body", "athletic body", "busty",
     "thicc thighs", "milf body", "petite", "hourglass figure"
 ]
 
@@ -167,10 +167,10 @@ STRENGTH_VARIATIONS = [0.6, 0.7, 0.8, 0.9, 1.0]
 
 def generate_image(idx: int, scenario: dict, body: str, ethnicity: str, strength: float) -> bool:
     """Generate a single high-quality image."""
-    
+
     # Build prompt
     prompt = f"{QUALITY_PREFIX}, {STYLE_TAGS}, {scenario['prompt']}, {body}, {ethnicity}"
-    
+
     # Build LoRA arguments (multiple --lora flags)
     lora_args = []
     for lora_file, lora_str in scenario['loras']:
@@ -178,14 +178,14 @@ def generate_image(idx: int, scenario: dict, body: str, ethnicity: str, strength
             lora_args.extend(["--lora", f"{lora_file}:{strength}"])
         else:
             lora_args.extend(["--lora", f"{lora_file}:{lora_str}"])
-    
+
     # Random steps in range
     steps = random.randint(*STEPS_RANGE)
     seed = random.randint(1, 999999)
-    
+
     output_name = f"pony_hq_{idx:03d}_{scenario['name']}"
     output_path = f"/tmp/{output_name}.png"
-    
+
     cmd = [
         "python3", "generate.py",
         "--workflow", WORKFLOW,
@@ -197,11 +197,11 @@ def generate_image(idx: int, scenario: dict, body: str, ethnicity: str, strength
         "--seed", str(seed),
         "--output", output_path
     ]
-    
+
     print(f"\n[{idx:03d}] {scenario['name']} | {body} | {ethnicity}")
     print(f"      LoRA strength: {strength} | Steps: {steps}")
     print(f"      LoRAs: {[a for a in lora_args if not a.startswith('--')]}")
-    
+
     try:
         result = subprocess.run(
             cmd,
@@ -209,7 +209,7 @@ def generate_image(idx: int, scenario: dict, body: str, ethnicity: str, strength
             text=True,
             cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         )
-        
+
         if result.returncode == 0:
             # Extract CLIP score if present
             for line in result.stdout.split('\n'):
@@ -220,7 +220,7 @@ def generate_image(idx: int, scenario: dict, body: str, ethnicity: str, strength
         else:
             print(f"      [ERROR] {result.stderr[:200]}")
             return False
-            
+
     except Exception as e:
         print(f"      [ERROR] {e}")
         return False
@@ -229,36 +229,36 @@ def generate_image(idx: int, scenario: dict, body: str, ethnicity: str, strength
 def main():
     start = int(sys.argv[1]) if len(sys.argv) > 1 else 1
     count = int(sys.argv[2]) if len(sys.argv) > 2 else 20
-    
-    print(f"=== Pony Realism HQ Batch Generation ===")
+
+    print("=== Pony Realism HQ Batch Generation ===")
     print(f"Generating images {start} to {start + count - 1}")
     print(f"Steps: {STEPS_RANGE[0]}-{STEPS_RANGE[1]}, CFG: {CFG}")
     print(f"LoRA strength variations: {STRENGTH_VARIATIONS}")
     print(f"Scenarios: {len(SCENARIOS)}")
-    
+
     successes = 0
     failures = 0
-    
+
     for i in range(start, start + count):
         # Cycle through scenarios
         scenario = SCENARIOS[(i - 1) % len(SCENARIOS)]
-        
+
         # Random body/ethnicity
         body = random.choice(BODY_TYPES)
         ethnicity = random.choice(ETHNICITIES)
-        
+
         # Variable LoRA strength
         strength = random.choice(STRENGTH_VARIATIONS)
-        
+
         if generate_image(i, scenario, body, ethnicity, strength):
             successes += 1
         else:
             failures += 1
-    
-    print(f"\n=== Complete ===")
+
+    print("\n=== Complete ===")
     print(f"Success: {successes}, Failures: {failures}")
-    print(f"Images at: http://192.168.1.215:9000/comfy-gen/")
-    print(f"Gallery at: http://192.168.1.162:8080/")
+    print("Images at: http://192.168.1.215:9000/comfy-gen/")
+    print("Gallery at: http://192.168.1.162:8080/")
 
 
 if __name__ == "__main__":
