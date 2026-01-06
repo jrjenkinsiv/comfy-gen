@@ -22,22 +22,21 @@ def main():
     # Change to ComfyUI directory
     os.chdir(COMFYUI_PATH)
 
-    # Open log file
-    log_file = open(LOG_FILE, "w")
-
     # Start ComfyUI as a detached subprocess
     # DETACHED_PROCESS = 0x00000008
     # CREATE_NEW_PROCESS_GROUP = 0x00000200
     # CREATE_NO_WINDOW = 0x08000000
     creation_flags = 0x00000008 | 0x00000200 | 0x08000000
 
-    process = subprocess.Popen(
-        [PYTHON_PATH, "main.py", "--listen", "0.0.0.0", "--port", "8188"],
-        stdout=log_file,
-        stderr=subprocess.STDOUT,
-        creationflags=creation_flags,
-        cwd=COMFYUI_PATH,
-    )
+    # Open log file and start process
+    with open(LOG_FILE, "w") as log_file:
+        process = subprocess.Popen(
+            [PYTHON_PATH, "main.py", "--listen", "0.0.0.0", "--port", "8188"],
+            stdout=log_file,
+            stderr=subprocess.STDOUT,
+            creationflags=creation_flags,
+            cwd=COMFYUI_PATH,
+        )
 
     print(f"[INFO] ComfyUI started with PID: {process.pid}")
     print(f"[INFO] Waiting for port 8188 to be listening (timeout: 60 seconds)...")

@@ -10,6 +10,7 @@ import unittest
 from unittest.mock import patch, MagicMock, mock_open, call
 import socket
 import time
+import subprocess
 
 # Add scripts directory to path
 scripts_dir = Path(__file__).parent.parent / "scripts"
@@ -206,7 +207,7 @@ class TestStartComfyUIBehavior(unittest.TestCase):
         # Verify read_last_lines was called to get log content
         mock_read_log.assert_called_once()
         # Verify log content was printed (check individual print calls)
-        printed_args = [call[0][0] if call[0] else "" for call in mock_print.call_args_list]
+        printed_args = [call.args[0] for call in mock_print.call_args_list if call.args]
         self.assertIn(log_content, printed_args, "Log content should be printed on failure")
     
     @patch('start_comfyui.subprocess.Popen')
@@ -233,7 +234,7 @@ class TestStartComfyUIBehavior(unittest.TestCase):
         self.assertIn("8188", args[0])
         
         # Check that stderr is redirected to stdout
-        self.assertEqual(kwargs.get('stderr'), sys.modules['subprocess'].STDOUT)
+        self.assertEqual(kwargs.get('stderr'), subprocess.STDOUT)
 
 
 if __name__ == '__main__':
