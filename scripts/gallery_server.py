@@ -9,10 +9,15 @@ Shows thumbnails, metadata, and allows filtering/searching.
 
 import http.server
 import json
+import socket
+import sys
 import socketserver
 import urllib.request
 import xml.etree.ElementTree as ET
 from urllib.parse import parse_qs, urlparse
+import io
+import requests
+from PIL import Image
 
 MINIO_ENDPOINT = "http://192.168.1.215:9000"
 BUCKET = "comfy-gen"
@@ -438,84 +443,78 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 const jsonKeys = new Set(keys.filter(k => k.endsWith('.json')));
                 
                 document.getElementById('stats').textContent = `${pngFiles.length} images in gallery`;
-                gallery.innerHTML = `<div class="loading">Loading metadata... (0/${pngFiles.length})</div>`;
                 
-                // Load metadata in parallel batches for speed
-                allImages = [];
-                const batchSize = 20;
+                // PERFORMANCE FIX: Only load metadata for first page, then lazy-load rest
+                // This prevents loading 558+ JSON files upfront
+                allImages = pngFiles.map(png => ({
+                    key: png,
+                    url: `${MINIO}/${BUCKET}/${png}`,
+                    prompt: null, // Lazy-loaded
+                    metadataLoaded: false
+                }));
                 
-                for (let i = 0; i < pngFiles.length; i += batchSize) {
-                    const batch = pngFiles.slice(i, i + batchSize);
-                    const batchPromises = batch.map(async (png) => {
-                        const jsonKey = png + '.json';
-                        let meta = { prompt: 'No metadata', loras: [], validation_score: null, quality_grade: null, quality_score: null };
-                        
-                        if (jsonKeys.has(jsonKey)) {
-                            try {
-                                const metaResp = await fetch(`${MINIO}/${BUCKET}/${jsonKey}`);
-                                const rawMeta = await metaResp.json();
-                            
-                            // Handle both old flat format and new nested format
-                            if (rawMeta.input) {
-                                // New nested format
-                                meta = {
-                                    prompt: rawMeta.input?.prompt || 'No prompt',
-                                    negative_prompt: rawMeta.input?.negative_prompt || '',
-                                    seed: rawMeta.parameters?.seed,
-                                    steps: rawMeta.parameters?.steps,
-                                    cfg: rawMeta.parameters?.cfg,
-                                    loras: rawMeta.parameters?.loras || [],
-                                    validation_score: rawMeta.quality?.prompt_adherence?.clip,
-                                    quality_grade: rawMeta.quality?.grade,
-                                    quality_score: rawMeta.quality?.composite_score,
-                                    quality_technical: rawMeta.quality?.technical?.brisque,
-                                    quality_aesthetic: rawMeta.quality?.aesthetic,
-                                    quality_detail: rawMeta.quality?.detail,
-                                    generation_time: rawMeta.storage?.generation_time_seconds,
-                                    file_size: rawMeta.storage?.file_size_bytes,
-                                    model: rawMeta.workflow?.model,
-                                    resolution: rawMeta.parameters?.resolution
-                                };
-                            } else {
-                                // Old flat format - maintain backward compatibility
-                                meta = {
-                                    prompt: rawMeta.prompt || 'No prompt',
-                                    negative_prompt: rawMeta.negative_prompt || '',
-                                    seed: rawMeta.seed,
-                                    steps: rawMeta.steps,
-                                    cfg: rawMeta.cfg,
-                                    loras: rawMeta.loras || [],
-                                    validation_score: rawMeta.validation_score,
-                                    quality_grade: null,
-                                    quality_score: null
-                                };
-                            }
-                        } catch (e) {
-                            console.error(`Failed to load metadata for ${png}:`, e);
-                        }
-                        }
-                        
-                        return {
-                            key: png,
-                            url: `${MINIO}/${BUCKET}/${png}`,
-                            ...meta
-                        };
-                    });
-                    
-                    const batchResults = await Promise.all(batchPromises);
-                    allImages = allImages.concat(batchResults);
-                    
-                    // Update progress
-                    gallery.innerHTML = `<div class="loading">Loading metadata... (${Math.min(i + batchSize, pngFiles.length)}/${pngFiles.length})</div>`;
-                }
-                
-                // Sort newest first by default
+                // Sort newest first by default (by filename which is timestamp-based)
                 allImages.sort((a, b) => b.key.localeCompare(a.key));
                 
                 renderGallery();
             } catch (e) {
                 gallery.innerHTML = `<div class="loading">Error loading gallery: ${e.message}</div>`;
             }
+        }
+        
+        // Lazy-load metadata for a specific image
+        async function loadMetadata(img) {
+            if (img.metadataLoaded) return img;
+            
+            const jsonKey = img.key + '.json';
+            let meta = { prompt: 'No metadata', loras: [], validation_score: null, quality_grade: null, quality_score: null };
+            
+            try {
+                const metaResp = await fetch(`${MINIO}/${BUCKET}/${jsonKey}`);
+                const rawMeta = await metaResp.json();
+            
+                // Handle both old flat format and new nested format
+                if (rawMeta.input) {
+                    // New nested format
+                    meta = {
+                        prompt: rawMeta.input?.prompt || 'No prompt',
+                        negative_prompt: rawMeta.input?.negative_prompt || '',
+                        seed: rawMeta.parameters?.seed,
+                        steps: rawMeta.parameters?.steps,
+                        cfg: rawMeta.parameters?.cfg,
+                        loras: rawMeta.parameters?.loras || [],
+                        validation_score: rawMeta.quality?.prompt_adherence?.clip,
+                        quality_grade: rawMeta.quality?.grade,
+                        quality_score: rawMeta.quality?.composite_score,
+                        quality_technical: rawMeta.quality?.technical?.brisque,
+                        quality_aesthetic: rawMeta.quality?.aesthetic,
+                        quality_detail: rawMeta.quality?.detail,
+                        generation_time: rawMeta.storage?.generation_time_seconds,
+                        file_size: rawMeta.storage?.file_size_bytes,
+                        model: rawMeta.workflow?.model,
+                        resolution: rawMeta.parameters?.resolution
+                    };
+                } else {
+                    // Old flat format - maintain backward compatibility
+                    meta = {
+                        prompt: rawMeta.prompt || 'No prompt',
+                        negative_prompt: rawMeta.negative_prompt || '',
+                        seed: rawMeta.seed,
+                        steps: rawMeta.steps,
+                        cfg: rawMeta.cfg,
+                        loras: rawMeta.loras || [],
+                        validation_score: rawMeta.validation_score,
+                        quality_grade: null,
+                        quality_score: null
+                    };
+                }
+            } catch (e) {
+                console.error(`Failed to load metadata for ${img.key}:`, e);
+            }
+            
+            // Update the image object with metadata
+            Object.assign(img, meta, { metadataLoaded: true });
+            return img;
         }
         
         function renderGallery() {
@@ -571,8 +570,21 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             const endIdx = Math.min(startIdx + perPage, filtered.length);
             const pageImages = filtered.slice(startIdx, endIdx);
             
+            // Lazy-load metadata for current page only
+            Promise.all(pageImages.map(img => loadMetadata(img))).then(() => {
+                // Re-render after metadata loads to show prompts/loras
+                renderCurrentPage(pageImages, currentPage, totalPages, filtered.length, startIdx, endIdx);
+            });
+            
+            // Render immediately with placeholders, metadata will update when loaded
+            renderCurrentPage(pageImages, currentPage, totalPages, filtered.length, startIdx, endIdx);
+        }
+        
+        function renderCurrentPage(pageImages, currentPage, totalPages, filteredLength, startIdx, endIdx) {
+            const gallery = document.getElementById('gallery');
+            
             // Render pagination controls
-            const paginationHtml = renderPagination(currentPage, totalPages, filtered.length, startIdx, endIdx);
+            const paginationHtml = renderPagination(currentPage, totalPages, filteredLength, startIdx, endIdx);
             document.getElementById('paginationTop').innerHTML = paginationHtml;
             document.getElementById('paginationBottom').innerHTML = paginationHtml;
             
@@ -586,7 +598,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                      data-key="${img.key}"
                      onclick="handleCardClick(event, '${img.key}')">
                     ${img.quality_grade ? `<div class="quality-overlay grade-${img.quality_grade.toLowerCase()}">${img.quality_grade}</div>` : ''}
-                    <img src="${img.url}" onclick="openModal(event, '${img.url}')" loading="lazy">
+                    <img src="/thumbnail?url=${encodeURIComponent(img.url)}" onclick="openModal(event, '${img.url}')" loading="lazy">
                     <div class="card-body">
                         <div class="card-title">${img.key}</div>
                         <div class="prompt">${escapeHtml(img.prompt || 'No prompt')}</div>
@@ -830,6 +842,43 @@ class GalleryHandler(http.server.BaseHTTPRequestHandler):
         elif self.path == '/favicon.ico':
             self.send_response(204)
             self.end_headers()
+        elif self.path.startswith('/thumbnail'):
+            try:
+                query = urlparse(self.path).query
+                params = parse_qs(query)
+                img_url = params.get('url', [None])[0]
+                
+                if not img_url:
+                    self.send_error(400, "Missing 'url' parameter")
+                    return
+
+                # Fetch image from MinIO
+                resp = requests.get(img_url, timeout=5)
+                if resp.status_code != 200:
+                    self.send_error(404, "Could not fetch image")
+                    return
+
+                # Process image
+                img = Image.open(io.BytesIO(resp.content))
+                img.thumbnail((350, 350))  # Resize to max 350px (card width covers approx 300px)
+                
+                # Convert to RGB if necessary (e.g. if RGBA)
+                if img.mode in ('RGBA', 'P'):
+                    img = img.convert('RGB')
+
+                out_io = io.BytesIO()
+                img.save(out_io, 'JPEG', quality=85)
+                out_io.seek(0)
+                
+                self.send_response(200)
+                self.send_header('Content-type', 'image/jpeg')
+                self.send_header('Cache-Control', 'public, max-age=86400')  # Cache for 1 day
+                self.end_headers()
+                self.wfile.write(out_io.getvalue())
+                
+            except Exception as e:
+                print(f"[ERROR] Thumbnail generation failed: {e}")
+                self.send_error(500, f"Internal Server Error: {e}")
         else:
             self.send_error(404)
     
@@ -841,9 +890,29 @@ class ThreadingTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
     """Handle each request in a separate thread to prevent blocking."""
     allow_reuse_address = True
     daemon_threads = True
+    # Timeout for socket operations - prevents hung client connections from blocking threads forever
+    timeout = 30  # Server-level timeout (for accept())
+
+    def finish_request(self, request, client_address):
+        """Override to set socket timeout on each request."""
+        # Set per-socket timeout to prevent threads blocking on hung clients
+        request.settimeout(30)  # 30 second timeout for individual socket operations
+        super().finish_request(request, client_address)
 
 
 def main():
+    # Production guardrail: Prevent accidental execution on dev machine (Magneto)
+    hostname = socket.gethostname()
+    if hostname == "Magneto" and "--dev" not in sys.argv:
+        print("\n[ERROR] DEPLOYMENT GUARDRAIL TRIGGERED")
+        print("----------------------------------------")
+        print(f"You are attempting to run the Gallery Server on {hostname} (Local Host).")
+        print("This service is designed to run on Cerebro (192.168.1.162).")
+        print("\nTo bypass this and run locally for development, use:")
+        print("    python3 scripts/gallery_server.py --dev")
+        print("\nExiting to prevent accidental local deployment.")
+        sys.exit(1)
+
     server = ThreadingTCPServer(("", PORT), GalleryHandler)
     with server:
         print(f"[OK] Gallery server running at http://localhost:{PORT}")
