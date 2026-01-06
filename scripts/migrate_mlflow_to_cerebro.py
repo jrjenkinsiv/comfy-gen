@@ -18,20 +18,22 @@ import requests
 MOIRA_MLFLOW = "http://192.168.1.215:5000"
 CEREBRO_MLFLOW = "http://192.168.1.162:5001"
 
+
 def get_experiments(uri: str) -> List[Dict[str, Any]]:
     """Get all experiments from an MLflow server."""
     resp = requests.get(f"{uri}/api/2.0/mlflow/experiments/search", params={"max_results": 100})
     resp.raise_for_status()
     return resp.json().get("experiments", [])
 
+
 def get_runs(uri: str, experiment_id: str) -> List[Dict[str, Any]]:
     """Get all runs for an experiment."""
     resp = requests.post(
-        f"{uri}/api/2.0/mlflow/runs/search",
-        json={"experiment_ids": [experiment_id], "max_results": 1000}
+        f"{uri}/api/2.0/mlflow/runs/search", json={"experiment_ids": [experiment_id], "max_results": 1000}
     )
     resp.raise_for_status()
     return resp.json().get("runs", [])
+
 
 def create_experiment(uri: str, name: str) -> str:
     """Create or restore experiment on destination server. Returns experiment_id."""
@@ -43,26 +45,23 @@ def create_experiment(uri: str, name: str) -> str:
             return exp["experiment_id"]
 
     # Check if deleted
-    resp = requests.get(f"{uri}/api/2.0/mlflow/experiments/search", params={"max_results": 100, "view_type": "DELETED_ONLY"})
+    resp = requests.get(
+        f"{uri}/api/2.0/mlflow/experiments/search", params={"max_results": 100, "view_type": "DELETED_ONLY"}
+    )
     deleted_exps = resp.json().get("experiments", [])
     for exp in deleted_exps:
         if exp["name"] == name:
             print(f"  [OK] Restoring deleted experiment '{name}' (id={exp['experiment_id']})")
-            requests.post(
-                f"{uri}/api/2.0/mlflow/experiments/restore",
-                json={"experiment_id": exp["experiment_id"]}
-            )
+            requests.post(f"{uri}/api/2.0/mlflow/experiments/restore", json={"experiment_id": exp["experiment_id"]})
             return exp["experiment_id"]
 
     # Create new
-    resp = requests.post(
-        f"{uri}/api/2.0/mlflow/experiments/create",
-        json={"name": name}
-    )
+    resp = requests.post(f"{uri}/api/2.0/mlflow/experiments/create", json={"name": name})
     resp.raise_for_status()
     exp_id = resp.json()["experiment_id"]
     print(f"  [OK] Created experiment '{name}' (id={exp_id})")
     return exp_id
+
 
 def create_run(uri: str, experiment_id: str, run_data: Dict[str, Any]) -> str:
     """Create a run on destination server. Returns run_id."""
@@ -88,7 +87,7 @@ def create_run(uri: str, experiment_id: str, run_data: Dict[str, Any]) -> str:
     for param in data.get("params", []):
         requests.post(
             f"{uri}/api/2.0/mlflow/runs/log-parameter",
-            json={"run_id": new_run_id, "key": param["key"], "value": param["value"]}
+            json={"run_id": new_run_id, "key": param["key"], "value": param["value"]},
         )
 
     # Log metrics - metrics are a list of {key, value, timestamp, step} dicts
@@ -100,18 +99,19 @@ def create_run(uri: str, experiment_id: str, run_data: Dict[str, Any]) -> str:
                 "key": metric["key"],
                 "value": metric["value"],
                 "timestamp": metric.get("timestamp", info["start_time"]),
-                "step": metric.get("step", 0)
-            }
+                "step": metric.get("step", 0),
+            },
         )
 
     # Update run status and end_time
     if info.get("status") == "FINISHED":
         requests.post(
             f"{uri}/api/2.0/mlflow/runs/update",
-            json={"run_id": new_run_id, "status": "FINISHED", "end_time": info.get("end_time")}
+            json={"run_id": new_run_id, "status": "FINISHED", "end_time": info.get("end_time")},
         )
 
     return new_run_id
+
 
 def migrate():
     """Migrate all experiments and runs from moira to cerebro."""
@@ -165,9 +165,12 @@ def migrate():
     print(f"[OK] Migration complete! Migrated {total_runs_migrated} runs")
     print(f"\nView experiments at: {CEREBRO_MLFLOW}")
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Migrate MLflow experiments from moira to cerebro")
-    parser.add_argument("--clean", action="store_true", help="Delete all existing experiments on cerebro first (except Default)")
+    parser.add_argument(
+        "--clean", action="store_true", help="Delete all existing experiments on cerebro first (except Default)"
+    )
     args = parser.parse_args()
 
     if args.clean:
@@ -179,7 +182,7 @@ if __name__ == "__main__":
                     print(f"  Deleting experiment '{exp['name']}' (id={exp['experiment_id']})")
                     requests.post(
                         f"{CEREBRO_MLFLOW}/api/2.0/mlflow/experiments/delete",
-                        json={"experiment_id": exp["experiment_id"]}
+                        json={"experiment_id": exp["experiment_id"]},
                     )
             print("[OK] Cerebro experiments deleted\n")
         except Exception as e:
