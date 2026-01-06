@@ -2,6 +2,8 @@
 
 import subprocess
 import platform
+import socket
+import time
 
 
 def find_comfyui_process():
@@ -36,3 +38,52 @@ def find_comfyui_process():
             return result.stdout.strip().split('\n')[0]
     
     return None
+
+
+def check_port_listening(host, port, timeout=60):
+    """Check if a port is listening within a timeout period.
+    
+    Args:
+        host: Hostname or IP address
+        port: Port number
+        timeout: Maximum seconds to wait (default: 60)
+    
+    Returns:
+        bool: True if port is listening, False otherwise
+    """
+    start_time = time.time()
+    
+    while (time.time() - start_time) < timeout:
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(2)
+            result = sock.connect_ex((host, port))
+            sock.close()
+            
+            if result == 0:
+                return True
+        except (socket.error, OSError):
+            pass
+        
+        # Wait a bit before retrying
+        time.sleep(2)
+    
+    return False
+
+
+def read_last_lines(file_path, num_lines=20):
+    """Read last N lines from a file.
+    
+    Args:
+        file_path: Path to file
+        num_lines: Number of lines to read from end (default: 20)
+    
+    Returns:
+        str: Last N lines of file, or empty string if file doesn't exist
+    """
+    try:
+        with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
+            lines = f.readlines()
+            return ''.join(lines[-num_lines:])
+    except (FileNotFoundError, PermissionError):
+        return ""

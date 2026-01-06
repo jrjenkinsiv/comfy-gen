@@ -6,6 +6,7 @@ Run via SSH to start ComfyUI as a background process.
 import subprocess
 import sys
 import os
+from comfyui_utils import check_port_listening, read_last_lines
 
 COMFYUI_PATH = r"C:\Users\jrjen\AppData\Local\Programs\@comfyorgcomfyui-electron\resources\ComfyUI"
 PYTHON_PATH = r"C:\Users\jrjen\comfy\.venv\Scripts\python.exe"
@@ -38,11 +39,26 @@ def main():
         cwd=COMFYUI_PATH,
     )
 
-    print(f"[OK] ComfyUI started with PID: {process.pid}")
-    print(f"[INFO] Check log file: {LOG_FILE}")
-    print(f"[INFO] API should be available at http://192.168.1.215:8188")
+    print(f"[INFO] ComfyUI started with PID: {process.pid}")
+    print(f"[INFO] Waiting for port 8188 to be listening (timeout: 60 seconds)...")
 
-    return 0
+    # Wait for port 8188 to be available
+    if check_port_listening("0.0.0.0", 8188, timeout=60):
+        print(f"[OK] ComfyUI is running and listening on port 8188")
+        print(f"[INFO] Check log file: {LOG_FILE}")
+        print(f"[INFO] API available at http://192.168.1.215:8188")
+        return 0
+    else:
+        print(f"[ERROR] ComfyUI failed to start - port 8188 not listening after 60 seconds")
+        print(f"[ERROR] Last 20 lines of log file {LOG_FILE}:")
+        print("=" * 80)
+        log_content = read_last_lines(LOG_FILE, num_lines=20)
+        if log_content:
+            print(log_content)
+        else:
+            print("[WARN] Unable to read log file")
+        print("=" * 80)
+        return 1
 
 
 if __name__ == "__main__":
