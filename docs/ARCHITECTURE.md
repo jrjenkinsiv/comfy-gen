@@ -1,6 +1,6 @@
 # ComfyGen Architecture
 
-**Last verified:** 2026-01-05
+**Last verified:** 2026-01-06
 
 System design documentation covering workflows, presets, LoRA injection, and metadata tracking.
 
@@ -11,6 +11,7 @@ System design documentation covering workflows, presets, LoRA injection, and met
 - [Generation Presets](#generation-presets)
 - [Dynamic LoRA Injection](#dynamic-lora-injection)
 - [Metadata Tracking](#metadata-tracking)
+- [MinIO Object Storage](#minio-object-storage)
 
 ---
 
@@ -719,6 +720,146 @@ Metadata creation happens in `generate.py`:
 2. **Extract LoRAs** - `extract_loras_from_workflow()` finds all LoRA nodes
 3. **Create metadata** - `create_metadata_json()` assembles the complete JSON
 4. **Upload** - `upload_metadata_to_minio()` saves to MinIO after image upload
+
+---
+
+## MinIO Object Storage
+
+MinIO provides S3-compatible object storage for generated images and videos on moira. All generated assets are automatically uploaded and made publicly accessible via HTTP URLs.
+
+### Installation
+
+**Location on moira:**
+- **Binary:** `C:\mlflow-artifacts\minio.exe`
+- **Data directory:** `C:\mlflow-artifacts\data`
+
+### Startup
+
+**Starting MinIO manually:**
+
+```powershell
+# SSH to moira
+ssh moira
+
+# Start MinIO server
+cd C:\mlflow-artifacts
+.\minio.exe server .\data --console-address ":9001"
+```
+
+**MinIO should start automatically on moira boot.** If it doesn't respond after reboot, use the command above.
+
+### Endpoints
+
+| Service | Port | URL | Purpose |
+|---------|------|-----|---------|
+| MinIO API | 9000 | http://192.168.1.215:9000 | S3-compatible API for uploads/downloads |
+| MinIO Console | 9001 | http://192.168.1.215:9001 | Web UI for bucket management |
+
+### Health Check
+
+Verify MinIO is running:
+
+```bash
+# Check API health
+curl http://192.168.1.215:9000/minio/health/live
+
+# Expected output: HTTP 200 OK (no body)
+```
+
+### Credentials
+
+**Default credentials (local development):**
+- **Username:** `minioadmin`
+- **Password:** `minioadmin`
+
+These credentials are used by:
+- MinIO Console login (http://192.168.1.215:9001)
+- `generate.py` for automated uploads (configured in code)
+- Manual S3 client access
+
+**Security note:** These are development credentials. MinIO is only accessible on the local network (192.168.1.0/24).
+
+### Bucket Configuration
+
+**Primary bucket:** `comfy-gen`
+
+This bucket stores all generated images, videos, and metadata JSON files.
+
+**Public access:** The `comfy-gen` bucket is configured with public read access, allowing generated images to be viewed directly via URL without authentication.
+
+**Setting bucket policy (if needed):**
+
+```bash
+# Make bucket publicly readable
+python3 scripts/set_bucket_policy.py
+```
+
+**Creating the bucket (first-time setup):**
+
+```bash
+# Create comfy-gen bucket
+python3 scripts/create_bucket.py
+```
+
+### Accessing Images
+
+**Direct URL format:**
+```
+http://192.168.1.215:9000/comfy-gen/<filename>
+```
+
+**Example:**
+```
+http://192.168.1.215:9000/comfy-gen/20260104_011032_output.png
+```
+
+**Listing bucket contents:**
+
+```bash
+# List all files in comfy-gen bucket
+curl -s http://192.168.1.215:9000/comfy-gen/ | grep -oP '(?<=<Key>)[^<]+'
+```
+
+### SSH Tunnel (Secure Remote Access)
+
+For accessing MinIO from machines without direct network access:
+
+```bash
+# Create SSH tunnel
+python3 scripts/minio_tunnel.py
+
+# Then access via localhost
+open http://localhost:9000/comfy-gen/
+```
+
+The tunnel script creates an SSH port forward: `localhost:9000` → `moira:9000`
+
+### Troubleshooting
+
+**MinIO not responding:**
+
+1. Check if process is running:
+   ```powershell
+   ssh moira "tasklist | findstr minio"
+   ```
+
+2. Restart MinIO:
+   ```powershell
+   ssh moira "cd C:\mlflow-artifacts && .\minio.exe server .\data --console-address ':9001'"
+   ```
+
+**Access denied errors:**
+
+Bucket policy may need to be reset:
+```bash
+python3 scripts/set_bucket_policy.py
+```
+
+**Images not uploading:**
+
+1. Verify MinIO health: `curl http://192.168.1.215:9000/minio/health/live`
+2. Check bucket exists: `curl -s http://192.168.1.215:9000/comfy-gen/`
+3. Verify credentials in `generate.py` (minioadmin/minioadmin)
 
 ---
 
