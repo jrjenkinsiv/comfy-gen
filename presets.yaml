@@ -123,3 +123,53 @@ presets:
       - name: big_breasts_v2_epoch_30.safetensors
         strength: 0.7
     notes: "For adult content. Requires explicit prompts."
+  
+  # ========================================
+  # VIDEO PRESETS (Wan 2.2)
+  # ========================================
+  
+  # Fast video generation - 4 steps with acceleration LoRA
+  video-fast:
+    workflow: workflows/wan22-t2v.json
+    steps: 4
+    cfg: 1.0                   # Low CFG for acceleration LoRAs
+    sampler: euler
+    scheduler: simple
+    length: 81                 # ~5 seconds at 16fps
+    fps: 16
+    validate: false            # Skip validation for speed
+    notes: "Fast video generation with 4-step acceleration LoRA. Acceleration LoRA is included in workflow."
+  
+  # High quality video - 30 steps with physics LoRAs
+  video-quality:
+    workflow: workflows/wan22-t2v.json
+    steps: 30
+    cfg: 6.0
+    sampler: euler
+    scheduler: normal
+    length: 81
+    fps: 16
+    loras:
+      - name: BoobPhysics_WAN_v6.safetensors
+        strength: 0.7          # Realistic body physics
+      - name: BounceHighWan2_2.safetensors
+        strength: 0.7          # Dynamic motion
+    validate: true
+    notes: "High quality video with realistic physics. Use without acceleration LoRA (remove from workflow or use 30 steps)."
+  
+  # NSFW video generation preset
+  video-nsfw:
+    workflow: workflows/wan22-t2v.json
+    steps: 30
+    cfg: 7.0                   # Higher CFG for better prompt adherence
+    sampler: euler
+    scheduler: normal
+    length: 81
+    fps: 16
+    loras:
+      - name: BoobPhysics_WAN_v6.safetensors
+        strength: 0.8
+      - name: wan-thiccum-v3.safetensors
+        strength: 0.7
+    validate: true
+    notes: "For adult video content. Requires explicit prompts. Includes physics and body enhancement."

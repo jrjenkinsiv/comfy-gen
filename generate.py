@@ -2345,6 +2345,16 @@ def main():
     # Process LoRA arguments
     lora_specs = []
     
+    # First, load LoRAs from generation preset if specified
+    if preset_params and 'loras' in preset_params:
+        print(f"[OK] Loading LoRAs from preset '{args.preset}'")
+        for lora_entry in preset_params['loras']:
+            lora_name = lora_entry.get('name')
+            strength = lora_entry.get('strength', 1.0)
+            if lora_name:
+                lora_specs.append((lora_name, strength, strength))
+                print(f"  - {lora_name} (strength: {strength})")
+    
     # Handle --lora-preset
     if args.lora_preset:
         catalog = load_lora_presets()
@@ -2429,6 +2439,12 @@ def main():
     height = args.height if args.height is not None else preset_params.get('height')
     sampler = args.sampler if args.sampler is not None else preset_params.get('sampler')
     scheduler = args.scheduler if args.scheduler is not None else preset_params.get('scheduler')
+    
+    # Merge video-specific parameters from preset
+    if args.length is None and 'length' in preset_params:
+        args.length = preset_params.get('length')
+    if args.fps is None and 'fps' in preset_params:
+        args.fps = preset_params.get('fps')
     
     # Handle seed=-1 for random seed generation
     if seed == -1:
