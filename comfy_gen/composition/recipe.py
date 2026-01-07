@@ -7,7 +7,7 @@ parameters needed to generate an image from multiple categories.
 from __future__ import annotations
 
 import hashlib
-from typing import Literal
+from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -59,11 +59,11 @@ class Recipe(BaseModel):
     cfg: float = Field(default=7.5, ge=1.0, le=30.0)
     width: int = Field(default=1024, ge=64, le=4096)
     height: int = Field(default=1024, ge=64, le=4096)
-    sampler: str | None = None
-    scheduler: str | None = None
-    denoise: float | None = Field(default=None, ge=0.0, le=1.0)
-    checkpoint: str | None = None
-    vae: str | None = None
+    sampler: Optional[str] = None
+    scheduler: Optional[str] = None
+    denoise: Optional[float] = Field(default=None, ge=0.0, le=1.0)
+    checkpoint: Optional[str] = None
+    vae: Optional[str] = None
 
     # Workflow
     workflow: str = Field(default="flux-dev.json", description="Selected workflow file")

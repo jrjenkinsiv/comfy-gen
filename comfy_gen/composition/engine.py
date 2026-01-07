@@ -12,7 +12,7 @@ The CompositionEngine handles:
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 
 from .recipe import CompositionStep, LoraStack, Recipe
 
@@ -41,7 +41,7 @@ class CompositionEngine:
     6. Select workflow based on category types
     """
 
-    def __init__(self, registry: CategoryRegistry | None = None) -> None:
+    def __init__(self, registry: Optional[CategoryRegistry] = None) -> None:
         """Initialize the composition engine.
 
         Args:

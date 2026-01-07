@@ -1,5 +1,7 @@
 """Explanation schema - justification tree for composition decisions."""
 
+from typing import Optional, Union
+
 from pydantic import BaseModel, Field
 
 
@@ -18,7 +20,7 @@ class ConflictResolution(BaseModel):
     categories: list[str] = Field(description="Categories involved in the conflict")
     conflict_type: str = Field(description="Type: 'semantic', 'style', 'subject', 'exclusive'")
     resolution: str = Field(description="How it was resolved")
-    winner: str | None = Field(default=None, description="Which category won (if applicable)")
+    winner: Optional[str] = Field(default=None, description="Which category won (if applicable)")
 
 
 class LoRASelection(BaseModel):
@@ -43,9 +45,9 @@ class ParameterDecision(BaseModel):
     """Record of how a parameter value was determined."""
 
     parameter: str = Field(description="Parameter name (e.g., 'steps', 'cfg')")
-    value: int | float | str = Field(description="Final value")
-    source: str = Field(description="Where the value came from: 'category', 'default', 'user', 'merged'")
-    reasoning: str | None = Field(default=None, description="Additional reasoning if complex")
+    value: Union[int, float, str] = Field(description="Final value")
+    source: str = Field(description="Where the value came from: 'category', 'default', 'user', 'merged')")
+    reasoning: Optional[str] = Field(default=None, description="Additional reasoning if complex")
 
 
 class ExplanationBlock(BaseModel):
@@ -77,7 +79,7 @@ class ExplanationBlock(BaseModel):
     # LoRA selection
     lora_selection: list[LoRASelection] = Field(default_factory=list, description="Why each LoRA was chosen")
     lora_caps_applied: bool = Field(default=False, description="Whether LoRA count was capped")
-    lora_cap_reason: str | None = Field(default=None, description="Reason for cap if applied")
+    lora_cap_reason: Optional[str] = Field(default=None, description="Reason for cap if applied")
 
     # Workflow selection
     workflow_selection: WorkflowSelection = Field(description="Why this workflow was chosen")

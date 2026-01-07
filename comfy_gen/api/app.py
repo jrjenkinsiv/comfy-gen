@@ -2,13 +2,20 @@
 
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import AsyncGenerator
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from .config import settings
-from .routes import categories_router, generation_router
+from .routes import (
+    categories_router,
+    compose_router,
+    favorites_router,
+    generation_router,
+)
 
 # Configure logging
 logging.basicConfig(
@@ -58,6 +65,23 @@ app.add_middleware(
 # Include routers
 app.include_router(generation_router)
 app.include_router(categories_router, prefix="/api/v1")
+app.include_router(compose_router, prefix="/api/v1")
+app.include_router(favorites_router, prefix="/api/v1")
+
+# Mount GUI static files
+gui_static_path = Path(__file__).parent.parent / "gui" / "static"
+if gui_static_path.exists():
+    app.mount("/static", StaticFiles(directory=str(gui_static_path)), name="static")
+    logger.info(f"Mounted GUI static files from {gui_static_path}")
+
+# Setup GUI routes (Jinja2 templates)
+try:
+    from comfy_gen.gui import setup_gui
+
+    setup_gui(app)
+    logger.info("GUI routes configured")
+except ImportError as e:
+    logger.warning(f"GUI not available: {e}")
 
 
 # Health check endpoint

@@ -69,10 +69,19 @@ C:\Users\jrjen\comfy\models\
 
 | Filename | Type | Size | Workflow | Score | Notes |
 |----------|------|------|----------|-------|-------|
+| `veteNightfallAnime_v01.safetensors` | Illustrious | 6.6GB | TBD | TBD | **ANIME/GAME ART** Illustrious-based, clean anime style. Works with Boondocks LoRAs. |
 | `realisticVisionV60B1_v51HyperVAE.safetensors` | SD 1.5 Hyper | 4GB | `realistic-vision.json` | 0.675 | **TOP** Best photorealism, includes VAE. |
 | `majicmixRealistic_v7.safetensors` | SD 1.5 | 2GB | `majicmix-realistic.json` | 0.674 | Excellent for portraits/NSFW. 1.1M+ downloads. |
 | `ponyDiffusionV6XL_v6StartWithThisOne.safetensors` | SDXL/Pony | 6.6GB | `pony-v6.json` | 0.664 | SDXL-based. Use score_9 tags. Native 1024x1024. |
 | `v1-5-pruned-emaonly-fp16.safetensors` | SD 1.5 | 2GB | `flux-dev.json` | ~0.55 | Baseline model. Fast but lower quality. |
+
+### Illustrious Models - Anime/Illustration
+
+Illustrious is a newer model architecture optimized for anime and illustration styles:
+- **Better at:** Clean lines, cel animation, cartoon aesthetics, character design
+- **Use for:** Game art, anime characters, illustration work, non-photorealistic styles
+- **Compatible LoRAs:** Boondocks style, anime art styles
+- **Resolution:** Native 1024x1024 or higher
 
 ### Pony Diffusion V6 XL - Special Tags
 
@@ -131,7 +140,30 @@ python scripts/download_model.py --model-id 4384 --type checkpoint   # DreamShap
 
 LoRA files are stored in `C:\Users\jrjen\comfy\models\loras\`.
 
-**Note:** LoRA inventory is maintained locally. Many LoRAs are for specialized content generation.
+**Note:** LoRA inventory is maintained in `lora_catalog.yaml` with proper categorization (anime, style, nsfw, etc).
+
+### Anime & Illustration Style LoRAs
+
+| Filename | Compatible With | Strength | Notes |
+|----------|----------------|----------|-------|
+| `The_BoondocksILL.safetensors` | Illustrious models | 0.8 | **The Boondocks** anime/cartoon art style. Clean lines, expressive characters. CivitAI 2040083 |
+| `Boondocks_style_and_characters.safetensors` | Illustrious models | 0.8 | **The Boondocks** style with character references. CivitAI 1997157 |
+| `NarutoSS.safetensors` | Illustrious models | 0.7 | **Naruto Storm** game style. Vibrant cel-shaded anime, dynamic. CivitAI 2229766 (280 DL) |
+| `jic-000035.safetensors` | Illustrious models | 0.7 | **Jic** style. Clean soft anime illustration, gentle design. CivitAI 2254980 (105 DL) |
+| `PinpinStyle_V1.safetensors` | Illustrious models | 0.8 | **Pinpin** style. Hand-drawn artistic anime. CivitAI 2285773 (82 DL) |
+| `Markydaysaid-000030.safetensors` | Illustrious models | 0.7 | **Markydaysaid** webcomic style. Bold expressive cartoons. CivitAI 2255040 (138 DL) |
+
+**Anime/Illustration Usage:**
+- Use with Illustrious-based checkpoints (`veteNightfallAnime_v01.safetensors`)
+- Perfect for game character design, animation-style art
+- Combine with detailed prompts for best results
+
+**CRITICAL for African-American characters:**
+- **Skin tone:** "African American Black man, dark brown skin tone, deep brown mocha complexion"
+- **Facial features:** "West African features, full lips, broad nose, African facial structure"
+- **Negative prompt:** "thin lips, narrow nose, European features, Asian features, pale skin, light skin, white person, caucasian"
+- Anime models default to East Asian/European features even with dark skin - must explicitly specify African features
+- Negative prompt: "realistic, photorealistic, 3d render"
 
 ### Acceleration LoRAs (Reduce Steps)
 

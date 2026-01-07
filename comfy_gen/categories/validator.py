@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
+from typing import Optional, Union
 
 import jsonschema
 import yaml
@@ -13,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 # Load schema once at module import
 _SCHEMA_PATH = Path(__file__).parent / "schema.json"
-_SCHEMA: dict | None = None
+_SCHEMA: Optional[dict] = None
 
 
 def get_schema() -> dict:
@@ -25,7 +26,7 @@ def get_schema() -> dict:
     return _SCHEMA
 
 
-def validate_category(data: dict, filepath: str | Path | None = None) -> list[str]:
+def validate_category(data: dict, filepath: Optional[Union[str, Path]] = None) -> list[str]:
     """
     Validate a category dict against the JSON schema.
 
@@ -48,7 +49,7 @@ def validate_category(data: dict, filepath: str | Path | None = None) -> list[st
     return errors
 
 
-def validate_category_file(filepath: str | Path) -> list[str]:
+def validate_category_file(filepath: Union[str, Path]) -> list[str]:
     """
     Load and validate a category YAML file.
 
@@ -75,7 +76,7 @@ def validate_category_file(filepath: str | Path) -> list[str]:
     return validate_category(data, filepath)
 
 
-def validate_all_categories(categories_dir: str | Path | None = None) -> dict[str, list[str]]:
+def validate_all_categories(categories_dir: Optional[Union[str, Path]] = None) -> dict[str, list[str]]:
     """
     Validate all category YAML files in a directory.
 

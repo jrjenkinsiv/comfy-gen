@@ -1,5 +1,7 @@
 """Recipe schema - the deterministic, replayable generation configuration."""
 
+from typing import Optional
+
 from pydantic import BaseModel, Field
 
 
@@ -8,7 +10,7 @@ class LoRAConfig(BaseModel):
 
     filename: str = Field(description="LoRA filename")
     strength: float = Field(default=0.8, ge=0.0, le=2.0, description="LoRA strength")
-    clip_strength: float | None = Field(default=None, ge=0.0, le=2.0, description="CLIP strength if different")
+    clip_strength: Optional[float] = Field(default=None, ge=0.0, le=2.0, description="CLIP strength if different")
 
     model_config = {"json_schema_extra": {"example": {"filename": "add_detail.safetensors", "strength": 0.6}}}
 
@@ -25,7 +27,7 @@ class Recipe(BaseModel):
 
     # Workflow
     workflow: str = Field(description="Workflow JSON filename")
-    checkpoint: str | None = Field(default=None, description="Checkpoint model filename")
+    checkpoint: Optional[str] = Field(default=None, description="Checkpoint model filename")
 
     # Prompts
     positive_prompt: str = Field(description="Final positive prompt")
@@ -44,8 +46,8 @@ class Recipe(BaseModel):
     seed: int = Field(default=-1, description="Random seed")
 
     # Optional settings
-    vae: str | None = Field(default=None, description="VAE model filename")
-    clip_skip: int | None = Field(default=None, description="CLIP skip layers")
+    vae: Optional[str] = Field(default=None, description="VAE model filename")
+    clip_skip: Optional[int] = Field(default=None, description="CLIP skip layers")
     denoise: float = Field(default=1.0, ge=0.0, le=1.0, description="Denoise strength for img2img")
 
     model_config = {

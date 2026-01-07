@@ -58,6 +58,25 @@ When assigned a meta-issue (instruction/documentation updates):
 
 **Tech Stack:** Python, ComfyUI API, MinIO (object storage), GitHub Actions.
 
+### Generation & Experiment Triggers
+
+**When user says any of these, immediately consult `instructions/experiments.md`:**
+- "run an experiment", "run experiment", "generate variations"
+- "batch generate", "batch generation", "run a batch"
+- "test different [poses/expressions/LoRAs/etc]"
+- "generate 50 [variations/options/versions]"
+
+**Minimum info needed from user:**
+1. Subject/character description (or infer from context)
+2. What to vary (poses, expressions, angles, LoRAs, etc.)
+3. Count (default: 50)
+
+**Agent MUST:**
+- Create batch script with variation arrays
+- Run generation with progress output
+- **Return ALL image URLs directly** (never say "check bucket")
+- Save results to JSON for later reference
+
 **Key Architecture:**
 - `generate.py` - Main CLI for queuing workflows to ComfyUI API
 - `workflows/` - JSON workflow templates (exported from ComfyUI)
@@ -282,6 +301,8 @@ python3 -m ruff check . --fix --unsafe-fixes
 4. **Module Validation** - smoke tests
 
 ### Generation Commands
+
+**See `instructions/experiments.md` for full batch generation and experiment documentation.**
 
 ```bash
 # Generate an image (from magneto)

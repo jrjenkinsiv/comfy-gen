@@ -5,6 +5,8 @@ Provides REST API for browsing and searching categories.
 
 from __future__ import annotations
 
+from typing import Optional
+
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
@@ -55,7 +57,7 @@ class CategorySearchResponse(BaseModel):
 
 @router.get("", response_model=CategoryListResponse)
 async def list_categories(
-    type: CategoryType | None = Query(None, description="Filter by category type"),  # noqa: B008
+    type: Optional[CategoryType] = Query(None, description="Filter by category type"),  # noqa: B008
     page: int = Query(1, ge=1, description="Page number (1-indexed)"),  # noqa: B008
     page_size: int = Query(20, ge=1, le=100, description="Items per page"),  # noqa: B008
 ) -> CategoryListResponse:

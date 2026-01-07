@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}Generate - ComfyGen{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Generate Image</h1>
+    <p class="subtitle">Create images using ComfyUI workflows</p>
+</div>
+
+<div class="generation-page">
+    <section class="input-section">
+        <div class="card">
+            <h2>Prompt</h2>
+            
+            <div class="input-group">
+                <label for="prompt-input">Positive Prompt</label>
+                <textarea 
+                    id="prompt-input" 
+                    placeholder="Describe what you want to generate..."
+                    rows="4"
+                ></textarea>
+            </div>
+            
+            <div class="input-group">
+                <label for="negative-input">Negative Prompt</label>
+                <textarea 
+                    id="negative-input" 
+                    placeholder="What to avoid (optional)..."
+                    rows="2"
+                ></textarea>
+            </div>
+            
+            <details class="settings-panel">
+                <summary>Advanced Settings</summary>
+                <div class="settings-grid">
+                    <div class="setting">
+                        <label for="workflow">Workflow</label>
+                        <select id="workflow">
+                            <option value="flux-dev.json">Flux Dev</option>
+                            <option value="flux-schnell.json">Flux Schnell</option>
+                            <option value="sdxl-base.json">SDXL Base</option>
+                        </select>
+                    </div>
+                    <div class="setting">
+                        <label for="steps">Steps</label>
+                        <input type="number" id="steps" value="30" min="10" max="100">
+                    </div>
+                    <div class="setting">
+                        <label for="cfg">CFG Scale</label>
+                        <input type="number" id="cfg" value="7.5" step="0.5" min="1" max="20">
+                    </div>
+                    <div class="setting">
+                        <label for="width">Width</label>
+                        <input type="number" id="width" value="1024" step="64" min="512" max="2048">
+                    </div>
+                    <div class="setting">
+                        <label for="height">Height</label>
+                        <input type="number" id="height" value="1024" step="64" min="512" max="2048">
+                    </div>
+                    <div class="setting">
+                        <label for="seed">Seed</label>
+                        <input type="number" id="seed" value="-1" min="-1">
+                        <small>-1 for random</small>
+                    </div>
+                </div>
+            </details>
+            
+            <div class="action-buttons">
+                <button id="generate-btn" class="btn primary">
+                    <span class="btn-text">Generate</span>
+                    <span class="btn-spinner hidden"></span>
+                </button>
+            </div>
+        </div>
+    </section>
+    
+    <section class="preview-section">
+        <div class="card">
+            <h2>Output</h2>
+            
+            <div id="progress-section" class="hidden">
+                <div class="progress-info">
+                    <span id="progress-text">Starting...</span>
+                </div>
+                <div class="progress-bar">
+                    <div id="progress-fill"></div>
+                </div>
+            </div>
+            
+            <div id="result-section" class="hidden">
+                <div class="result-image-container">
+                    <img id="result-image" alt="Generated image">
+                </div>
+                <div class="result-actions">
+                    <button id="favorite-btn" class="btn secondary">
+                        <span>&#9734;</span> Favorite
+                    </button>
+                    <a id="download-link" class="btn secondary" download>
+                        Download
+                    </a>
+                    <button id="copy-url-btn" class="btn secondary">
+                        Copy URL
+                    </button>
+                </div>
+            </div>
+            
+            <div id="empty-state" class="empty-state">
+                <p>Generated images will appear here</p>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/gui/static/js/generate.js"></script>
+{% endblock %}

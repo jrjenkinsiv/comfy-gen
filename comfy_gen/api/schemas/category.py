@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import re
 from enum import Enum
+from typing import Optional, Union
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -71,7 +72,7 @@ class LoraConfig(BaseModel):
     filename: str = Field(..., description="LoRA filename (with .safetensors)")
     strength: float = Field(default=0.8, ge=0.0, le=2.0, description="LoRA strength (0.0-2.0)")
     trigger_words: list[str] = Field(default_factory=list, description="Keywords to add when using this LoRA")
-    condition: str | None = Field(default=None, description="When to use (e.g., 'if nsfw', 'if photorealistic')")
+    condition: Optional[str] = Field(default=None, description="When to use (e.g., 'if nsfw', 'if photorealistic')")
 
     model_config = {"extra": "forbid"}
 
@@ -89,9 +90,9 @@ class LoraSettings(BaseModel):
 class RangeConfig(BaseModel):
     """Min/max/default range configuration."""
 
-    min: int | float | None = None
-    max: int | float | None = None
-    default: int | float | None = None
+    min: Optional[Union[int, float]] = None
+    max: Optional[Union[int, float]] = None
+    default: Optional[Union[int, float]] = None
 
     model_config = {"extra": "forbid"}
 
@@ -99,9 +100,9 @@ class RangeConfig(BaseModel):
 class SizeConfig(BaseModel):
     """Image size configuration."""
 
-    width: int | None = Field(default=None, ge=64, le=4096)
-    height: int | None = Field(default=None, ge=64, le=4096)
-    aspect_ratio: str | None = Field(default=None, pattern=r"^\d+:\d+$", description="Aspect ratio like '16:9'")
+    width: Optional[int] = Field(default=None, ge=64, le=4096)
+    height: Optional[int] = Field(default=None, ge=64, le=4096)
+    aspect_ratio: Optional[str] = Field(default=None, pattern=r"^\d+:\d+$", description="Aspect ratio like '16:9'")
 
     model_config = {"extra": "forbid"}
 
@@ -109,12 +110,12 @@ class SizeConfig(BaseModel):
 class GenerationSettings(BaseModel):
     """Generation parameter overrides for a category."""
 
-    steps: RangeConfig | None = None
-    cfg: RangeConfig | None = None
-    size: SizeConfig | None = None
-    sampler: str | None = None
-    scheduler: str | None = None
-    denoise: float | None = Field(default=None, ge=0.0, le=1.0)
+    steps: Optional[RangeConfig] = None
+    cfg: Optional[RangeConfig] = None
+    size: Optional[SizeConfig] = None
+    sampler: Optional[str] = None
+    scheduler: Optional[str] = None
+    denoise: Optional[float] = Field(default=None, ge=0.0, le=1.0)
 
     model_config = {"extra": "forbid"}
 
@@ -136,7 +137,7 @@ class CompositionRules(BaseModel):
     conflicts_with: list[str] = Field(default_factory=list, description="Category IDs that conflict")
     requires: list[str] = Field(default_factory=list, description="Category IDs that must also be present")
     enhances: list[str] = Field(default_factory=list, description="Category IDs this enhances (synergy)")
-    max_per_type: int | None = Field(default=None, ge=1, description="Max categories of same type to combine")
+    max_per_type: Optional[int] = Field(default=None, ge=1, description="Max categories of same type to combine")
 
     model_config = {"extra": "forbid"}
 
@@ -179,7 +180,7 @@ class Category(BaseModel):
     )
 
     # Workflows (optional)
-    workflows: WorkflowConfig | None = Field(default=None, description="Workflow preferences")
+    workflows: Optional[WorkflowConfig] = Field(default=None, description="Workflow preferences")
 
     # Composition rules (optional)
     composition: CompositionRules = Field(

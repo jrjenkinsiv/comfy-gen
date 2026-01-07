@@ -17,6 +17,91 @@
 
 loras:
   # ========================================
+  # ANIME & ILLUSTRATION STYLE LoRAs
+  # ========================================
+  # These LoRAs add anime/cartoon/illustration styles
+  # Compatible with Illustrious-based models
+  # Use strength 0.6-1.0 depending on desired intensity
+  
+  - filename: "The_BoondocksILL.safetensors"
+    tags: ["anime", "illustration", "boondocks", "cel-animation", "cartoon", "african-american", "style"]
+    compatible_with: ["veteNightfallAnime_v01.safetensors"]
+    base_model: "Illustrious"
+    recommended_strength: 0.8
+    description: "The Boondocks anime/cartoon art style - clean lines, expressive characters"
+    use_cases: ["character design", "animation style art", "cartoon aesthetics", "game character art"]
+    source: "CivitAI model 2040083"
+    civitai_id: 2040083
+    civitai_verified: true
+    category: "style"
+    nsfw: false
+    
+  - filename: "Boondocks_style_and_characters.safetensors"
+    tags: ["anime", "illustration", "boondocks", "cel-animation", "cartoon", "african-american", "style", "character"]
+    compatible_with: ["veteNightfallAnime_v01.safetensors"]
+    base_model: "Illustrious"
+    recommended_strength: 0.8
+    description: "The Boondocks style with character references - clean anime lines, expressive design"
+    use_cases: ["character design", "animation style art", "cartoon aesthetics", "game character art", "boondocks characters"]
+    source: "CivitAI model 1997157"
+    civitai_id: 1997157
+    civitai_verified: true
+    category: "style"
+    nsfw: false
+    
+  - filename: "NarutoSS.safetensors"
+    tags: ["anime", "cel-shaded", "naruto", "storm-style", "game-art", "3d-cel", "vibrant"]
+    compatible_with: ["veteNightfallAnime_v01.safetensors"]
+    base_model: "Illustrious"
+    recommended_strength: 0.7
+    description: "Naruto Storm game style - vibrant cel-shaded anime, dynamic character art"
+    use_cases: ["game character design", "cel-shaded art", "action poses", "vibrant colors", "anime game aesthetics"]
+    source: "CivitAI model 2229766"
+    civitai_id: 2229766
+    civitai_verified: true
+    category: "style"
+    nsfw: false
+    
+  - filename: "jic-000035.safetensors"
+    tags: ["anime", "clean-lines", "illustration", "soft", "gentle"]
+    compatible_with: ["veteNightfallAnime_v01.safetensors"]
+    base_model: "Illustrious"
+    recommended_strength: 0.7
+    description: "Jic art style - clean soft anime illustration, gentle character design"
+    use_cases: ["character portraits", "soft anime style", "clean illustration", "gentle aesthetics"]
+    source: "CivitAI model 2254980"
+    civitai_id: 2254980
+    civitai_verified: true
+    category: "style"
+    nsfw: false
+    
+  - filename: "PinpinStyle_V1.safetensors"
+    tags: ["anime", "illustration", "hand-drawn", "artistic", "expressive"]
+    compatible_with: ["veteNightfallAnime_v01.safetensors"]
+    base_model: "Illustrious"
+    recommended_strength: 0.8
+    description: "Pinpin art style - hand-drawn anime illustration with artistic flair"
+    use_cases: ["artistic character design", "expressive illustrations", "hand-drawn aesthetics", "unique style"]
+    source: "CivitAI model 2285773"
+    civitai_id: 2285773
+    civitai_verified: true
+    category: "style"
+    nsfw: false
+    
+  - filename: "Markydaysaid-000030.safetensors"
+    tags: ["cartoon", "illustration", "webcomic", "bold-lines", "expressive"]
+    compatible_with: ["veteNightfallAnime_v01.safetensors"]
+    base_model: "Illustrious"
+    recommended_strength: 0.7
+    description: "Markydaysaid webcomic style - bold expressive cartoon illustration"
+    use_cases: ["webcomic style art", "bold character design", "expressive cartoons", "comic aesthetics"]
+    source: "CivitAI model 2255040"
+    civitai_id: 2255040
+    civitai_verified: true
+    category: "style"
+    nsfw: false
+  
+  # ========================================
   # ACCELERATION LoRAs - Reduce generation steps
   # ========================================
   # These LoRAs reduce Wan 2.2 generation from 30+ steps to 4 steps

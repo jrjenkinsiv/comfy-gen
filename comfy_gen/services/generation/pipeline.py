@@ -4,6 +4,7 @@ import json
 import logging
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Optional, Union
 
 from ...api.schemas.generation import GenerationRequest
 from ...api.schemas.recipe import Recipe
@@ -17,7 +18,7 @@ class PipelineResult:
     """Result from the generation pipeline."""
 
     image_url: str
-    image_bytes: bytes | None
+    image_bytes: Optional[bytes]
     recipe: Recipe
     execution_time: float
     prompt_id: str
@@ -38,8 +39,8 @@ class GenerationPipeline:
 
     def __init__(
         self,
-        executor: ComfyUIExecutor | None = None,
-        workflows_dir: str | Path = "workflows",
+        executor: Optional[ComfyUIExecutor] = None,
+        workflows_dir: Union[str, Path] = "workflows",
     ):
         self.executor = executor or ComfyUIExecutor()
         self.workflows_dir = Path(workflows_dir)
@@ -138,7 +139,7 @@ class GenerationPipeline:
     async def execute(
         self,
         request: GenerationRequest,
-        client_id: str | None = None,
+        client_id: Optional[str] = None,
     ) -> PipelineResult:
         """
         Execute the full generation pipeline.

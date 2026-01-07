@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, Iterator
+from typing import TYPE_CHECKING, Iterator, Optional, Union
 
 import jsonschema
 import yaml
@@ -41,9 +41,9 @@ class CategoryRegistry:
     Uses singleton pattern via get_instance() for shared access.
     """
 
-    _instance: CategoryRegistry | None = None
+    _instance: Optional[CategoryRegistry] = None
 
-    def __init__(self, categories_dir: str | Path | None = None) -> None:
+    def __init__(self, categories_dir: Optional[Union[str, Path]] = None) -> None:
         """Initialize the registry.
 
         Args:
@@ -168,7 +168,7 @@ class CategoryRegistry:
 
         logger.debug(f"Loaded category: {category.id} ({category.type.value})")
 
-    def get(self, category_id: str) -> Category | None:
+    def get(self, category_id: str) -> Optional[Category]:
         """Get category by ID.
 
         Args:
@@ -264,7 +264,7 @@ def get_registry() -> CategoryRegistry:
     return CategoryRegistry.get_instance()
 
 
-def get_category(category_id: str) -> Category | None:
+def get_category(category_id: str) -> Optional[Category]:
     """Get a category by ID.
 
     Args:

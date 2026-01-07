@@ -3,7 +3,7 @@
 import asyncio
 import logging
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Optional
 
 import aiohttp
 
@@ -15,10 +15,10 @@ class ExecutionProgress:
     """Progress information from ComfyUI."""
 
     prompt_id: str
-    current_node: str | None = None
+    current_node: Optional[str] = None
     current_step: int = 0
     total_steps: int = 0
-    preview_image: bytes | None = None
+    preview_image: Optional[bytes] = None
 
 
 @dataclass
@@ -48,7 +48,7 @@ class ComfyUIExecutor:
     async def queue_prompt(
         self,
         workflow: dict,
-        client_id: str | None = None,
+        client_id: Optional[str] = None,
     ) -> str:
         """
         Queue a prompt/workflow for execution.
@@ -82,7 +82,7 @@ class ComfyUIExecutor:
                 logger.info(f"Queued prompt: {prompt_id}")
                 return prompt_id
 
-    async def get_history(self, prompt_id: str) -> dict | None:
+    async def get_history(self, prompt_id: str) -> Optional[dict]:
         """
         Get execution history for a prompt.
 
