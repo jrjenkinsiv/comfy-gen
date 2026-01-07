@@ -1475,6 +1475,9 @@ def create_metadata_json(
     refinement_strategy=None,
     refinement_previous_scores=None,
     refinement_status=None,
+    project=None,
+    tags=None,
+    batch_id=None,
 ):
     """Create metadata JSON for experiment tracking.
 
@@ -1558,9 +1561,38 @@ def create_metadata_json(
             "format": file_format,
             "generation_time_seconds": generation_time_seconds,
         },
+        "organization": {
+            "project": project,
+            "batch_id": batch_id,
+            "tags": _parse_tags(tags) if tags else None,
+        },
     }
 
     return metadata
+
+
+def _parse_tags(tags_string):
+    """Parse comma-separated tags into a dictionary.
+
+    Supports both simple tags and key:value pairs.
+
+    Examples:
+        "pose,expression,lora" -> {"pose": true, "expression": true, "lora": true}
+        "project:youngboh,batch:001" -> {"project": "youngboh", "batch": "001"}
+        "project:youngboh,pose,style:boondocks" -> {"project": "youngboh", "pose": true, "style": "boondocks"}
+    """
+    if not tags_string:
+        return None
+
+    result = {}
+    for tag in tags_string.split(","):
+        tag = tag.strip()
+        if ":" in tag:
+            key, value = tag.split(":", 1)
+            result[key.strip()] = value.strip()
+        else:
+            result[tag] = True
+    return result
 
 
 def upload_metadata_to_minio(metadata, object_name):
@@ -1996,6 +2028,22 @@ def main():
     parser.add_argument("--no-metadata", action="store_true", help="Disable JSON metadata sidecar upload")
     parser.add_argument(
         "--no-embed-metadata", action="store_true", help="Disable embedding metadata in PNG files (default: enabled)"
+    )
+    # Project and tagging for experiment organization
+    parser.add_argument(
+        "--project",
+        metavar="NAME",
+        help="Project name for organizing generations (e.g., 'youngboh', 'nsfw-handjob'). Added to metadata.",
+    )
+    parser.add_argument(
+        "--tags",
+        metavar="TAGS",
+        help="Comma-separated tags for filtering (e.g., 'batch:poses,character:protagonist,style:boondocks')",
+    )
+    parser.add_argument(
+        "--batch-id",
+        metavar="ID",
+        help="Batch identifier for grouping related generations (e.g., 'char-poses-001')",
     )
     parser.add_argument(
         "--mlflow-log",
@@ -2879,6 +2927,9 @@ def main():
             refinement_strategy=refinement_strategy,
             refinement_previous_scores=refinement_previous_scores,
             refinement_status=refinement_status,
+            project=getattr(args, "project", None),
+            tags=getattr(args, "tags", None),
+            batch_id=getattr(args, "batch_id", None),
         )
         metadata_url = upload_metadata_to_minio(metadata, object_name)
         if metadata_url and not args.quiet:

@@ -1,7 +1,7 @@
 """Generation request and response schemas."""
 
 from enum import Enum
-from typing import Any
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field
 
@@ -21,7 +21,7 @@ class ProgressInfo(BaseModel):
     current_step: int = Field(description="Current step number")
     total_steps: int = Field(description="Total steps")
     percent: float = Field(description="Completion percentage 0-1")
-    preview_url: str | None = Field(default=None, description="Preview image URL if available")
+    preview_url: Optional[str] = Field(default=None, description="Preview image URL if available")
 
     model_config = {"json_schema_extra": {"example": {"current_step": 15, "total_steps": 30, "percent": 0.5}}}
 
@@ -52,12 +52,12 @@ class GenerationRequest(BaseModel):
     )
 
     # LoRA configuration
-    loras: list[dict[str, Any]] | None = Field(
+    loras: Optional[list[dict[str, Any]]] = Field(
         default=None, description="Manual LoRA configuration: [{'filename': 'x.safetensors', 'strength': 0.8}]"
     )
 
     # Output options
-    output_filename: str | None = Field(default=None, description="Custom output filename")
+    output_filename: Optional[str] = Field(default=None, description="Custom output filename")
 
     model_config = {
         "json_schema_extra": {
@@ -81,18 +81,18 @@ class GenerationResponse(BaseModel):
 
     generation_id: str = Field(description="Unique ID for this generation")
     status: GenerationStatus = Field(description="Current status")
-    message: str | None = Field(default=None, description="Status message or error")
+    message: Optional[str] = Field(default=None, description="Status message or error")
 
     # Progress (when running)
-    progress: ProgressInfo | None = Field(default=None, description="Progress info when running")
+    progress: Optional[ProgressInfo] = Field(default=None, description="Progress info when running")
 
     # Result (when completed)
-    image_url: str | None = Field(default=None, description="Output image URL when completed")
-    recipe_hash: str | None = Field(default=None, description="Hash of the recipe used")
+    image_url: Optional[str] = Field(default=None, description="Output image URL when completed")
+    recipe_hash: Optional[str] = Field(default=None, description="Hash of the recipe used")
 
     # Metadata (when completed)
-    categories_used: list[str] | None = Field(default=None, description="Categories that were applied")
-    generation_time: float | None = Field(default=None, description="Generation time in seconds")
+    categories_used: Optional[list[str]] = Field(default=None, description="Categories that were applied")
+    generation_time: Optional[float] = Field(default=None, description="Generation time in seconds")
 
     model_config = {
         "json_schema_extra": {

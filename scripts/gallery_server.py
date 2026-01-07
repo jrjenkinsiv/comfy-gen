@@ -282,7 +282,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     </div>
 
     <div class="controls">
-        <input type="text" id="search" placeholder="Search prompts..." style="flex: 1; min-width: 200px;">
+        <input type="text" id="search" placeholder="Search prompts or filename..." style="flex: 1; min-width: 200px;">
+        <select id="projectFilter">
+            <option value="all">All Projects</option>
+        </select>
         <select id="filter">
             <option value="all">All Images</option>
             <option value="lora">With LoRA</option>
@@ -336,6 +339,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         const MINIO = '__MINIO_ENDPOINT__';
         const BUCKET = '__BUCKET__';
         let allImages = [];
+        let allProjects = new Set();
         let selectedImages = new Set();
         let favorites = new Set();
         let viewMode = { type: 'grid', size: 'medium' };
@@ -353,6 +357,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
                     // Restore filters and sort
                     if (prefs.filter) document.getElementById('filter').value = prefs.filter;
+                    if (prefs.projectFilter) document.getElementById('projectFilter').value = prefs.projectFilter;
                     if (prefs.qualityFilter) document.getElementById('qualityFilter').value = prefs.qualityFilter;
                     if (prefs.sort) document.getElementById('sort').value = prefs.sort;
                     if (prefs.perPage) {
@@ -372,6 +377,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 viewMode: viewMode,
                 favorites: Array.from(favorites),
                 filter: document.getElementById('filter').value,
+                projectFilter: document.getElementById('projectFilter').value,
                 qualityFilter: document.getElementById('qualityFilter').value,
                 sort: document.getElementById('sort').value,
                 perPage: perPage
@@ -442,6 +448,15 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 
                 document.getElementById('stats').textContent = `${pngFiles.length} images in gallery`;
 
+                // Extract projects from filename patterns (e.g., "youngboh_20260107_...")
+                pngFiles.forEach(filename => {
+                    const match = filename.match(/^([a-z]+)_\\d{8}_/i);
+                    if (match && match[1].length > 3) {
+                        allProjects.add(match[1].toLowerCase());
+                    }
+                });
+                updateProjectDropdown();
+
                 // PERFORMANCE FIX: Only load metadata for first page, then lazy-load rest
                 // This prevents loading 558+ JSON files upfront
                 allImages = pngFiles.map(png => ({
@@ -465,7 +480,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             if (img.metadataLoaded) return img;
 
             const jsonKey = img.key + '.json';
-            let meta = { prompt: 'No metadata', loras: [], validation_score: null, quality_grade: null, quality_score: null };
+            let meta = { prompt: 'No metadata', loras: [], validation_score: null, quality_grade: null, quality_score: null, project: null, tags: null };
 
             try {
                 const metaResp = await fetch(`${MINIO}/${BUCKET}/${jsonKey}`);
@@ -490,8 +505,17 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                         generation_time: rawMeta.storage?.generation_time_seconds,
                         file_size: rawMeta.storage?.file_size_bytes,
                         model: rawMeta.workflow?.model,
-                        resolution: rawMeta.parameters?.resolution
+                        resolution: rawMeta.parameters?.resolution,
+                        project: rawMeta.organization?.project || null,
+                        batch_id: rawMeta.organization?.batch_id || null,
+                        tags: rawMeta.organization?.tags || null
                     };
+
+                    // Track project for dropdown population
+                    if (meta.project) {
+                        allProjects.add(meta.project);
+                        updateProjectDropdown();
+                    }
                 } else {
                     // Old flat format - maintain backward compatibility
                     meta = {
@@ -503,7 +527,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                         loras: rawMeta.loras || [],
                         validation_score: rawMeta.validation_score,
                         quality_grade: null,
-                        quality_score: null
+                        quality_score: null,
+                        project: null,
+                        batch_id: null,
+                        tags: null
                     };
                 }
             } catch (e) {
@@ -515,17 +542,40 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             return img;
         }
 
+        function updateProjectDropdown() {
+            const dropdown = document.getElementById('projectFilter');
+            const currentValue = dropdown.value;
+            const sortedProjects = Array.from(allProjects).sort();
+
+            dropdown.innerHTML = '<option value="all">All Projects</option>' +
+                sortedProjects.map(p => `<option value="${p}">${p}</option>`).join('');
+
+            // Restore selection if still valid
+            if (sortedProjects.includes(currentValue)) {
+                dropdown.value = currentValue;
+            }
+        }
+
         function renderGallery() {
             const search = document.getElementById('search').value.toLowerCase();
             const filter = document.getElementById('filter').value;
             const qualityFilter = document.getElementById('qualityFilter').value;
+            const projectFilter = document.getElementById('projectFilter').value;
             const sort = document.getElementById('sort').value;
 
             let filtered = allImages.filter(img => {
-                if (search && !img.prompt?.toLowerCase().includes(search)) return false;
+                // Search in prompt AND filename
+                if (search && !img.prompt?.toLowerCase().includes(search) && !img.key?.toLowerCase().includes(search)) return false;
                 if (filter === 'lora' && (!img.loras || img.loras.length === 0)) return false;
                 if (filter === 'validated' && (img.validation_score === null || img.validation_score < 0.9)) return false;
                 if (filter === 'favorites' && !favorites.has(img.key)) return false;
+
+                // Project filter - check metadata project OR filename prefix
+                if (projectFilter !== 'all') {
+                    const hasProjectMeta = img.project === projectFilter;
+                    const hasProjectPrefix = img.key?.toLowerCase().includes(projectFilter.toLowerCase());
+                    if (!hasProjectMeta && !hasProjectPrefix) return false;
+                }
 
                 // Quality grade filter
                 if (qualityFilter !== 'all' && img.quality_grade) {
@@ -794,6 +844,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             renderGallery();
             savePreferences();
         });
+        document.getElementById('projectFilter').addEventListener('change', () => {
+            currentPage = 1;  // Reset to first page on project filter change
+            renderGallery();
+            savePreferences();
+        });
         document.getElementById('qualityFilter').addEventListener('change', () => {
             currentPage = 1;  // Reset to first page on filter change
             renderGallery();
@@ -818,7 +873,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
                 }
             }
         });
-
         // Initialize
         loadPreferences();
         loadGallery();

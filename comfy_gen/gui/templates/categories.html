@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Categories - ComfyGen{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Category Browser</h1>
+    <p class="subtitle">Explore available categories for generation</p>
+</div>
+
+<div class="categories-page">
+    <section class="filters-section">
+        <div class="card">
+            <div class="filters">
+                <div class="filter-group">
+                    <label for="type-filter">Type</label>
+                    <select id="type-filter">
+                        <option value="">All Types</option>
+                        <option value="subject">Subject</option>
+                        <option value="setting">Setting</option>
+                        <option value="modifier">Modifier</option>
+                        <option value="style">Style</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="search-input">Search</label>
+                    <input type="text" id="search-input" placeholder="Search categories...">
+                </div>
+                <div class="filter-group">
+                    <label for="policy-filter">Policy Tier</label>
+                    <select id="policy-filter">
+                        <option value="">All Tiers</option>
+                        <option value="general">General</option>
+                        <option value="mature">Mature</option>
+                        <option value="explicit">Explicit</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <section class="categories-grid-section">
+        <div id="categories-grid" class="categories-grid">
+            <div class="loading-state">Loading categories...</div>
+        </div>
+    </section>
+    
+    <div id="category-detail-modal" class="modal hidden">
+        <div class="modal-content">
+            <button class="modal-close">&times;</button>
+            <div id="category-detail"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/gui/static/js/categories.js"></script>
+{% endblock %}

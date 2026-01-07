@@ -7,7 +7,7 @@ Auto-validates requests/responses against Pydantic schemas.
 
 import asyncio
 import logging
-from typing import Any, AsyncIterator
+from typing import Any, AsyncIterator, Optional
 
 import httpx
 
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 class ComfyGenError(Exception):
     """Base exception for ComfyGen client errors."""
 
-    def __init__(self, message: str, status_code: int | None = None):
+    def __init__(self, message: str, status_code: Optional[int] = None):
         super().__init__(message)
         self.status_code = status_code
 
@@ -57,8 +57,8 @@ class ComfyGenClient:
     ):
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
-        self._sync_client: httpx.Client | None = None
-        self._async_client: httpx.AsyncClient | None = None
+        self._sync_client: Optional[httpx.Client] = None
+        self._async_client: Optional[httpx.AsyncClient] = None
 
     # Context managers for async usage
     async def __aenter__(self) -> "ComfyGenClient":
