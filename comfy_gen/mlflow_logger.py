@@ -4,11 +4,11 @@ MLflow experiment logging for ComfyGen.
 Comprehensive schema captures ALL generation parameters.
 Supports auto-logging from generate.py for EVERY future run.
 """
-import mlflow
-from typing import Optional, Dict, Any, List
-import json
-import os
+
 import datetime
+from typing import Any, Dict, List, Optional
+
+import mlflow
 
 MLFLOW_URI = "http://192.168.1.162:5001"
 DEFAULT_EXPERIMENT = "comfy-gen-nsfw"
@@ -25,27 +25,22 @@ GENERATION_PARAMS = {
     # Model params (REQUIRED)
     "checkpoint": "Base model checkpoint file",
     "workflow": "Workflow JSON file used",
-    
     # Sampling params (REQUIRED)
     "steps": "Number of sampling steps",
     "cfg": "CFG scale (classifier-free guidance)",
     "sampler": "Sampler algorithm (euler, euler_ancestral, dpm_2, etc)",
     "scheduler": "Scheduler type (normal, karras, exponential, etc)",
     "seed": "Random seed (-1 for random)",
-    
     # Image params (REQUIRED)
     "width": "Output width in pixels",
     "height": "Output height in pixels",
-    
     # LoRA params (capture ALL)
     "loras": "Comma-separated LoRAs with strengths: name:strength,name:strength",
     "lora_count": "Number of LoRAs used",
-    
     # Prompt params (capture FULL text)
     "prompt": "Full positive prompt",
     "negative_prompt": "Full negative prompt",
     "prompt_length": "Token count of positive prompt",
-    
     # Subject params
     "ethnicity": "Subject ethnicity/race",
     "hair_color": "Hair color",
@@ -53,18 +48,15 @@ GENERATION_PARAMS = {
     "cup_size": "Breast size if applicable",
     "expression": "Facial expression",
     "age_range": "Approximate age range (20s, 30s, etc)",
-    
     # Scene params
     "scene": "Scene type (handjob_pov, blowjob, etc)",
     "setting": "Location/environment",
     "lighting": "Lighting conditions",
     "camera_angle": "Camera angle/perspective",
-    
     # Technical params
     "vae": "VAE model used",
     "clip_skip": "CLIP skip value",
     "denoise": "Denoise strength for img2img",
-    
     # Session metadata
     "session": "Session date/identifier",
     "batch_id": "Batch generation ID if applicable",
@@ -77,6 +69,7 @@ REQUIRED_PARAMS = ["checkpoint", "workflow", "steps", "cfg", "width", "height", 
 def check_mlflow_health() -> bool:
     """Check if MLflow is reachable."""
     import requests
+
     try:
         resp = requests.get(f"{MLFLOW_URI}/health", timeout=5)
         return resp.status_code == 200
@@ -110,7 +103,7 @@ def log_experiment(
 ) -> Optional[str]:
     """
     Log an experiment to MLflow with comprehensive schema.
-    
+
     Args:
         run_name: Name for this run
         image_url: MinIO URL of generated image
@@ -122,7 +115,7 @@ def log_experiment(
         experiment_name: MLflow experiment name
         prompt: Full positive prompt (also accepted in params)
         negative_prompt: Full negative prompt (also accepted in params)
-        
+
     Returns:
         Run ID if successful, None if failed
     """
@@ -131,7 +124,7 @@ def log_experiment(
         params["prompt"] = prompt
     if negative_prompt:
         params["negative_prompt"] = negative_prompt
-    
+
     # Auto-calculate derived params
     if "prompt" in params:
         params["prompt_length"] = len(params["prompt"].split())
@@ -141,51 +134,53 @@ def log_experiment(
         # Also log individual LoRA strengths
         for lora_name, strength in lora_dict.items():
             params[f"lora_{lora_name}"] = strength
-    
+
     # Check required params
     missing = [p for p in REQUIRED_PARAMS if p not in params]
     if missing:
         print(f"[WARN] Missing REQUIRED params: {missing}")
         print("       These are essential for experiment reproducibility!")
-    
+
     # Check recommended params
     recommended = ["loras", "prompt", "negative_prompt", "seed", "scheduler"]
     missing_rec = [p for p in recommended if p not in params]
     if missing_rec:
         print(f"[INFO] Missing recommended params: {missing_rec}")
-    
+
     # Check MLflow health
     if not check_mlflow_health():
         print(f"[ERROR] MLflow not reachable at {MLFLOW_URI}")
-        print("        Try: ssh cerebro 'printf \"babyseal\\n\" | sudo -S pmset -a displaysleep 0 sleep 0 disksleep 0 powernap 0'")
+        print(
+            "        Try: ssh cerebro 'printf \"babyseal\\n\" | sudo -S pmset -a displaysleep 0 sleep 0 disksleep 0 powernap 0'"
+        )
         return None
-    
+
     try:
         mlflow.set_tracking_uri(MLFLOW_URI)
         mlflow.set_experiment(experiment_name)
-        
+
         # Enable system metrics logging
         with mlflow.start_run(run_name=run_name) as run:
             # Log ALL params
             mlflow.log_params(params)
-            
+
             # Log metrics
             mlflow.log_metric("validation_score", validation_score)
             mlflow.log_metric("user_rating", user_rating)
-            
+
             # Log tags (for searchability)
             mlflow.set_tag("user_feedback", feedback)
             mlflow.set_tag("image_url", image_url)
             mlflow.set_tag("minio_bucket", "comfy-gen")
-            
+
             if favorite:
                 mlflow.set_tag("favorite", "true")
-            
+
             # Extract filename for artifact reference
             if image_url:
                 filename = image_url.split("/")[-1]
                 mlflow.set_tag("image_filename", filename)
-            
+
             # Log checkpoint and workflow as tags too for easy filtering
             if "checkpoint" in params:
                 mlflow.set_tag("checkpoint", params["checkpoint"])
@@ -193,12 +188,12 @@ def log_experiment(
                 mlflow.set_tag("ethnicity", params["ethnicity"])
             if "scene" in params:
                 mlflow.set_tag("scene", params["scene"])
-            
+
             run_id = run.info.run_id
             print(f"[OK] Logged {run_name} to MLflow (run_id: {run_id[:8]}...)")
             print(f"     Params: {len(params)} | Rating: {user_rating}/5")
             return run_id
-            
+
     except Exception as e:
         print(f"[ERROR] Failed to log to MLflow: {e}")
         return None
@@ -261,7 +256,7 @@ def get_standard_params(
     loras: str = "",
     prompt: str = "",
     negative_prompt: str = "",
-    **kwargs
+    **kwargs,
 ) -> dict:
     """Helper to build a complete params dict with all standard fields."""
     params = {
@@ -292,10 +287,10 @@ def log_from_metadata(
 ) -> Optional[str]:
     """
     Auto-log from generate.py metadata dict.
-    
+
     This is called automatically when --mlflow-log is used with generate.py.
     Extracts all params from the metadata JSON that generate.py creates.
-    
+
     Args:
         metadata: The metadata dict from create_metadata_json()
         image_url: MinIO URL of the image
@@ -303,7 +298,7 @@ def log_from_metadata(
         user_rating: User rating 0-5 (0 = not rated yet)
         feedback: Optional feedback
         experiment_name: MLflow experiment name
-        
+
     Returns:
         Run ID if successful
     """
@@ -312,22 +307,22 @@ def log_from_metadata(
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         workflow_name = metadata.get("workflow", {}).get("name", "unknown").replace(".json", "")
         run_name = f"{timestamp}_{workflow_name}"
-    
+
     # Extract params from metadata (new structure)
     params = {}
-    
+
     # Input section
     input_section = metadata.get("input", {})
     params["prompt"] = input_section.get("prompt", "")
     params["negative_prompt"] = input_section.get("negative_prompt", "")
     params["preset"] = input_section.get("preset")
-    
+
     # Workflow section
     workflow_section = metadata.get("workflow", {})
     params["workflow"] = workflow_section.get("name", "unknown")
     params["checkpoint"] = workflow_section.get("model", "unknown")
     params["vae"] = workflow_section.get("vae")
-    
+
     # Parameters section (this is where the good stuff is)
     parameters = metadata.get("parameters", {})
     params["seed"] = parameters.get("seed")
@@ -335,13 +330,13 @@ def log_from_metadata(
     params["cfg"] = parameters.get("cfg")
     params["sampler"] = parameters.get("sampler")
     params["scheduler"] = parameters.get("scheduler")
-    
+
     # Resolution
     resolution = parameters.get("resolution", [])
     if resolution and len(resolution) >= 2:
         params["width"] = resolution[0]
         params["height"] = resolution[1]
-    
+
     # LoRAs - convert list to string format
     loras = parameters.get("loras", [])
     if loras:
@@ -351,22 +346,22 @@ def log_from_metadata(
             strength = lora.get("strength", 1.0)
             lora_strings.append(f"{name}:{strength}")
         params["loras"] = ",".join(lora_strings)
-    
+
     # Quality section
     quality = metadata.get("quality", {})
     prompt_adherence = quality.get("prompt_adherence", {})
     validation_score = prompt_adherence.get("clip", 0)
-    
+
     # Output section
     output_section = metadata.get("output", {})
     params["generation_time_seconds"] = output_section.get("generation_time_seconds")
-    
+
     # Session metadata
     params["session"] = datetime.datetime.now().strftime("%Y-%m-%d")
-    
+
     # Remove None values
     params = {k: v for k, v in params.items() if v is not None}
-    
+
     return log_experiment(
         run_name=run_name,
         image_url=image_url,
