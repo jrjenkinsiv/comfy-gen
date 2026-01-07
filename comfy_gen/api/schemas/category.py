@@ -1,4 +1,5 @@
 """Category schema - domain expertise with best practices."""
+
 from enum import Enum
 
 from pydantic import BaseModel, Field
@@ -24,10 +25,10 @@ class PolicyTier(str, Enum):
 class Keywords(BaseModel):
     """Keywords for category matching."""
 
-    primary: list[str] = Field(default_factory=list, description="Primary keywords that strongly indicate this category")
-    secondary: list[str] = Field(
-        default_factory=list, description="Secondary keywords with weaker association"
+    primary: list[str] = Field(
+        default_factory=list, description="Primary keywords that strongly indicate this category"
     )
+    secondary: list[str] = Field(default_factory=list, description="Secondary keywords with weaker association")
 
 
 class Prompts(BaseModel):

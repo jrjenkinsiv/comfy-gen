@@ -1,4 +1,5 @@
 """Generation request and response schemas."""
+
 from enum import Enum
 from typing import Any
 

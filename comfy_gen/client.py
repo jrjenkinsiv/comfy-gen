@@ -4,6 +4,7 @@ Typed HTTP client for comfy-gen API.
 Shared by CLI and MCP Server - provides type-safe access to all API endpoints.
 Auto-validates requests/responses against Pydantic schemas.
 """
+
 import asyncio
 import logging
 from typing import Any, AsyncIterator
@@ -15,7 +16,6 @@ from .api.schemas.generation import (
     GenerationResponse,
     GenerationStatus,
 )
-from .api.schemas.recipe import Recipe
 
 logger = logging.getLogger(__name__)
 
@@ -152,13 +152,9 @@ class ComfyGenClient:
         self._handle_error(response)
         return GenerationResponse.model_validate(response.json())
 
-    async def get_generation_status_async(
-        self, generation_id: str
-    ) -> GenerationResponse:
+    async def get_generation_status_async(self, generation_id: str) -> GenerationResponse:
         """GET /api/v1/generate/{id} - Get generation status (async)."""
-        response = await self._get_async_client().get(
-            f"/api/v1/generate/{generation_id}"
-        )
+        response = await self._get_async_client().get(f"/api/v1/generate/{generation_id}")
         self._handle_error(response)
         return GenerationResponse.model_validate(response.json())
 
@@ -170,9 +166,7 @@ class ComfyGenClient:
 
     async def cancel_generation_async(self, generation_id: str) -> dict:
         """DELETE /api/v1/generate/{id} - Cancel a generation (async)."""
-        response = await self._get_async_client().delete(
-            f"/api/v1/generate/{generation_id}"
-        )
+        response = await self._get_async_client().delete(f"/api/v1/generate/{generation_id}")
         self._handle_error(response)
         return response.json()
 

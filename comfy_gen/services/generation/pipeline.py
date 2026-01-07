@@ -1,12 +1,12 @@
 """Generation pipeline - orchestrates the full generation process."""
+
 import json
 import logging
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
-from ...api.schemas.recipe import Recipe
 from ...api.schemas.generation import GenerationRequest
+from ...api.schemas.recipe import Recipe
 from .executor import ComfyUIExecutor
 
 logger = logging.getLogger(__name__)
@@ -70,7 +70,7 @@ class GenerationPipeline:
         workflow = workflow.copy()
 
         # Find key nodes by class_type
-        for node_id, node in workflow.items():
+        for _node_id, node in workflow.items():
             if not isinstance(node, dict):
                 continue
 

@@ -1,4 +1,5 @@
 """API route modules."""
+
 from .generation import router as generation_router
 from .health import router as health_router
 

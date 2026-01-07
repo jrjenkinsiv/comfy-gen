@@ -14,14 +14,14 @@ Usage:
     comfygen status <generation_id>
     comfygen health
 """
+
 import os
 import sys
 
 import click
 
-from ..client import ComfyGenClient, ComfyGenError
 from ..api.schemas.generation import GenerationRequest, GenerationStatus
-
+from ..client import ComfyGenClient, ComfyGenError
 
 # Configuration
 API_URL = os.getenv("COMFYGEN_API_URL", "http://localhost:8000")
@@ -220,6 +220,7 @@ def generate(
                     raise ComfyGenError(status.message or "Generation failed")
 
                 import time
+
                 time.sleep(poll_interval)
 
         # Show result
@@ -302,7 +303,7 @@ def cancel(ctx: click.Context, generation_id: str) -> None:
     """
     client = ComfyGenClient(base_url=ctx.obj["api_url"])
     try:
-        result = client.cancel_generation(generation_id)
+        client.cancel_generation(generation_id)
         click.echo(click.style("[OK] ", fg="green") + f"Cancelled generation {generation_id}")
     except ComfyGenError as e:
         click.echo(click.style("[ERROR] ", fg="red") + str(e), err=True)

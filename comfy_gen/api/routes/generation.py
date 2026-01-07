@@ -1,16 +1,17 @@
 """Generation API routes - POST /generate, GET /generate/{id}."""
+
 import logging
 from uuid import uuid4
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException
 
+from ...services.generation import ComfyUIExecutor, GenerationPipeline
 from ..schemas.generation import (
     GenerationRequest,
     GenerationResponse,
     GenerationStatus,
     ProgressInfo,
 )
-from ...services.generation import ComfyUIExecutor, GenerationPipeline
 
 router = APIRouter(prefix="/api/v1", tags=["generation"])
 logger = logging.getLogger(__name__)

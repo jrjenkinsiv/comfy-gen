@@ -1,6 +1,6 @@
 """ComfyUI API executor - handles all ComfyUI server interactions."""
+
 import asyncio
-import json
 import logging
 from dataclasses import dataclass
 from typing import Any
@@ -188,7 +188,7 @@ class ComfyUIExecutor:
                 outputs = history.get("outputs", {})
                 images = []
 
-                for node_id, node_output in outputs.items():
+                for _node_id, node_output in outputs.items():
                     if "images" in node_output:
                         images.extend(node_output["images"])
 

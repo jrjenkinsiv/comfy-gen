@@ -1,4 +1,5 @@
 """Explanation schema - justification tree for composition decisions."""
+
 from pydantic import BaseModel, Field
 
 
@@ -87,9 +88,7 @@ class ExplanationBlock(BaseModel):
     )
 
     # Settings source map
-    settings_source: dict[str, str] = Field(
-        default_factory=dict, description="Map of parameter -> source category"
-    )
+    settings_source: dict[str, str] = Field(default_factory=dict, description="Map of parameter -> source category")
 
     # Warnings
     warnings: list[str] = Field(default_factory=list, description="Any warnings during composition")

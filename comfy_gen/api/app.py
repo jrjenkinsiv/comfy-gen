@@ -1,4 +1,5 @@
 """FastAPI application entry point."""
+
 import logging
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
@@ -56,7 +57,7 @@ app.include_router(generation_router)
 async def health_check() -> dict:
     """
     Health check endpoint.
-    
+
     Returns basic service health status.
     """
     return {

@@ -1,4 +1,5 @@
 """Recipe schema - the deterministic, replayable generation configuration."""
+
 from pydantic import BaseModel, Field
 
 
