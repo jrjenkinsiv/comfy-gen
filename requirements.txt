@@ -8,6 +8,7 @@ mcp
 websocket-client
 pyyaml
 httpx
+aiohttp
 aiofiles
 pyiqa
 ultralytics
@@ -15,3 +16,6 @@ huggingface_hub
 click>=8.0
 mediapipe
 opencv-python
+fastapi
+uvicorn[standard]
+pydantic-settings
