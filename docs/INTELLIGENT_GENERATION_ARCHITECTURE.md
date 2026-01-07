@@ -1283,27 +1283,96 @@ The comfy-gen codebase already has significant infrastructure that aligns with t
 | **MCP Server** | `mcp_server.py` | Existing tools for generation, can be extended |
 | **Gallery Server** | cerebro | Image browsing and metadata display |
 
-### Gaps to Fill 🔧
+---
 
-| Component | Current State | Needed |
-|-----------|---------------|--------|
-| **Category Registry** | Implicit in prompt_catalog | Explicit Category class with YAML schema |
-| **Composition Engine** | Manual prompt building | Automated merge/conflict resolution |
-| **@tag Parser** | Not implemented | Simple regex parser |
-| **NL Parser** | LLM enhancement exists | Keyword matching + optional LLM |
-| **Recipe Builder** | Scattered across generate.py | Dedicated service |
-| **API Layer** | Not implemented | FastAPI app wrapping services |
-| **Favorites System** | MLflow favorites experiment | Recipe extraction + transfer |
+## Implementation Status (2026-01-07)
 
-### Migration Path
+This section maps the architectural design to actual implemented code.
 
-**Phase 0** will extract existing logic from `generate.py` into the API service layer:
-- `load_prompt_catalog()` → `services/categories/registry.py`
-- Prompt building → `services/generation/recipe.py`  
-- ComfyUI execution → `services/generation/executor.py`
-- Validation → `services/generation/pipeline.py`
+### Implemented Modules
 
-This preserves all existing functionality while enabling the new architecture.
+| Component | Module Path | Key Classes/Functions |
+|-----------|-------------|----------------------|
+| **Category Schema** | `comfy_gen/categories/schema.json` | JSON Schema v1.0.0 |
+| **Category Registry** | `comfy_gen/categories/registry.py` | `CategoryRegistry` (singleton) |
+| **Category Validator** | `comfy_gen/categories/validator.py` | `validate_category()`, `validate_all_categories()` |
+| **Tag Parser** | `comfy_gen/parsing/tag_parser.py` | `TagParser`, `TagMatch`, `ParseResult` |
+| **Intent Classifier** | `comfy_gen/parsing/intent_classifier.py` | `IntentClassifier`, `HybridParser`, `CategoryMatch` |
+| **Composition Engine** | `comfy_gen/composition/engine.py` | `CompositionEngine`, `CompositionResult` |
+| **Recipe Builder** | `comfy_gen/composition/recipe.py` | `RecipeBuilder`, `Recipe` |
+| **Content Policy** | `comfy_gen/policy/content_policy.py` | `PolicyEnforcer`, `PolicyLevel`, `check_policy()` |
+| **Workflow Manifest** | `comfy_gen/workflows/manifest.py` | `WorkflowManifest`, `ResolutionConstraint` |
+| **Workflow Registry** | `comfy_gen/workflows/registry.py` | `WorkflowRegistry` (singleton) |
+| **MLflow Tracker** | `comfy_gen/tracking/mlflow_tracker.py` | `MLflowTracker`, `ProvenanceHashes`, `GenerationResult` |
+| **FastAPI App** | `comfy_gen/api/app.py` | `app`, `create_app()` |
+| **Web GUI** | `comfy_gen/gui/routes.py` | `setup_gui()`, Jinja2 templates |
+
+### API Endpoints
+
+| Endpoint | Route Module | Status |
+|----------|--------------|--------|
+| `POST /compose` | `comfy_gen/api/routes/compose.py` | ✅ Implemented |
+| `POST /compose/preview` | `comfy_gen/api/routes/compose.py` | ✅ Implemented |
+| `GET /categories` | `comfy_gen/api/routes/categories.py` | ✅ Implemented |
+| `GET /categories/{id}` | `comfy_gen/api/routes/categories.py` | ✅ Implemented |
+| `POST /favorites` | `comfy_gen/api/routes/favorites.py` | ✅ Implemented |
+| `GET /favorites` | `comfy_gen/api/routes/favorites.py` | ✅ Implemented |
+| `DELETE /favorites/{id}` | `comfy_gen/api/routes/favorites.py` | ✅ Implemented |
+| `POST /favorites/{id}/extract-recipe` | `comfy_gen/api/routes/favorites.py` | ✅ Implemented |
+| `PUT /favorites/{id}/rating` | `comfy_gen/api/routes/favorites.py` | ✅ Implemented |
+| `POST /generate` | `comfy_gen/api/routes/generation.py` | ✅ Implemented |
+| `GET /generate/{id}` | `comfy_gen/api/routes/generation.py` | ✅ Implemented |
+| `GET /health` | `comfy_gen/api/app.py` | ✅ Implemented |
+
+### Pydantic Schemas
+
+| Schema | Module | Purpose |
+|--------|--------|---------|
+| `Category` | `comfy_gen/api/schemas/category.py` | Category response model |
+| `Recipe` | `comfy_gen/api/schemas/recipe.py` | Generation recipe model |
+| `ExplanationBlock` | `comfy_gen/api/schemas/explanation.py` | Composition explanation |
+| `ComposeRequest/Response` | `comfy_gen/api/schemas/compose.py` | Compose endpoint models |
+| `GenerationRequest/Response` | `comfy_gen/api/schemas/generation.py` | Generate endpoint models |
+
+### GUI Components
+
+| Template | Path | Purpose |
+|----------|------|---------|
+| `base.html` | `comfy_gen/gui/templates/base.html` | Base layout with navigation |
+| `index.html` | `comfy_gen/gui/templates/index.html` | Generation interface |
+| `compose.html` | `comfy_gen/gui/templates/compose.html` | Intelligent composition |
+| `categories.html` | `comfy_gen/gui/templates/categories.html` | Category browser |
+| `gallery.html` | `comfy_gen/gui/templates/gallery.html` | Favorites gallery |
+
+| JavaScript | Path | Purpose |
+|------------|------|---------|
+| `api.js` | `comfy_gen/gui/static/js/api.js` | `ComfyGenAPI` client class |
+| `generate.js` | `comfy_gen/gui/static/js/generate.js` | Generation page logic |
+| `compose.js` | `comfy_gen/gui/static/js/compose.js` | Composition page logic |
+| `categories.js` | `comfy_gen/gui/static/js/categories.js` | Category browser logic |
+| `gallery.js` | `comfy_gen/gui/static/js/gallery.js` | Favorites gallery logic |
+
+### Phase Status Summary
+
+| Phase | Description | Status |
+|-------|-------------|--------|
+| 0 | FastAPI skeleton + services | ✅ Complete |
+| 1 | Category System (YAML, schema, registry) | ✅ Complete |
+| 2 | Parser + Compose Endpoint + Policy | ✅ Complete |
+| 3 | CLI Migration to API | ⏳ Planned |
+| 4 | MCP Migration to API | ⏳ Planned |
+| 5 | MLflow + Favorites | ✅ Complete |
+| 6 | Web GUI | ✅ Complete |
+
+### Configuration Files
+
+| File | Purpose |
+|------|---------|
+| `comfy_gen/categories/schema.json` | JSON Schema for category validation |
+| `comfy_gen/categories/schema_version.yaml` | Schema versioning info |
+| `comfy_gen/categories/definitions/` | Category YAML files |
+
+---
 
 ## Related Files
 
@@ -1311,6 +1380,8 @@ This preserves all existing functionality while enabling the new architecture.
 - [lora_catalog.yaml](../lora_catalog.yaml) - LoRA metadata
 - [prompt_catalog.yaml](../prompt_catalog.yaml) - Prompt templates
 - [USAGE.md](./USAGE.md) - Current CLI usage
+- [API_REFERENCE.md](./API_REFERENCE.md) - API endpoint documentation
+- [CATEGORY_AUTHORING.md](./CATEGORY_AUTHORING.md) - How to create categories
 
 ## Architectural North Star
 

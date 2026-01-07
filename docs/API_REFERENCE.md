@@ -890,11 +890,386 @@ while True:
 
 ---
 
+## Intelligent Generation API (FastAPI)
+
+The Intelligent Generation API provides category-based composition, content policies, favorites, and a web GUI. Access at `http://localhost:8000` when running the server.
+
+### Starting the Server
+
+```bash
+cd /path/to/comfy-gen
+uvicorn comfy_gen.api.app:app --reload --host 0.0.0.0 --port 8000
+```
+
+---
+
+### Compose Endpoint
+
+#### `POST /compose`
+
+Compose categories into a generation recipe with full explainability.
+
+**Request Body:**
+```json
+{
+  "input": "@portrait @outdoor professional headshot natural lighting",
+  "dry_run": false,
+  "max_categories": 3,
+  "min_confidence": 0.3,
+  "policy_tier": "general"
+}
+```
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `input` | string | required | User text with optional `@tags` |
+| `dry_run` | boolean | false | If true, returns recipe without generation |
+| `max_categories` | int | 3 | Maximum categories to include (1-10) |
+| `min_confidence` | float | 0.3 | Threshold for inferred categories (0-1) |
+| `policy_tier` | string | "general" | Content tier: "general", "mature", "explicit" |
+
+**Response:**
+```json
+{
+  "recipe": {
+    "checkpoint": "pornmasterProPony_realismV1.safetensors",
+    "workflow": "pornmaster-pony-stacked-realism.json",
+    "positive_prompt": "professional headshot, natural lighting, detailed face, sharp focus on eyes",
+    "negative_prompt": "blurry, distorted face, extra limbs, bad anatomy",
+    "loras": [
+      {"filename": "add_detail.safetensors", "strength": 0.4}
+    ],
+    "steps": 50,
+    "cfg": 7.5,
+    "width": 768,
+    "height": 1024,
+    "sampler": "euler_ancestral",
+    "scheduler": "normal"
+  },
+  "categories_used": ["portrait", "outdoor"],
+  "explanation": {
+    "summary": "Selected portrait (subject) and outdoor (setting) categories",
+    "steps": [
+      {"phase": "parsing", "action": "tag_extraction", "detail": "Found @portrait, @outdoor tags", "source": "parser"},
+      {"phase": "composition", "action": "prompt_merge", "detail": "Merged 2 positive fragments", "source": "portrait"}
+    ]
+  }
+}
+```
+
+**Errors:**
+- `400`: No categories matched input
+- `403`: Policy tier violation (requested content requires higher tier)
+- `422`: Validation error
+
+**Example Usage:**
+```python
+import httpx
+
+response = httpx.post("http://localhost:8000/compose", json={
+    "input": "@car @night red ferrari wet streets",
+    "policy_tier": "general"
+})
+recipe = response.json()["recipe"]
+print(f"Checkpoint: {recipe['checkpoint']}")
+print(f"Prompt: {recipe['positive_prompt']}")
+```
+
+---
+
+#### `POST /compose/preview`
+
+Preview category composition without building full recipe. Useful for UI feedback.
+
+**Request Body:**
+```json
+{
+  "input": "portrait in city at sunset",
+  "policy_tier": "general"
+}
+```
+
+**Response:**
+```json
+{
+  "tags_found": ["portrait"],
+  "categories_inferred": [
+    {"id": "city", "confidence": 0.72, "type": "setting"},
+    {"id": "sunset", "confidence": 0.85, "type": "modifier"}
+  ],
+  "conflicts": [],
+  "policy_violations": []
+}
+```
+
+---
+
+### Categories Endpoints
+
+#### `GET /categories`
+
+List all available categories with optional filtering.
+
+**Query Parameters:**
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `type` | string | null | Filter by type: "subject", "setting", "modifier", "style" |
+| `policy_tier` | string | "general" | Filter by policy tier |
+| `search` | string | null | Search by keyword |
+
+**Response:**
+```json
+{
+  "categories": [
+    {
+      "id": "portrait",
+      "type": "subject",
+      "display_name": "Portrait",
+      "description": "Human portrait photography and art",
+      "icon": "person",
+      "keywords": ["portrait", "headshot", "face"],
+      "policy_tier": "general"
+    }
+  ],
+  "total": 1
+}
+```
+
+---
+
+#### `GET /categories/{category_id}`
+
+Get detailed information for a specific category.
+
+**Response:**
+```json
+{
+  "category": {
+    "id": "portrait",
+    "type": "subject",
+    "display_name": "Portrait",
+    "description": "Human portrait photography and art",
+    "prompts": {
+      "positive_fragments": {"required": ["detailed face", "sharp focus on eyes"]},
+      "negative_fragments": {"required": ["blurry", "distorted face"]}
+    },
+    "loras": {
+      "recommended": [
+        {"filename": "add_detail.safetensors", "strength": 0.4}
+      ]
+    },
+    "settings": {
+      "steps": {"min": 30, "max": 100, "default": 50},
+      "cfg": {"min": 6.0, "max": 12.0, "default": 7.5}
+    },
+    "composition": {
+      "priority": 70,
+      "conflicts_with": [],
+      "enhances": ["lighting", "photorealistic"]
+    }
+  }
+}
+```
+
+**Errors:**
+- `404`: Category not found
+
+---
+
+### Favorites Endpoints
+
+#### `POST /favorites`
+
+Mark a generation as favorite.
+
+**Request Body:**
+```json
+{
+  "generation_id": "abc123-mlflow-run-id",
+  "rating": 5,
+  "feedback": "Perfect lighting and composition",
+  "tags": ["best", "portfolio"]
+}
+```
+
+**Response:**
+```json
+{
+  "id": "fav_001",
+  "generation_id": "abc123-mlflow-run-id",
+  "recipe_hash": "sha256:...",
+  "rating": 5,
+  "feedback": "Perfect lighting and composition",
+  "image_url": "http://192.168.1.215:9000/comfy-gen/...",
+  "categories": ["portrait", "outdoor"],
+  "created_at": "2026-01-07T12:00:00Z"
+}
+```
+
+**Errors:**
+- `404`: Generation not found
+- `503`: MLflow unavailable
+
+---
+
+#### `GET /favorites`
+
+List all favorites with optional filtering.
+
+**Query Parameters:**
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `min_rating` | int | 1 | Minimum rating filter |
+| `categories` | string | null | Filter by category (comma-separated) |
+| `limit` | int | 20 | Max results |
+| `offset` | int | 0 | Pagination offset |
+
+**Response:**
+```json
+{
+  "favorites": [...],
+  "total": 42,
+  "limit": 20,
+  "offset": 0
+}
+```
+
+---
+
+#### `DELETE /favorites/{favorite_id}`
+
+Remove a favorite by ID.
+
+**Response:**
+```json
+{
+  "message": "Favorite removed",
+  "id": "fav_001"
+}
+```
+
+**Errors:**
+- `404`: Favorite not found
+
+---
+
+#### `POST /favorites/{favorite_id}/extract-recipe`
+
+Extract a reusable recipe from a favorite generation.
+
+**Request Body:**
+```json
+{
+  "target_categories": ["car"],
+  "preserve_loras": true,
+  "preserve_settings": true
+}
+```
+
+**Response:**
+```json
+{
+  "recipe": {...},
+  "source_favorite": "fav_001",
+  "adaptations": [
+    "Replaced portrait loras with car-compatible alternatives"
+  ]
+}
+```
+
+---
+
+#### `PUT /favorites/{favorite_id}/rating`
+
+Update rating on an existing favorite.
+
+**Request Body:**
+```json
+{
+  "rating": 4,
+  "feedback": "Updated feedback"
+}
+```
+
+---
+
+### Generation Endpoints
+
+#### `POST /generate`
+
+Start an async generation from a recipe or prompt.
+
+**Request Body:**
+```json
+{
+  "recipe_id": null,
+  "prompt": "a sunset over mountains",
+  "workflow": "flux-dev.json",
+  "steps": 50,
+  "cfg": 7.5
+}
+```
+
+**Response:**
+```json
+{
+  "generation_id": "gen_abc123",
+  "status": "queued"
+}
+```
+
+---
+
+#### `GET /generate/{generation_id}`
+
+Poll generation status.
+
+**Response:**
+```json
+{
+  "generation_id": "gen_abc123",
+  "status": "completed",
+  "output_url": "http://192.168.1.215:9000/comfy-gen/...",
+  "progress": 100
+}
+```
+
+---
+
+### Health Endpoint
+
+#### `GET /health`
+
+Server health check.
+
+**Response:**
+```json
+{
+  "status": "healthy",
+  "version": "1.0.0",
+  "comfyui_available": true,
+  "mlflow_available": true
+}
+```
+
+---
+
+### Content Policy Headers
+
+Some endpoints support content policy via headers:
+
+| Header | Values | Description |
+|--------|--------|-------------|
+| `X-Policy-Tier` | general, mature, explicit | Override default policy tier |
+
+---
+
 ## See Also
 
 - [USAGE.md](USAGE.md) - Complete usage guide for CLI and MCP
 - [ARCHITECTURE.md](ARCHITECTURE.md) - System design and workflows
 - [MODEL_REGISTRY.md](MODEL_REGISTRY.md) - Available models
+- [CATEGORY_AUTHORING.md](CATEGORY_AUTHORING.md) - How to create categories
 
 ---
 

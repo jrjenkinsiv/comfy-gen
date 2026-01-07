@@ -1487,11 +1487,199 @@ Sidecar JSON files are always created regardless of embedding setting.
 
 ---
 
+## Intelligent Generation System
+
+The Intelligent Generation System provides category-based composition for streamlined generation. It understands natural language and explicit tags.
+
+### Quick Start
+
+```bash
+# Start the API server
+cd /path/to/comfy-gen
+uvicorn comfy_gen.api.app:app --host 0.0.0.0 --port 8000
+
+# Open the web GUI
+open http://localhost:8000/gui
+```
+
+### Using @Tags (Explicit Mode)
+
+Prefix category names with `@` for explicit selection:
+
+```bash
+# Single category
+python3 generate.py --compose "@portrait professional headshot"
+
+# Multiple categories
+python3 generate.py --compose "@car @city @night red ferrari wet streets"
+
+# Mix explicit tags with natural language
+python3 generate.py --compose "@portrait woman in @city sunset lighting"
+```
+
+**Available categories:**
+- **Subjects:** `@portrait`, `@car`, `@animal`, `@product`
+- **Settings:** `@city`, `@beach`, `@forest`, `@studio`
+- **Modifiers:** `@night`, `@rainy`, `@golden_hour`, `@foggy`
+- **Styles:** `@anime`, `@photorealistic`, `@cinematic`
+
+List all categories:
+```bash
+curl http://localhost:8000/categories | jq '.categories[].id'
+```
+
+### Natural Language Mode
+
+Without @tags, the system infers categories from your prompt:
+
+```bash
+# System detects: portrait (subject), city (setting), night (modifier)
+python3 generate.py --compose "photo of a woman in Tokyo at night"
+
+# System detects: car (subject), rainy (modifier)
+python3 generate.py --compose "sports car on wet streets"
+```
+
+The system uses keyword matching with confidence scoring:
+- **Primary keywords**: High confidence (0.8+)
+- **Secondary keywords**: Medium confidence (0.5+)
+- **Contextual inference**: Lower confidence, may need confirmation
+
+### Content Policy Tiers
+
+Categories have policy tiers controlling access:
+
+| Tier | Description | Example Categories |
+|------|-------------|-------------------|
+| `general` | Safe for work | portrait, car, landscape |
+| `mature` | Suggestive content | glamour, lingerie |
+| `explicit` | Adult content | nsfw categories |
+
+**Specifying policy tier:**
+
+```bash
+# Via CLI (when available)
+python3 generate.py --compose "@portrait woman" --policy-tier general
+
+# Via API
+curl -X POST http://localhost:8000/compose \
+  -H "Content-Type: application/json" \
+  -d '{"input": "@portrait woman", "policy_tier": "explicit"}'
+```
+
+Default tier is `general`. Requesting categories above your tier returns 403.
+
+### Composition Preview
+
+Preview what the system will do before generating:
+
+```bash
+curl -X POST http://localhost:8000/compose/preview \
+  -H "Content-Type: application/json" \
+  -d '{"input": "portrait woman in city at sunset"}'
+```
+
+Response shows:
+- Tags detected explicitly (`@tags`)
+- Categories inferred from keywords
+- Confidence scores
+- Any conflicts between categories
+- Policy violations (if any)
+
+### ExplanationBlock (Transparency)
+
+The `/compose` endpoint returns an `explanation` showing exactly why each decision was made:
+
+```json
+{
+  "recipe": {...},
+  "explanation": {
+    "summary": "Selected portrait (subject) + city (setting) + sunset (modifier)",
+    "steps": [
+      {"phase": "parsing", "action": "tag_extraction", "detail": "No explicit @tags found"},
+      {"phase": "classification", "action": "keyword_match", "detail": "portrait: 0.85 confidence"},
+      {"phase": "classification", "action": "keyword_match", "detail": "city: 0.72 confidence"},
+      {"phase": "composition", "action": "prompt_merge", "detail": "Merged 3 positive fragments"},
+      {"phase": "composition", "action": "lora_selection", "detail": "Added add_detail.safetensors:0.4"}
+    ]
+  }
+}
+```
+
+This transparency helps you understand and debug generation decisions.
+
+### Using the Web GUI
+
+The web GUI provides a visual interface for composition:
+
+1. **Generate Tab**: Direct generation with parameters
+2. **Compose Tab**: Category-based intelligent composition
+3. **Categories Tab**: Browse and search all categories
+4. **Gallery Tab**: View and manage favorites
+
+Access at: `http://localhost:8000/gui`
+
+Features:
+- Click categories to add @tags
+- Real-time recipe preview
+- Explanation display
+- WebSocket progress updates
+
+### Favorites System
+
+Mark successful generations as favorites to reuse their settings:
+
+```bash
+# Mark a generation as favorite
+curl -X POST http://localhost:8000/favorites \
+  -H "Content-Type: application/json" \
+  -d '{
+    "generation_id": "mlflow-run-id",
+    "rating": 5,
+    "feedback": "Perfect lighting",
+    "tags": ["portfolio", "best"]
+  }'
+
+# List favorites
+curl http://localhost:8000/favorites
+
+# Extract reusable recipe
+curl -X POST http://localhost:8000/favorites/fav_001/extract-recipe \
+  -d '{"target_categories": ["car"], "preserve_loras": true}'
+```
+
+**Recipe extraction** transfers successful settings to different subjects:
+- Extract recipe from portrait favorite
+- Apply to car subject
+- System adapts incompatible LoRAs
+
+### MLflow Tracking
+
+All generations are logged to MLflow for provenance:
+
+```bash
+# View experiments
+open http://192.168.1.162:5001
+
+# Experiment: comfy-gen-intelligent
+# Tracks:
+# - Recipe hash (reproducibility)
+# - Category hashes (drift detection)
+# - Generation parameters
+# - Output URLs
+# - User ratings
+```
+
+Recipe hashes ensure you can reproduce exact generations later.
+
+---
+
 ## See Also
 
 - [MODEL_REGISTRY.md](MODEL_REGISTRY.md) - Available models and LoRAs
 - [API_REFERENCE.md](API_REFERENCE.md) - Internal module documentation
 - [ARCHITECTURE.md](ARCHITECTURE.md) - System design and workflows
+- [CATEGORY_AUTHORING.md](CATEGORY_AUTHORING.md) - How to create categories
 
 ---
 
