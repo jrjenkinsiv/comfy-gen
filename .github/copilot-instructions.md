@@ -248,6 +248,41 @@ git push -u origin fix/99-lora-catalog-audit
 
 ## 5. Build & Test Commands
 
+### Pre-Commit Checks (MANDATORY)
+
+**CRITICAL: Run these checks BEFORE every commit to avoid CI failures.**
+
+```bash
+# 1. Lint check and auto-fix
+python3 -m ruff check . --fix
+
+# 2. Format code
+python3 -m ruff format .
+
+# 3. Verify all checks pass
+python3 -m ruff check .
+```
+
+**Common lint errors to watch for:**
+| Error | Meaning | Fix |
+|-------|---------|-----|
+| `I001` | Import block unsorted | `ruff check --fix` auto-fixes |
+| `F401` | Unused import | Remove the import or use `--unsafe-fixes` |
+| `W293` | Whitespace in blank line | `ruff format` auto-fixes |
+
+**If `--fix` doesn't resolve all issues:**
+```bash
+python3 -m ruff check . --fix --unsafe-fixes
+```
+
+**CI Pipeline Stages:**
+1. **Type Checking** - mypy (if configured)
+2. **Code Quality Checks** - ruff lint + format verification
+3. **Unit Tests** - pytest
+4. **Module Validation** - smoke tests
+
+### Generation Commands
+
 ```bash
 # Generate an image (from magneto)
 python3 generate.py --workflow workflows/flux-dev.json \
