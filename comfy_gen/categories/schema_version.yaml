@@ -1,0 +1,23 @@
+# Category Schema Version Tracking
+# This file defines the current schema version and migration history
+
+schema:
+  version: "1.0.0"
+  minimum_supported: "1.0.0"
+  
+  changelog:
+    "1.0.0":
+      date: "2026-01-07"
+      changes:
+        - "Initial schema definition"
+        - "Core fields: id, type, display_name, keywords"
+        - "Prompt fragments: positive/negative, required/optional"
+        - "LoRA specs with strength, triggers, conditions"
+        - "Settings: steps, cfg, size, sampler, scheduler"
+        - "Workflow preferences: preferred, required_capabilities, excluded"
+        - "Composition rules: priority, conflicts, requires, enhances"
+        - "Policy tiers: general, mature, explicit"
+
+# Migration notes:
+# When schema changes, increment version and add migration function
+# Categories declare their schema_version, loader validates compatibility

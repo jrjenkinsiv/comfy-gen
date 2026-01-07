@@ -1,0 +1,71 @@
+# Night Category - Time-of-day modifier
+# Demonstrates a modifier category type
+
+category:
+  id: night
+  type: modifier
+  display_name: Night / Dark
+  description: Night-time scenes with low light, moon, stars
+  icon: "moon"
+  schema_version: "1.0.0"
+  policy_tier: general
+
+  keywords:
+    primary:
+      - night
+      - nighttime
+      - dark
+      - midnight
+    secondary:
+      - evening
+      - dusk
+      - moonlight
+      - starlight
+    specific:
+      - city at night
+      - night sky
+      - nocturnal
+
+  prompts:
+    positive_fragments:
+      required:
+        - "night scene"
+        - "dark atmosphere"
+      optional:
+        - "moonlight"
+        - "stars"
+        - "city lights"
+        - "neon lights"
+    negative_fragments:
+      required:
+        - "daylight"
+        - "sunny"
+        - "bright day"
+      optional:
+        - "harsh sunlight"
+
+  loras:
+    required: []
+    recommended: []
+    avoid: []
+
+  settings:
+    cfg:
+      default: 8.0
+
+  workflows:
+    preferred: []
+    required_capabilities: []
+    excluded: []
+
+  composition:
+    priority: 40
+    conflicts_with:
+      - "daytime"
+      - "sunset"
+      - "sunrise"
+    requires: []
+    enhances:
+      - "city"
+      - "cyberpunk"
+      - "neon"

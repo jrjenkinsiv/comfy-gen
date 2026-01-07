@@ -19,3 +19,4 @@ opencv-python
 fastapi
 uvicorn[standard]
 pydantic-settings
+jsonschema
