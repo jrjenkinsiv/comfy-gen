@@ -8,7 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .config import settings
-from .routes import generation_router
+from .routes import categories_router, generation_router
 
 # Configure logging
 logging.basicConfig(
@@ -26,6 +26,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info(f"ComfyUI server: {settings.comfyui_url}")
     logger.info(f"MinIO endpoint: {settings.MINIO_ENDPOINT}")
     logger.info(f"MLflow tracking: {settings.MLFLOW_TRACKING_URI}")
+
+    # Initialize category registry
+    from comfy_gen.categories.registry import CategoryRegistry
+
+    registry = CategoryRegistry.get_instance()
+    logger.info(f"Loaded {len(registry)} categories")
+
     yield
     # Shutdown
     logger.info("ComfyGen API shutting down...")
@@ -50,6 +57,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(generation_router)
+app.include_router(categories_router, prefix="/api/v1")
 
 
 # Health check endpoint

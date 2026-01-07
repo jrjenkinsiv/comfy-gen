@@ -1,6 +1,21 @@
 """API schema models."""
 
-from .category import Category, CategoryType, Keywords, LoRADefaults, PolicyTier, Prompts
+from .category import (
+    Category,
+    CategoryType,
+    CategoryWrapper,
+    CompositionRules,
+    GenerationSettings,
+    Keywords,
+    LoraConfig,
+    LoraSettings,
+    PolicyTier,
+    PromptFragments,
+    Prompts,
+    RangeConfig,
+    SizeConfig,
+    WorkflowConfig,
+)
 from .explanation import (
     CategoryMatch,
     ConflictResolution,
@@ -14,7 +29,8 @@ from .generation import (
     GenerationStatus,
     ProgressInfo,
 )
-from .recipe import LoRAConfig, Recipe
+from .recipe import LoRAConfig as RecipeLoRAConfig
+from .recipe import Recipe
 
 __all__ = [
     # Generation
@@ -24,14 +40,22 @@ __all__ = [
     "ProgressInfo",
     # Recipe
     "Recipe",
-    "LoRAConfig",
+    "RecipeLoRAConfig",
     # Category
     "Category",
+    "CategoryWrapper",
     "CategoryType",
     "PolicyTier",
     "Keywords",
+    "PromptFragments",
     "Prompts",
-    "LoRADefaults",
+    "LoraConfig",
+    "LoraSettings",
+    "RangeConfig",
+    "SizeConfig",
+    "GenerationSettings",
+    "WorkflowConfig",
+    "CompositionRules",
     # Explanation
     "ExplanationBlock",
     "CategoryMatch",
