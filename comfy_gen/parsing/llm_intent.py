@@ -30,9 +30,11 @@ logger = logging.getLogger(__name__)
 
 
 # Environment configuration
-LLM_ENDPOINT = os.getenv("COMFYGEN_LLM_ENDPOINT", "http://192.168.1.215:8006/v1/chat/completions")
-LLM_MODEL = os.getenv("COMFYGEN_LLM_MODEL", "gpt-oss-20b")
-LLM_TIMEOUT = int(os.getenv("COMFYGEN_LLM_TIMEOUT", "30"))
+# Default to ant-man Jetson Orin Nano running Ollama with deepseek-r1:7b
+# Previously used moira's model-manager (192.168.1.215:8006) but GPU is busy with ComfyUI
+LLM_ENDPOINT = os.getenv("COMFYGEN_LLM_ENDPOINT", "http://192.168.1.253:11434/v1/chat/completions")
+LLM_MODEL = os.getenv("COMFYGEN_LLM_MODEL", "deepseek-r1:7b")
+LLM_TIMEOUT = int(os.getenv("COMFYGEN_LLM_TIMEOUT", "60"))  # Reasoning models need more time
 
 
 class ContentTier(Enum):

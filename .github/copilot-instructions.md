@@ -81,11 +81,11 @@ When assigned a meta-issue (instruction/documentation updates):
 - `generate.py` - Main CLI for queuing workflows to ComfyUI API
 - `workflows/` - JSON workflow templates (exported from ComfyUI)
 - `scripts/` - Cross-platform Python utilities for server management
-- `.github/workflows/` - CI/CD automation via ant-man runner
+- `.github/workflows/` - CI/CD automation via cerebro runner
 
 **Data Flow:**
 ```
-magneto (git push) --> GitHub --> ant-man (runner) --> moira (ComfyUI)
+magneto (git push) --> GitHub --> cerebro (runner) --> moira (ComfyUI)
                                                           |
                                                           v
                                                      MinIO storage
@@ -98,9 +98,9 @@ magneto (git push) --> GitHub --> ant-man (runner) --> moira (ComfyUI)
 | Machine | Role | IP |
 |---------|------|-----|
 | magneto | Development workstation | 192.168.1.124 |
-| cerebro | PostgreSQL + MLflow + Gallery | 192.168.1.162 |
+| cerebro | PostgreSQL + MLflow + Gallery + GitHub Runner | 192.168.1.162 |
 | moira | ComfyUI + MinIO + GPU (RTX 5090) | 192.168.1.215 |
-| ant-man | GitHub Actions runner (ARM64) | 192.168.1.253 |
+| ant-man | Ollama LLM inference (Jetson Orin) | 192.168.1.253 |
 
 **Machine Credentials (for sudo operations):**
 | Machine | User | Sudo Password |
@@ -120,12 +120,27 @@ ssh cerebro 'printf "babyseal\n" | sudo -S pmset -a displaysleep 0 sleep 0 disks
 | PostgreSQL | 5432 | N/A (local) |
 | MLflow | 5001 | http://192.168.1.162:5001 |
 | Gallery | 8080 | http://192.168.1.162:8080 |
+| GitHub Runner | - | launchd service |
 
 **Service Ports on moira:**
 | Service | Port | URL |
 |---------|------|-----|
 | ComfyUI | 8188 | http://192.168.1.215:8188 |
 | MinIO | 9000 | http://192.168.1.215:9000 |
+
+**Service Ports on ant-man (LLM Inference):**
+| Service | Port | URL |
+|---------|------|-----|
+| Ollama API | 11434 | http://192.168.1.253:11434 |
+| OpenAI-compat | 11434 | http://192.168.1.253:11434/v1/chat/completions |
+
+**LLM Configuration (for intent parsing):**
+```bash
+export COMFYGEN_LLM_ENDPOINT="http://192.168.1.253:11434/v1/chat/completions"
+export COMFYGEN_LLM_MODEL="deepseek-r1:7b"
+export COMFYGEN_LLM_TIMEOUT="120"  # Reasoning models need more time
+```
+Available models: `deepseek-r1:7b` (reasoning, primary), `mistral:7b`, `llama2:7b`, `orca-mini:3b`
 
 **IMPORTANT:** Cerebro is the permanent home for ML experiment tracking. All scripts and workflows MUST use cerebro's MLflow (http://192.168.1.162:5001). Moira's MLflow (port 5000) was deprecated as of January 2026.
 
