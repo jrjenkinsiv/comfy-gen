@@ -1648,7 +1648,7 @@ def embed_metadata_in_output(output_path, metadata):
             return False
 
         # Import metadata module
-        from comfy_gen.metadata import embed_metadata_in_png
+        from utils.metadata import embed_metadata_in_png
 
         # Embed metadata in place
         success = embed_metadata_in_png(output_path, metadata)
@@ -1945,7 +1945,7 @@ def main():
             print(f"[ERROR] Image file not found: {image_path}")
             sys.exit(EXIT_FAILURE)
 
-        from comfy_gen.metadata import format_metadata_for_display, read_metadata_from_png
+        from utils.metadata import format_metadata_for_display, read_metadata_from_png
 
         metadata = read_metadata_from_png(image_path)
 
@@ -2311,7 +2311,7 @@ def main():
     original_prompt = args.prompt
     if args.enhance_prompt:
         try:
-            from comfy_gen.prompt_enhancer import enhance_prompt, is_available
+            from utils.prompt_enhancer import enhance_prompt, is_available
         except ImportError as e:
             print(f"[ERROR] Failed to import prompt_enhancer: {e}")
             print("[ERROR] Install with: pip install transformers torch")
@@ -2693,7 +2693,7 @@ def main():
         # Run quality scoring if requested
         if args.quality_score:
             try:
-                from comfy_gen.quality import score_image
+                from utils.quality import score_image
 
                 if not args.quiet:
                     print("[INFO] Running quality assessment...")
@@ -2746,7 +2746,7 @@ def main():
         # Run validation if requested
         if args.validate:
             try:
-                from comfy_gen.validation import validate_image
+                from utils.validation import validate_image
 
                 if not args.quiet:
                     print("[INFO] Running validation...")
@@ -2779,8 +2779,8 @@ def main():
                 pose_result = None
                 if args.validate_pose:
                     try:
-                        from comfy_gen.pose_validation import validate_pose
-                        from comfy_gen.validation import extract_expected_person_count
+                        from utils.pose_validation import validate_pose
+                        from utils.validation import extract_expected_person_count
 
                         expected_persons = extract_expected_person_count(args.prompt)
                         pose_result = validate_pose(args.output, expected_persons=expected_persons)
@@ -2810,7 +2810,7 @@ def main():
                 # Run content validation if requested
                 if args.validate_content:
                     try:
-                        from comfy_gen.content_validator import validate_content
+                        from utils.content_validator import validate_content
 
                         content_result = validate_content(args.output, args.prompt)
 
@@ -2942,7 +2942,7 @@ def main():
         # Auto-log to MLflow if requested
         if args.mlflow_log and minio_url:
             try:
-                from comfy_gen.mlflow_logger import log_from_metadata
+                from utils.mlflow_logger import log_from_metadata
 
                 run_id = log_from_metadata(
                     metadata=metadata,

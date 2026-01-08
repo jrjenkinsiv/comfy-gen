@@ -17,7 +17,7 @@ from pathlib import Path
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from comfygen.tools import generation
+from clients.tools import generation
 
 
 async def example_with_validation():

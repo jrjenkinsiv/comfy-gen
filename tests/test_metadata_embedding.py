@@ -10,7 +10,7 @@ from PIL import Image
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from comfy_gen.metadata import (
+from utils.metadata import (
     embed_metadata_in_png,
     format_civitai_parameters,
     format_metadata_for_display,

@@ -51,7 +51,8 @@ python3 generate.py --workflow workflows/wan22-t2v.json \
 | Workflow | Base Model | Best For | Default Steps/CFG |
 |----------|------------|----------|-------------------|
 | `flux-dev.json` | Flux Dev FP8 | **General quality**, photorealism, SFW | 25 / 3.5 |
-| `flux-dev-hires.json` | Flux Dev FP8 | High-res outputs | 25 / 3.5 |
+| `sd15-basic.json` | SD 1.5 | Fast general-purpose | 20 / 7.0 |
+| `sd15-hires.json` | SD 1.5 | Higher resolution SD 1.5 | 30 / 7.5 |
 | `pornmaster-pony-stacked-realism.json` | Pony/SDXL | **NSFW realism** with multiple LoRAs | 70 / 9.0 |
 | `pornmaster-pony-lora.json` | Pony/SDXL | NSFW with single LoRA | 50 / 8.0 |
 | `majicmix-realistic.json` | SD 1.5 | Realistic portraits | 30 / 7.5 |

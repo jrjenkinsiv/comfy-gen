@@ -73,7 +73,7 @@ print("=" * 70)
 print("\n[INFO] Testing validation module availability...")
 try:
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from comfy_gen.validation import CLIP_AVAILABLE
+    from utils.validation import CLIP_AVAILABLE
 
     if CLIP_AVAILABLE:
         print("[OK] CLIP is available - validation will work")

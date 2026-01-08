@@ -23,7 +23,7 @@ async def example_simple_generation():
     print("Example 1: Simple Image Generation")
     print("=" * 70)
 
-    from comfygen.tools import generation
+    from clients.tools import generation
 
     result = await generation.generate_image(
         prompt="a sunset over mountains, highly detailed, 8k", width=768, height=512, steps=25
@@ -43,7 +43,7 @@ async def example_intelligent_workflow():
     print("Example 2: Intelligent Model Selection Workflow")
     print("=" * 70)
 
-    from comfygen.tools import models, prompts
+    from clients.tools import models, prompts
 
     # Step 1: Get model recommendation
     print("\n[1/3] Getting model recommendation...")
@@ -75,7 +75,7 @@ async def example_video_creation():
     print("Example 3: Text-to-Video Generation")
     print("=" * 70)
 
-    from comfygen.tools import models, video
+    from clients.tools import models, video
 
     # Get LoRA suggestions for video
     print("\n[1/2] Getting LoRA suggestions for video...")
@@ -108,7 +108,7 @@ async def example_gallery_management():
     print("Example 4: Gallery and History Management")
     print("=" * 70)
 
-    from comfygen.tools import gallery
+    from clients.tools import gallery
 
     # List recent images
     print("\n[1/2] Listing recent images...")
@@ -135,7 +135,7 @@ async def example_system_monitoring():
     print("Example 5: System Monitoring and Control")
     print("=" * 70)
 
-    from comfygen.tools import control
+    from clients.tools import control
 
     # Check system status
     print("\n[1/3] Checking system status...")
@@ -173,7 +173,7 @@ async def example_model_discovery():
     print("Example 6: Model Discovery with CivitAI")
     print("=" * 70)
 
-    from comfygen.tools import models
+    from clients.tools import models
 
     # Search for models
     print("\n[1/2] Searching CivitAI for detail enhancer LoRAs...")

@@ -1,93 +1,77 @@
 # Python Package Structure
 
-This project has **two Python packages** with different purposes. This is intentional but confusing - here's the breakdown:
+This project has **two Python packages** with clear, logical names.
 
 ## Package Overview
 
-| Package | Purpose | Entry Point | Used By |
-|---------|---------|-------------|---------|
-| `comfy_gen/` | **Core CLI package** - Validation, MLflow, metadata | `python -m comfy_gen` | `generate.py`, CLI users |
-| `comfygen/` | **MCP server package** - ComfyUI client, MinIO, tools | `mcp_server.py` | MCP server, tests |
+| Package | Purpose | Used By |
+|---------|---------|---------|
+| `utils/` | **Utilities** - Validation, MLflow, metadata, quality scoring | `generate.py` |
+| `clients/` | **API Clients** - ComfyUI, MinIO, CivitAI, HuggingFace + MCP tools | `mcp_server.py` |
 
-## comfy_gen/ (CLI Package)
+## utils/ (Utilities Package)
 
-**The main user-facing package.** Installed via `pip install -e .`
+**Utility modules used by generate.py.**
 
 ```
-comfy_gen/
+utils/
 ├── __init__.py
-├── __main__.py         # CLI entry point
-├── cli.py              # Click-based CLI commands
-├── mlflow_logger.py    # Experiment tracking
-├── validation.py       # CLIP validation
-├── quality.py          # Quality metrics
-├── metadata.py         # Image metadata handling
-├── content_validator.py
-├── pose_validation.py
-├── prompt_enhancer.py
-├── api/                # API clients
-├── categories/         # Category definitions
-├── cli/                # Additional CLI commands
-├── composition/        # Composition helpers
-├── gui/                # GUI components
-├── parsing/            # Input parsing
-├── policy/             # Content policies
-├── services/           # Service layer
-├── tracking/           # Tracking utilities
-└── workflows/          # Workflow handling
+├── __main__.py          # Help output
+├── metadata.py          # PNG metadata embedding
+├── prompt_enhancer.py   # LLM prompt enhancement
+├── quality.py           # Image quality scoring
+├── validation.py        # CLIP validation
+├── pose_validation.py   # YOLOv8 pose validation
+├── content_validator.py # Content validation
+└── mlflow_logger.py     # MLflow experiment logging
 ```
 
-## comfygen/ (MCP Server Package)
+## clients/ (API Clients Package)
 
-**Internal package for MCP server and testing.** NOT installed via pip.
+**API clients and MCP tools for interacting with external services.**
 
 ```
-comfygen/
+clients/
 ├── __init__.py
-├── comfyui_client.py   # ComfyUI API client
+├── comfyui_client.py   # ComfyUI API client (HTTP + WebSocket)
 ├── minio_client.py     # MinIO storage client
 ├── civitai_client.py   # CivitAI API client
-├── llm_client.py       # LLM API client
-├── tools/              # MCP tool definitions
-└── workflows/          # Workflow utilities
+├── hf_client.py        # HuggingFace client
+├── llm_client.py       # LLM API client (Ollama)
+├── config.py           # Configuration loader
+├── models.py           # Model registry
+├── workflows.py        # Workflow utilities
+└── tools/              # MCP tool definitions
+    ├── gallery.py
+    ├── generation.py
+    ├── models.py
+    ├── prompts.py
+    ├── video.py
+    └── control.py
 ```
-
-## Why Two Packages?
-
-**Historical reasons + different dependency trees:**
-
-1. `comfy_gen/` is the pip-installable CLI package with stable dependencies
-2. `comfygen/` started as MCP server code with different imports (websocket, mcp, etc.)
-3. Merging them would require resolving dependency conflicts
-
-## Future Consideration
-
-Consider consolidating into single `comfy_gen/` package with submodules:
-- `comfy_gen.cli` - CLI (current comfy_gen)
-- `comfy_gen.mcp` - MCP server (current comfygen)
-- `comfy_gen.clients` - API clients
-
-This is tracked as a future cleanup task, not urgent.
 
 ## Import Patterns
 
 ```python
-# For CLI/validation work:
-from comfy_gen.mlflow_logger import log_experiment
-from comfy_gen.validation import validate_image
+# For validation/logging (used by generate.py):
+from utils.mlflow_logger import log_experiment
+from utils.validation import validate_image
+from utils.quality import score_image
 
-# For MCP/client work:
-from comfygen.comfyui_client import ComfyUIClient
-from comfygen.minio_client import MinIOClient
+# For API clients (used by mcp_server.py):
+from clients.comfyui_client import ComfyUIClient
+from clients.minio_client import MinIOClient
+from clients.civitai_client import CivitAIClient
 ```
 
-## Avoiding Confusion
+## Quick Reference
 
-| You Want To... | Use Package |
-|----------------|-------------|
-| Log to MLflow | `comfy_gen.mlflow_logger` |
-| Validate images | `comfy_gen.validation` |
-| Queue ComfyUI workflows | `comfygen.comfyui_client` |
-| Upload to MinIO | `comfygen.minio_client` |
-| Run CLI commands | `python -m comfy_gen` or `comfy-gen` |
+| You Want To... | Use |
+|----------------|-----|
+| Generate images | `python3 generate.py` |
+| Log to MLflow | `utils.mlflow_logger` |
+| Validate images | `utils.validation` |
+| Score quality | `utils.quality` |
+| Queue ComfyUI workflows | `clients.comfyui_client` |
+| Upload to MinIO | `clients.minio_client` |
 | Run MCP server | `python mcp_server.py` |

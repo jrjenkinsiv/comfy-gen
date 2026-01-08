@@ -12,7 +12,7 @@ from pathlib import Path
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from comfygen.config import get_config_loader
+from clients.config import get_config_loader
 
 
 async def example_default_negative_prompt():

@@ -5,7 +5,7 @@ This example demonstrates how to use the prompt enhancer to automatically
 improve prompts for better image generation quality.
 """
 
-from comfy_gen.prompt_enhancer import enhance_prompt, is_available
+from utils.prompt_enhancer import enhance_prompt, is_available
 
 
 def main():

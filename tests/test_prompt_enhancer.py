@@ -18,7 +18,7 @@ class TestPromptEnhancerAvailability:
             if "comfy_gen.prompt_enhancer" in sys.modules:
                 del sys.modules["comfy_gen.prompt_enhancer"]
 
-            from comfy_gen import prompt_enhancer
+            from utils import prompt_enhancer
 
             importlib.reload(prompt_enhancer)
 
@@ -37,7 +37,7 @@ class TestPromptEnhancerAvailability:
             if "comfy_gen.prompt_enhancer" in sys.modules:
                 del sys.modules["comfy_gen.prompt_enhancer"]
 
-            from comfy_gen import prompt_enhancer
+            from utils import prompt_enhancer
 
             importlib.reload(prompt_enhancer)
 
@@ -51,7 +51,7 @@ class TestPromptEnhancerFallback:
     def test_enhance_prompt_fallback_no_transformers(self):
         """Test that enhance_prompt returns original when transformers unavailable."""
         with patch("comfy_gen.prompt_enhancer.TRANSFORMERS_AVAILABLE", False):
-            from comfy_gen.prompt_enhancer import enhance_prompt
+            from utils.prompt_enhancer import enhance_prompt
 
             original = "a cat"
             result = enhance_prompt(original)
@@ -68,7 +68,7 @@ class TestPromptEnhancerFallback:
         mock_enhancer_class.return_value = mock_enhancer
 
         with patch("comfy_gen.prompt_enhancer.TRANSFORMERS_AVAILABLE", True):
-            from comfy_gen.prompt_enhancer import enhance_prompt
+            from utils.prompt_enhancer import enhance_prompt
 
             original = "a cat"
             result = enhance_prompt(original)
@@ -86,7 +86,7 @@ class TestPromptEnhancerCore:
     def test_enhancer_initialization(self, mock_pipeline, mock_model_class, mock_tokenizer_class):
         """Test enhancer initialization."""
         with patch("comfy_gen.prompt_enhancer.TRANSFORMERS_AVAILABLE", True):
-            from comfy_gen.prompt_enhancer import PromptEnhancer
+            from utils.prompt_enhancer import PromptEnhancer
 
             # Create enhancer (model not loaded yet - lazy loading)
             enhancer = PromptEnhancer()
@@ -115,7 +115,7 @@ class TestPromptEnhancerCore:
         mock_pipeline_func.return_value = mock_pipe
 
         with patch("comfy_gen.prompt_enhancer.TRANSFORMERS_AVAILABLE", True):
-            from comfy_gen.prompt_enhancer import PromptEnhancer
+            from utils.prompt_enhancer import PromptEnhancer
 
             enhancer = PromptEnhancer()
 
@@ -150,7 +150,7 @@ class TestPromptEnhancerCore:
         mock_pipeline_func.return_value = mock_pipe
 
         with patch("comfy_gen.prompt_enhancer.TRANSFORMERS_AVAILABLE", True):
-            from comfy_gen.prompt_enhancer import PromptEnhancer
+            from utils.prompt_enhancer import PromptEnhancer
 
             enhancer = PromptEnhancer()
             result = enhancer.enhance("a cat", style="photorealistic")
@@ -182,7 +182,7 @@ class TestPromptEnhancerCore:
         ]
 
         with patch("comfy_gen.prompt_enhancer.TRANSFORMERS_AVAILABLE", True):
-            from comfy_gen.prompt_enhancer import PromptEnhancer
+            from utils.prompt_enhancer import PromptEnhancer
 
             enhancer = PromptEnhancer()
 
@@ -208,7 +208,7 @@ class TestPromptEnhancerAPI:
         mock_enhancer_class.return_value = mock_enhancer
 
         with patch("comfy_gen.prompt_enhancer.TRANSFORMERS_AVAILABLE", True):
-            from comfy_gen.prompt_enhancer import enhance_prompt, reset_enhancer
+            from utils.prompt_enhancer import enhance_prompt, reset_enhancer
 
             # Reset to clean state
             reset_enhancer()
@@ -229,7 +229,7 @@ class TestPromptEnhancerAPI:
         mock_enhancer_class.return_value = mock_enhancer
 
         with patch("comfy_gen.prompt_enhancer.TRANSFORMERS_AVAILABLE", True):
-            from comfy_gen.prompt_enhancer import enhance_prompt, reset_enhancer
+            from utils.prompt_enhancer import enhance_prompt, reset_enhancer
 
             # Reset to clean state
             reset_enhancer()

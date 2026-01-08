@@ -13,7 +13,7 @@ def test_imports():
     print("Testing imports...")
 
     try:
-        from comfygen.comfyui_client import WEBSOCKET_AVAILABLE
+        from clients.comfyui_client import WEBSOCKET_AVAILABLE
 
         print(f"  [OK] ComfyUIClient imported (WebSocket available: {WEBSOCKET_AVAILABLE})")
     except Exception as e:
@@ -40,7 +40,7 @@ def test_workflow_validation():
     print("\nTesting workflow validation...")
 
     try:
-        from comfygen.workflows import WorkflowManager
+        from clients.workflows import WorkflowManager
 
         wf_mgr = WorkflowManager()
 
@@ -77,7 +77,7 @@ def test_comfyui_client():
     print("\nTesting ComfyUI client...")
 
     try:
-        from comfygen.comfyui_client import ComfyUIClient
+        from clients.comfyui_client import ComfyUIClient
 
         client = ComfyUIClient()
         print(f"  ComfyUI client created: {client.host}")
@@ -105,7 +105,7 @@ def test_generation_signature():
     try:
         import inspect
 
-        from comfygen.tools import generation
+        from clients.tools import generation
 
         sig = inspect.signature(generation.generate_image)
         params = sig.parameters

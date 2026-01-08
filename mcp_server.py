@@ -52,13 +52,13 @@ import stop_comfyui  # noqa: E402
 from mcp.server import FastMCP  # noqa: E402
 
 # Import typed API client for compose/category operations
-from comfy_gen.client import ComfyGenClient, ComfyGenError  # noqa: E402
+from utils.client import ComfyGenClient, ComfyGenError  # noqa: E402
 
 # Import config loader
-from comfygen.config import get_config_loader  # noqa: E402
+from clients.config import get_config_loader  # noqa: E402
 
 # Import generation tools
-from comfygen.tools import control, gallery, generation, models, prompts, video  # noqa: E402
+from clients.tools import control, gallery, generation, models, prompts, video  # noqa: E402
 
 # Initialize FastMCP server
 mcp = FastMCP("ComfyUI Comprehensive Generation Server")
@@ -501,7 +501,7 @@ async def list_available_categories(
         # Map string to enum if provided
         cat_type = None
         if category_type:
-            from comfy_gen.api.schemas.category import CategoryType
+            from utils.api.schemas.category import CategoryType
 
             try:
                 cat_type = CategoryType(category_type)
@@ -970,8 +970,8 @@ async def validate_workflow(
     try:
         import os
 
-        from comfygen.comfyui_client import ComfyUIClient
-        from comfygen.workflows import WorkflowManager
+        from clients.comfyui_client import ComfyUIClient
+        from clients.workflows import WorkflowManager
 
         # Get clients
         comfyui = ComfyUIClient(host=os.getenv("COMFYUI_HOST", "http://192.168.1.215:8188"))
