@@ -5,9 +5,9 @@
 document.addEventListener('DOMContentLoaded', () => {
     const categoriesGrid = document.getElementById('categories-grid');
     const typeFilter = document.getElementById('type-filter');
-    const searchInput = document.getElementById('category-search');
-    const categoryModal = document.getElementById('category-modal');
-    const modalClose = document.getElementById('modal-close');
+    const searchInput = document.getElementById('search-input');
+    const categoryModal = document.getElementById('category-detail-modal');
+    const modalClose = categoryModal?.querySelector('.modal-close');
     
     // Modal content elements
     const modalTitle = document.getElementById('modal-title');
@@ -109,52 +109,62 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Type filter
-    typeFilter.addEventListener('change', () => {
-        const type = typeFilter.value || null;
-        loadCategories(type);
-    });
+    if (typeFilter) {
+        typeFilter.addEventListener('change', () => {
+            const type = typeFilter.value || null;
+            loadCategories(type);
+        });
+    }
 
     // Search
     let searchTimeout;
-    searchInput.addEventListener('input', () => {
-        clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(() => {
-            const query = searchInput.value.trim().toLowerCase();
-            if (!query) {
-                renderCategories(allCategories);
-            } else {
-                const filtered = allCategories.filter(cat => 
-                    (cat.name || cat.id).toLowerCase().includes(query) ||
-                    (cat.keywords || []).some(kw => kw.toLowerCase().includes(query))
-                );
-                renderCategories(filtered);
-            }
-        }, 300);
-    });
+    if (searchInput) {
+        searchInput.addEventListener('input', () => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                const query = searchInput.value.trim().toLowerCase();
+                if (!query) {
+                    renderCategories(allCategories);
+                } else {
+                    const filtered = allCategories.filter(cat => 
+                        (cat.name || cat.id).toLowerCase().includes(query) ||
+                        (cat.keywords || []).some(kw => kw.toLowerCase().includes(query))
+                    );
+                    renderCategories(filtered);
+                }
+            }, 300);
+        });
+    }
 
     // Modal close
-    modalClose.addEventListener('click', () => {
-        categoryModal.classList.add('hidden');
-    });
-
-    categoryModal.addEventListener('click', (e) => {
-        if (e.target === categoryModal) {
+    if (modalClose) {
+        modalClose.addEventListener('click', () => {
             categoryModal.classList.add('hidden');
-        }
-    });
+        });
+    }
+
+    if (categoryModal) {
+        categoryModal.addEventListener('click', (e) => {
+            if (e.target === categoryModal) {
+                categoryModal.classList.add('hidden');
+            }
+        });
+    }
 
     // Use category button
-    useCategory.addEventListener('click', () => {
-        if (currentCategory) {
-            // Store in sessionStorage and navigate to compose
-            sessionStorage.setItem('selectedCategory', JSON.stringify(currentCategory));
-            window.location.href = '/compose';
-        }
-    });
+    if (useCategory) {
+        useCategory.addEventListener('click', () => {
+            if (currentCategory) {
+                // Store in sessionStorage and navigate to compose
+                sessionStorage.setItem('selectedCategory', JSON.stringify(currentCategory));
+                window.location.href = '/compose';
+            }
+        });
+    }
 
     // Add keyboard shortcut to close modal
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && !categoryModal.classList.contains('hidden')) {
+        if (e.key === 'Escape' && categoryModal && !categoryModal.classList.contains('hidden')) {
             categoryModal.classList.add('hidden');
         }
     });

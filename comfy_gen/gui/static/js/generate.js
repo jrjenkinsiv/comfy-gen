@@ -3,9 +3,9 @@
  */
 
 document.addEventListener('DOMContentLoaded', () => {
-    const form = document.getElementById('generate-form');
-    const promptInput = document.getElementById('prompt');
-    const negativeInput = document.getElementById('negative-prompt');
+    // Input elements - match HTML IDs
+    const promptInput = document.getElementById('prompt-input');
+    const negativeInput = document.getElementById('negative-input');
     const widthInput = document.getElementById('width');
     const heightInput = document.getElementById('height');
     const stepsInput = document.getElementById('steps');
@@ -13,104 +13,97 @@ document.addEventListener('DOMContentLoaded', () => {
     const seedInput = document.getElementById('seed');
     const workflowSelect = document.getElementById('workflow');
     
+    // Buttons
     const generateBtn = document.getElementById('generate-btn');
-    const cancelBtn = document.getElementById('cancel-btn');
-    const progressContainer = document.getElementById('progress-container');
+    
+    // Progress elements
+    const progressSection = document.getElementById('progress-section');
     const progressFill = document.getElementById('progress-fill');
     const progressText = document.getElementById('progress-text');
-    const progressStep = document.getElementById('progress-step');
     
-    const resultContainer = document.getElementById('result-container');
+    // Result elements
+    const resultSection = document.getElementById('result-section');
+    const emptyState = document.getElementById('empty-state');
     const resultImage = document.getElementById('result-image');
     const favoriteBtn = document.getElementById('favorite-btn');
-    const copyPromptBtn = document.getElementById('copy-prompt-btn');
-    const downloadBtn = document.getElementById('download-btn');
-    const regenerateBtn = document.getElementById('regenerate-btn');
+    const downloadLink = document.getElementById('download-link');
+    const copyUrlBtn = document.getElementById('copy-url-btn');
     
+    // Status
     const statusDot = document.getElementById('status-dot');
 
     let currentGeneration = null;
     let isGenerating = false;
 
-    // Load workflows
-    async function loadWorkflows() {
-        try {
-            const workflows = await api.listWorkflows();
-            workflowSelect.innerHTML = '<option value="">Auto-select</option>';
-            workflows.forEach(wf => {
-                const option = document.createElement('option');
-                option.value = wf.name;
-                option.textContent = wf.name;
-                workflowSelect.appendChild(option);
-            });
-        } catch (err) {
-            console.error('Failed to load workflows:', err);
-        }
+    // Guard against missing elements
+    if (!generateBtn || !promptInput) {
+        console.error('Required generate elements not found');
+        return;
     }
 
-    // Connect WebSocket for progress
-    progressSocket.connect();
+    // Connect WebSocket for progress (if available)
+    if (typeof progressSocket !== 'undefined') {
+        progressSocket.connect();
 
-    progressSocket.on('connected', () => {
-        statusDot.classList.add('connected');
-        statusDot.classList.remove('disconnected');
-    });
+        progressSocket.on('connected', () => {
+            if (statusDot) {
+                statusDot.classList.add('connected');
+                statusDot.classList.remove('disconnected');
+            }
+        });
 
-    progressSocket.on('disconnected', () => {
-        statusDot.classList.remove('connected');
-        statusDot.classList.add('disconnected');
-    });
+        progressSocket.on('disconnected', () => {
+            if (statusDot) {
+                statusDot.classList.remove('connected');
+                statusDot.classList.add('disconnected');
+            }
+        });
 
-    progressSocket.on('progress', (data) => {
-        if (isGenerating) {
-            const percent = Math.round((data.value / data.max) * 100);
-            progressFill.style.width = `${percent}%`;
-            progressText.textContent = `${percent}%`;
-            progressStep.textContent = data.step || 'Processing...';
-        }
-    });
+        progressSocket.on('progress', (data) => {
+            if (isGenerating && progressFill && progressText) {
+                const percent = Math.round((data.value / data.max) * 100);
+                progressFill.style.width = percent + '%';
+                progressText.textContent = percent + '%';
+            }
+        });
 
-    progressSocket.on('complete', (data) => {
-        if (isGenerating) {
-            finishGeneration(data);
-        }
-    });
+        progressSocket.on('complete', (data) => {
+            if (isGenerating) {
+                finishGeneration(data);
+            }
+        });
 
-    progressSocket.on('error', (data) => {
-        if (isGenerating) {
-            handleError(data.message || 'Generation failed');
-        }
-    });
+        progressSocket.on('error', (data) => {
+            if (isGenerating) {
+                handleError(data.message || 'Generation failed');
+            }
+        });
+    }
 
-    // Form submission
-    form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        
+    // Generate button click
+    generateBtn.addEventListener('click', async () => {
         if (isGenerating) return;
+
+        const prompt = promptInput.value.trim();
+        if (!prompt) {
+            alert('Please enter a prompt');
+            return;
+        }
 
         startGeneration();
 
-        const recipe = {
-            prompt: promptInput.value.trim(),
-            negative_prompt: negativeInput.value.trim(),
-        };
-
-        const settings = {
-            width: parseInt(widthInput.value) || 768,
-            height: parseInt(heightInput.value) || 1024,
-            steps: parseInt(stepsInput.value) || 50,
-            cfg: parseFloat(cfgInput.value) || 8.5,
-            seed: parseInt(seedInput.value) || -1,
-            workflow: workflowSelect.value || null,
-        };
-
         try {
-            const result = await api.generate(recipe, settings);
-            currentGeneration = {
-                ...result,
-                recipe,
-                settings,
-            };
+            const result = await api.generate({
+                prompt: prompt,
+                negative_prompt: negativeInput?.value.trim() || '',
+                workflow: workflowSelect?.value || 'flux-dev.json',
+                steps: parseInt(stepsInput?.value) || 30,
+                cfg: parseFloat(cfgInput?.value) || 7.5,
+                width: parseInt(widthInput?.value) || 1024,
+                height: parseInt(heightInput?.value) || 1024,
+                seed: parseInt(seedInput?.value) || -1,
+            });
+
             finishGeneration(result);
         } catch (err) {
             handleError(err.message);
@@ -121,78 +114,70 @@ document.addEventListener('DOMContentLoaded', () => {
         isGenerating = true;
         generateBtn.disabled = true;
         generateBtn.innerHTML = '<span class="btn-spinner"></span> Generating...';
-        cancelBtn.classList.remove('hidden');
-        progressContainer.classList.remove('hidden');
-        resultContainer.classList.add('hidden');
-        progressFill.style.width = '0%';
-        progressText.textContent = '0%';
-        progressStep.textContent = 'Starting...';
+        
+        if (progressSection) progressSection.classList.remove('hidden');
+        if (emptyState) emptyState.classList.add('hidden');
+        if (resultSection) resultSection.classList.add('hidden');
+        if (progressFill) progressFill.style.width = '0%';
+        if (progressText) progressText.textContent = 'Starting...';
     }
 
     function finishGeneration(result) {
         isGenerating = false;
         generateBtn.disabled = false;
-        generateBtn.innerHTML = 'Generate';
-        cancelBtn.classList.add('hidden');
-        progressContainer.classList.add('hidden');
-        progressFill.style.width = '100%';
+        generateBtn.innerHTML = '<span class="btn-text">Generate</span>';
         
-        if (result.image_url) {
+        if (progressSection) progressSection.classList.add('hidden');
+        
+        currentGeneration = result;
+        
+        if (result.image_url && resultImage) {
             resultImage.src = result.image_url;
-            resultContainer.classList.remove('hidden');
-            downloadBtn.href = result.image_url;
-            downloadBtn.download = result.filename || 'generated.png';
+            if (downloadLink) {
+                downloadLink.href = result.image_url;
+                downloadLink.download = result.filename || 'generated.png';
+            }
+            if (resultSection) resultSection.classList.remove('hidden');
         }
     }
 
     function handleError(message) {
         isGenerating = false;
         generateBtn.disabled = false;
-        generateBtn.innerHTML = 'Generate';
-        cancelBtn.classList.add('hidden');
-        progressContainer.classList.add('hidden');
-        alert(`Generation failed: ${message}`);
+        generateBtn.innerHTML = '<span class="btn-text">Generate</span>';
+        
+        if (progressSection) progressSection.classList.add('hidden');
+        if (emptyState) emptyState.classList.remove('hidden');
+        
+        alert('Generation failed: ' + message);
     }
 
-    // Cancel button
-    cancelBtn.addEventListener('click', () => {
-        // TODO: Implement cancel via API
-        handleError('Generation cancelled');
-    });
-
     // Favorite button
-    favoriteBtn.addEventListener('click', async () => {
-        if (!currentGeneration) return;
-
-        try {
-            await api.markFavorite({
-                image_url: currentGeneration.image_url,
-                recipe: currentGeneration.recipe,
-                settings: currentGeneration.settings,
-            });
-            favoriteBtn.textContent = '[OK] Saved';
-            favoriteBtn.disabled = true;
-        } catch (err) {
-            alert(`Failed to save favorite: ${err.message}`);
-        }
-    });
-
-    // Copy prompt button
-    copyPromptBtn.addEventListener('click', () => {
-        navigator.clipboard.writeText(promptInput.value).then(() => {
-            copyPromptBtn.textContent = '[OK] Copied';
-            setTimeout(() => {
-                copyPromptBtn.textContent = 'Copy Prompt';
-            }, 2000);
+    if (favoriteBtn) {
+        favoriteBtn.addEventListener('click', async () => {
+            if (!currentGeneration) return;
+            
+            try {
+                await api.addFavorite(currentGeneration);
+                favoriteBtn.innerHTML = '<span>★</span> Favorited';
+                favoriteBtn.classList.add('favorited');
+            } catch (err) {
+                alert('Failed to add favorite: ' + err.message);
+            }
         });
-    });
+    }
 
-    // Regenerate button
-    regenerateBtn.addEventListener('click', () => {
-        // Trigger form submit
-        form.dispatchEvent(new Event('submit'));
-    });
-
-    // Initialize
-    loadWorkflows();
+    // Copy URL button
+    if (copyUrlBtn) {
+        copyUrlBtn.addEventListener('click', () => {
+            if (!currentGeneration?.image_url) return;
+            
+            navigator.clipboard.writeText(currentGeneration.image_url).then(() => {
+                copyUrlBtn.textContent = 'Copied!';
+                setTimeout(() => {
+                    copyUrlBtn.textContent = 'Copy URL';
+                }, 2000);
+            });
+        });
+    }
 });

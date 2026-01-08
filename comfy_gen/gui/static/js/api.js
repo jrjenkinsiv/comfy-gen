@@ -2,7 +2,7 @@
  * API client for ComfyGen backend
  */
 
-const API_BASE = '';
+const API_BASE = '/api/v1';
 
 class ComfyGenAPI {
     constructor() {
@@ -10,6 +10,7 @@ class ComfyGenAPI {
     }
 
     async request(endpoint, options = {}) {
+        // Build full URL - always prepend baseUrl for relative paths
         const url = `${this.baseUrl}${endpoint}`;
         const config = {
             headers: {
@@ -36,29 +37,41 @@ class ComfyGenAPI {
 
     // Health check
     async health() {
-        return this.request('/api/health');
+        return this.request('/health');
     }
 
     // Categories
     async listCategories(type = null) {
-        let endpoint = '/api/categories';
+        let endpoint = '/categories';
         if (type) {
             endpoint += `?type=${type}`;
         }
-        return this.request(endpoint);
+        const response = await this.request(endpoint);
+        // API returns {items: [...], total: ...}, extract and normalize items
+        const items = response.items || response;
+        return items.map(cat => ({
+            ...cat,
+            name: cat.display_name || cat.name || cat.id,
+            // Flatten keywords for search - API returns {primary: [], secondary: [], specific: []}
+            keywords: [
+                ...(cat.keywords?.primary || []),
+                ...(cat.keywords?.secondary || []),
+                ...(cat.keywords?.specific || [])
+            ]
+        }));
     }
 
     async getCategory(id) {
-        return this.request(`/api/categories/${id}`);
+        return this.request(`/categories/${id}`);
     }
 
     async searchCategories(query) {
-        return this.request(`/api/categories/search?q=${encodeURIComponent(query)}`);
+        return this.request(`/categories/search?q=${encodeURIComponent(query)}`);
     }
 
     // Recipes
     async listRecipes(categoryId = null, limit = 20) {
-        let endpoint = `/api/recipes?limit=${limit}`;
+        let endpoint = `/recipes?limit=${limit}`;
         if (categoryId) {
             endpoint += `&category_id=${categoryId}`;
         }
@@ -66,26 +79,26 @@ class ComfyGenAPI {
     }
 
     async getRecipe(id) {
-        return this.request(`/api/recipes/${id}`);
+        return this.request(`/recipes/${id}`);
     }
 
     // Compose
-    async compose(text, policyTier = 'explicit', explain = true) {
-        return this.request('/api/compose', {
+    async compose(input, policyTier = 'general', explain = true) {
+        return this.request('/compose', {
             method: 'POST',
             body: JSON.stringify({
-                text,
+                input,
                 policy_tier: policyTier,
-                explain,
+                dry_run: false,
             }),
         });
     }
 
-    async previewCompose(text, policyTier = 'explicit') {
-        return this.request('/api/compose/preview', {
+    async previewCompose(input, policyTier = 'general') {
+        return this.request('/compose/preview', {
             method: 'POST',
             body: JSON.stringify({
-                text,
+                input,
                 policy_tier: policyTier,
             }),
         });
@@ -106,7 +119,7 @@ class ComfyGenAPI {
             workflow: settings.workflow || null,
         };
 
-        return this.request('/api/generate', {
+        return this.request('/generate', {
             method: 'POST',
             body: JSON.stringify(payload),
         });
@@ -114,33 +127,33 @@ class ComfyGenAPI {
 
     // Favorites
     async listFavorites(limit = 50, offset = 0) {
-        return this.request(`/api/favorites?limit=${limit}&offset=${offset}`);
+        return this.request(`/favorites?limit=${limit}&offset=${offset}`);
     }
 
     async markFavorite(data) {
-        return this.request('/api/favorites', {
+        return this.request('/favorites', {
             method: 'POST',
             body: JSON.stringify(data),
         });
     }
 
     async removeFavorite(id) {
-        return this.request(`/api/favorites/${id}`, {
+        return this.request(`/favorites/${id}`, {
             method: 'DELETE',
         });
     }
 
     async extractRecipe(favoriteId) {
-        return this.request(`/api/favorites/${favoriteId}/recipe`);
+        return this.request(`/favorites/${favoriteId}/extract-recipe`);
     }
 
     // Workflows
     async listWorkflows() {
-        return this.request('/api/workflows');
+        return this.request('/workflows');
     }
 
     async getWorkflow(name) {
-        return this.request(`/api/workflows/${name}`);
+        return this.request(`/workflows/${name}`);
     }
 }
 
