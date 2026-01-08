@@ -1,8 +1,6 @@
 """Tests for MLflow logger module."""
 
-from unittest.mock import Mock, patch, MagicMock
-
-import pytest
+from unittest.mock import MagicMock, Mock, patch
 
 from utils.mlflow_logger import (
     DEFAULT_EXPERIMENT,
@@ -27,7 +25,7 @@ class TestMLflowLoggerModule:
 class TestLogExperiment:
     """Tests for log_experiment function."""
 
-    @patch('utils.mlflow_logger.mlflow')
+    @patch("utils.mlflow_logger.mlflow")
     def test_log_experiment_basic(self, mock_mlflow):
         """Test basic experiment logging."""
         # Setup mocks
@@ -51,7 +49,7 @@ class TestLogExperiment:
         mock_mlflow.set_tracking_uri.assert_called_once_with(MLFLOW_URI)
         mock_mlflow.set_experiment.assert_called_once()
 
-    @patch('utils.mlflow_logger.mlflow')
+    @patch("utils.mlflow_logger.mlflow")
     def test_log_experiment_with_loras(self, mock_mlflow):
         """Test experiment logging with LoRAs."""
         mock_mlflow.set_tracking_uri = Mock()
@@ -75,7 +73,7 @@ class TestLogExperiment:
         # Verify function executed without errors
         mock_mlflow.set_tracking_uri.assert_called_once()
 
-    @patch('utils.mlflow_logger.mlflow')
+    @patch("utils.mlflow_logger.mlflow")
     def test_log_experiment_missing_params_warning(self, mock_mlflow):
         """Test that missing required params trigger warnings."""
         mock_mlflow.set_tracking_uri = Mock()
@@ -94,7 +92,7 @@ class TestLogExperiment:
         # Should still execute without crashing
         mock_mlflow.set_tracking_uri.assert_called_once()
 
-    @patch('utils.mlflow_logger.mlflow')
+    @patch("utils.mlflow_logger.mlflow")
     def test_log_experiment_custom_experiment(self, mock_mlflow):
         """Test logging to custom experiment."""
         mock_mlflow.set_tracking_uri = Mock()
@@ -118,7 +116,7 @@ class TestLogExperiment:
 class TestLogFavorite:
     """Tests for log_favorite function."""
 
-    @patch('utils.mlflow_logger.log_experiment')
+    @patch("utils.mlflow_logger.log_experiment")
     def test_log_favorite_calls_log_experiment(self, mock_log_experiment):
         """Test that log_favorite calls log_experiment with correct params."""
         log_favorite(
@@ -141,7 +139,7 @@ class TestLogFavorite:
 class TestLogBatch:
     """Tests for log_batch function."""
 
-    @patch('utils.mlflow_logger.log_experiment')
+    @patch("utils.mlflow_logger.log_experiment")
     def test_log_batch_multiple_experiments(self, mock_log_experiment):
         """Test batch logging of multiple experiments."""
         experiments = [
@@ -164,7 +162,7 @@ class TestLogBatch:
         # Should call log_experiment for each
         assert mock_log_experiment.call_count == 2
 
-    @patch('utils.mlflow_logger.log_experiment')
+    @patch("utils.mlflow_logger.log_experiment")
     def test_log_batch_empty_list(self, mock_log_experiment):
         """Test batch logging with empty list."""
         log_batch([])
@@ -172,7 +170,7 @@ class TestLogBatch:
         # Should not call log_experiment
         mock_log_experiment.assert_not_called()
 
-    @patch('utils.mlflow_logger.log_experiment')
+    @patch("utils.mlflow_logger.log_experiment")
     def test_log_batch_custom_experiment(self, mock_log_experiment):
         """Test batch logging to custom experiment."""
         experiments = [
@@ -193,7 +191,7 @@ class TestLogBatch:
 class TestMLflowHealthCheck:
     """Tests for MLflow health check functionality."""
 
-    @patch('utils.mlflow_logger.requests.get')
+    @patch("utils.mlflow_logger.requests.get")
     def test_mlflow_health_check_success(self, mock_get):
         """Test MLflow health check when server is up."""
         # This would be part of the actual implementation
@@ -206,7 +204,7 @@ class TestMLflowHealthCheck:
         # (Actual health check implementation may vary)
         assert MLFLOW_URI == "http://192.168.1.162:5001"
 
-    @patch('utils.mlflow_logger.requests.get')
+    @patch("utils.mlflow_logger.requests.get")
     def test_mlflow_health_check_failure(self, mock_get):
         """Test MLflow health check when server is down."""
         import requests

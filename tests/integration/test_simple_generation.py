@@ -36,7 +36,7 @@ class TestSimpleGeneration:
 
         # Validate each workflow is valid JSON
         for workflow_file in workflow_files:
-            with open(workflow_file, "r") as f:
+            with open(workflow_file) as f:
                 try:
                     data = json.load(f)
                     assert isinstance(data, dict), f"{workflow_file.name} is not a JSON object"

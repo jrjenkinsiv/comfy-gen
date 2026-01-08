@@ -1,7 +1,6 @@
 """Tests for quality scoring module (pytest version)."""
 
 import tempfile
-from unittest.mock import Mock, patch
 
 import pytest
 
