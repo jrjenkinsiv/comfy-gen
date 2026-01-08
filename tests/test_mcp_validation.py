@@ -17,7 +17,7 @@ async def test_generate_image_signature():
     """Test that generate_image has validation parameters."""
     import inspect
 
-    from comfygen.tools import generation
+    from clients.tools import generation
 
     sig = inspect.signature(generation.generate_image)
     params = sig.parameters
@@ -58,7 +58,7 @@ async def test_mcp_tool_signature():
 
 async def test_adjust_prompt_for_retry():
     """Test the prompt adjustment function."""
-    from comfygen.tools.generation import _adjust_prompt_for_retry
+    from clients.tools.generation import _adjust_prompt_for_retry
 
     # Test basic adjustment with pattern that matches
     positive = "single car on a road"
@@ -80,7 +80,7 @@ async def test_adjust_prompt_for_retry():
 async def test_validation_module_import():
     """Test that validation module can be imported."""
     try:
-        from comfy_gen.validation import validate_image  # noqa: F401
+        from utils.validation import validate_image  # noqa: F401
 
         print("[OK] Validation module imported successfully")
         return True
@@ -92,7 +92,7 @@ async def test_validation_module_import():
 
 async def test_generate_with_validation_disabled():
     """Test generation with validation disabled."""
-    from comfygen.tools import generation
+    from clients.tools import generation
 
     # Mock the clients to avoid needing actual ComfyUI server
     mock_comfyui = MagicMock()
@@ -126,7 +126,7 @@ async def test_generate_with_validation_disabled():
 
 async def test_validation_unavailable_handling():
     """Test graceful handling when validation dependencies are unavailable."""
-    from comfygen.tools import generation
+    from clients.tools import generation
 
     # Mock the clients
     mock_comfyui = MagicMock()

@@ -18,7 +18,7 @@ async def example_json_progress():
     print("Example: JSON Progress Tracking")
     print("=" * 60)
 
-    from comfygen.tools import generation
+    from clients.tools import generation
 
     # Generate with JSON progress enabled
     # Note: When json_progress=True, progress updates are collected in result['progress_updates']
@@ -60,7 +60,7 @@ async def example_local_file_output():
 
     import tempfile
 
-    from comfygen.tools import generation
+    from clients.tools import generation
 
     # Create temporary output path
     output_path = Path(tempfile.gettempdir()) / "comfygen_example.png"
@@ -95,8 +95,8 @@ async def example_workflow_validation():
 
     import os
 
-    from comfygen.comfyui_client import ComfyUIClient
-    from comfygen.workflows import WorkflowManager
+    from clients.comfyui_client import ComfyUIClient
+    from clients.workflows import WorkflowManager
 
     # Get clients
     comfyui = ComfyUIClient(host=os.getenv("COMFYUI_HOST", "http://192.168.1.215:8188"))
@@ -146,7 +146,7 @@ async def example_progress_polling():
     print("Example: Progress Polling")
     print("=" * 60)
 
-    from comfygen.tools import control, generation
+    from clients.tools import control, generation
 
     print("\nStarting generation...")
 

@@ -91,7 +91,7 @@ def test_quality_grade_colors():
 def test_quality_scorer_normalization():
     """Test score normalization functions."""
     try:
-        from comfy_gen.quality import PYIQA_AVAILABLE, QualityScorer
+        from utils.quality import PYIQA_AVAILABLE, QualityScorer
 
         if not PYIQA_AVAILABLE:
             print("[SKIP] QualityScorer normalization test - pyiqa not available")

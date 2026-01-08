@@ -7,15 +7,15 @@ import tempfile
 import traceback  # Used for detailed error reporting in exception handler
 from pathlib import Path
 
-# Add parent directory to path to import comfy_gen
+# Add parent directory to path to import utils
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from comfy_gen.validation import CLIP_AVAILABLE, YOLO_AVAILABLE
+from utils.validation import CLIP_AVAILABLE, YOLO_AVAILABLE
 
 
 def test_validation_import():
     """Test that validation module can be imported."""
-    from comfy_gen import validation
+    from utils import validation
 
     assert validation is not None
     print("[OK] Validation module imported successfully")
@@ -43,7 +43,7 @@ def test_validation_yolo_availability():
 
 def test_validation_function_signature():
     """Test that validate_image function has correct signature."""
-    from comfy_gen.validation import validate_image
+    from utils.validation import validate_image
 
     # Test with minimal arguments (should not crash)
     # Use tempfile to generate a cross-platform non-existent file path
@@ -61,7 +61,7 @@ def test_validation_function_signature():
 
 def test_validation_function_person_count_signature():
     """Test that validate_image accepts person count parameter."""
-    from comfy_gen.validation import validate_image
+    from utils.validation import validate_image
 
     # Test with person count validation enabled
     nonexistent_path = os.path.join(tempfile.gettempdir(), "nonexistent_test_image.png")
@@ -81,7 +81,7 @@ def test_validation_function_person_count_signature():
 
 def test_extract_expected_person_count():
     """Test person count extraction from prompts."""
-    from comfy_gen.validation import extract_expected_person_count
+    from utils.validation import extract_expected_person_count
 
     test_cases = [
         ("solo woman portrait", 1),
@@ -113,7 +113,7 @@ def test_extract_expected_person_count():
 
 def test_validator_class():
     """Test ImageValidator class can be imported."""
-    from comfy_gen.validation import ImageValidator
+    from utils.validation import ImageValidator
 
     # Just check the class exists
     assert ImageValidator is not None
@@ -122,7 +122,7 @@ def test_validator_class():
 
 def test_count_persons_yolo_function():
     """Test that count_persons_yolo function exists and handles errors gracefully."""
-    from comfy_gen.validation import count_persons_yolo
+    from utils.validation import count_persons_yolo
 
     # Test with non-existent file
     nonexistent_path = os.path.join(tempfile.gettempdir(), "nonexistent_test_image.png")

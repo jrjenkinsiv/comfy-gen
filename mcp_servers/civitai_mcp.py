@@ -21,7 +21,7 @@ sys.path.insert(0, str(parent_dir))
 
 from mcp.server import FastMCP  # noqa: E402
 
-from comfygen.civitai_client import CivitAIClient  # noqa: E402
+from clients.civitai_client import CivitAIClient  # noqa: E402
 
 # Initialize FastMCP server
 mcp = FastMCP("CivitAI Model Discovery Server")

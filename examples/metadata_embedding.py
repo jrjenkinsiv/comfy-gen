@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from PIL import Image
 
-from comfy_gen.metadata import (
+from utils.metadata import (
     embed_metadata_in_png,
     format_civitai_parameters,
     format_metadata_for_display,

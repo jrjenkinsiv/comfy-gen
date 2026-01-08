@@ -73,7 +73,8 @@ C:\Users\jrjen\comfy\models\
 | `realisticVisionV60B1_v51HyperVAE.safetensors` | SD 1.5 Hyper | 4GB | `realistic-vision.json` | 0.675 | **TOP** Best photorealism, includes VAE. |
 | `majicmixRealistic_v7.safetensors` | SD 1.5 | 2GB | `majicmix-realistic.json` | 0.674 | Excellent for portraits/NSFW. 1.1M+ downloads. |
 | `ponyDiffusionV6XL_v6StartWithThisOne.safetensors` | SDXL/Pony | 6.6GB | `pony-v6.json` | 0.664 | SDXL-based. Use score_9 tags. Native 1024x1024. |
-| `v1-5-pruned-emaonly-fp16.safetensors` | SD 1.5 | 2GB | `flux-dev.json` | ~0.55 | Baseline model. Fast but lower quality. |
+| `v1-5-pruned-emaonly-fp16.safetensors` | SD 1.5 | 2GB | `sd15-basic.json` | ~0.55 | Baseline model. Fast but lower quality. |
+| `flux1-dev-fp8.safetensors` | Flux Dev | 17GB | `flux-dev.json` | 0.70+ | Flux architecture, high quality. Native 1024x1024. |
 
 ### Illustrious Models - Anime/Illustration
 
@@ -200,7 +201,7 @@ LoRA files are stored in `C:\Users\jrjen\comfy\models\loras\`.
 | `GothicPixelArtV1.1.safetensors` | SD 1.5 | Gothic/dark pixel art style. Strength 0.8. Source: CivitAI 2264335 |
 
 **Game Asset Usage Notes:**
-- Use with SD 1.5 workflow (`flux-dev.json` uses v1-5-pruned-emaonly-fp16)
+- Use with SD 1.5 workflow (`sd15-basic.json` uses v1-5-pruned-emaonly-fp16)
 - Best for top-down views of ships, icons, UI elements
 - Recommended negative prompt: "realistic, 3d, photograph, perspective"
 - See `lora_catalog.yaml` for the `battleship_ship_icon` preset
@@ -396,7 +397,8 @@ print('new_lora.safetensors' in loras)
 
 | Workflow | Primary Model | Required LoRAs | Input Image | Output Type |
 |----------|---------------|----------------|-------------|-------------|
-| flux-dev.json | v1-5-pruned-emaonly-fp16.safetensors | None | No | PNG (512x512) |
+| sd15-basic.json | v1-5-pruned-emaonly-fp16.safetensors | None | No | PNG (512x512) |
+| flux-dev.json | flux1-dev-fp8.safetensors | None | No | PNG (1024x1024) |
 | sd15-img2img.json | v1-5-pruned-emaonly-fp16.safetensors | None | Yes | PNG (variable) |
 | wan22-t2v.json | wan2.2_t2v_high_noise_14B_fp8_scaled.safetensors | wan2.2_t2v_lightx2v_4steps_lora_v1.1_high_noise | No | MP4 (848x480, 81 frames) |
 | wan22-i2v.json | wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors | wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise | Yes | MP4 (848x480, 81 frames) |
@@ -409,7 +411,8 @@ print('new_lora.safetensors' in loras)
 
 | Model | Resolution | Steps | GPU | Time |
 |-------|------------|-------|-----|------|
-| SD 1.5 (flux-dev) | 512x512 | 20 | RTX 5090 | 10-15s |
+| SD 1.5 (sd15-basic) | 512x512 | 20 | RTX 5090 | 10-15s |
+| Flux Dev (flux-dev) | 1024x1024 | 20 | RTX 5090 | 30-45s |
 | SD 1.5 (img2img) | 512x512 | 20 | RTX 5090 | 10-20s |
 | Wan 2.2 T2V | 848x480 (81 frames) | 4 | RTX 5090 | 2-5 min |
 | Wan 2.2 I2V | 848x480 (81 frames) | 4 | RTX 5090 | 2-5 min |

@@ -83,7 +83,7 @@ def test_cli_entrypoint() -> int:
     print("-" * 40)
 
     try:
-        from comfy_gen.cli import main as cli_main  # noqa: F401
+        from utils.cli import main as cli_main  # noqa: F401
 
         print("[OK] CLI entrypoint 'main' is importable")
         return 0

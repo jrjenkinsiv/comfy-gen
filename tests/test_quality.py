@@ -5,15 +5,15 @@ import sys
 import tempfile
 from pathlib import Path
 
-# Add parent directory to path to import comfy_gen
+# Add parent directory to path to import utils
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from comfy_gen.quality import PYIQA_AVAILABLE
+from utils.quality import PYIQA_AVAILABLE
 
 
 def test_quality_import():
     """Test that quality module can be imported."""
-    from comfy_gen import quality
+    from utils import quality
 
     assert quality is not None
     print("[OK] Quality module imported successfully")
@@ -31,7 +31,7 @@ def test_quality_pyiqa_availability():
 
 def test_quality_function_signature():
     """Test that score_image function has correct signature."""
-    from comfy_gen.quality import score_image
+    from utils.quality import score_image
 
     # Test with minimal arguments (should not crash)
     # Use tempfile to generate a unique non-existent file path
@@ -59,7 +59,7 @@ def test_quality_scorer_class():
         return
 
     try:
-        from comfy_gen.quality import QualityScorer
+        from utils.quality import QualityScorer
 
         scorer = QualityScorer()
         assert scorer is not None
@@ -80,7 +80,7 @@ def test_quality_scorer_class():
 
 def test_grade_assignment():
     """Test that grades are assigned correctly."""
-    from comfy_gen.quality import QualityScorer
+    from utils.quality import QualityScorer
 
     if not PYIQA_AVAILABLE:
         print("[SKIP] Grade assignment test - pyiqa not available")
@@ -103,7 +103,7 @@ def test_grade_assignment():
 
 def test_metadata_integration():
     """Test that quality results integrate with metadata structure."""
-    from comfy_gen.quality import score_image
+    from utils.quality import score_image
 
     # Create a unique non-existent path
     with tempfile.NamedTemporaryFile(suffix=".png", delete=True) as tmp:

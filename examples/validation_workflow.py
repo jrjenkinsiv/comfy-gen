@@ -30,7 +30,7 @@ from generate import (
 )
 
 try:
-    from comfy_gen.validation import ImageValidator
+    from utils.validation import ImageValidator
 
     VALIDATION_AVAILABLE = True
 except ImportError:

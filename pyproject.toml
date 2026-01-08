@@ -27,7 +27,7 @@ dependencies = [
 ]
 
 [project.scripts]
-comfy = "comfy_gen.cli:main"
+# CLI entry point removed - use generate.py directly
 
 [project.optional-dependencies]
 dev = [
@@ -36,7 +36,7 @@ dev = [
 ]
 
 [tool.setuptools.packages.find]
-include = ["comfy_gen*", "comfygen*"]
+include = ["clients*", "utils*"]
 
 # =============================================================================
 # Ruff Configuration

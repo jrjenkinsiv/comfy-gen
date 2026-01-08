@@ -8,7 +8,7 @@ from pathlib import Path
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from comfygen.config import get_config_loader
+from clients.config import get_config_loader
 
 
 async def test_mcp_preset_integration():
@@ -181,7 +181,7 @@ def test_cli_mcp_parity():
     # Import both config loaders
     import sys
 
-    from comfygen.config import get_config_loader as mcp_config_loader
+    from clients.config import get_config_loader as mcp_config_loader
 
     # Add generate.py to path
     sys.path.insert(0, str(Path(__file__).parent.parent))
