@@ -1,5 +1,6 @@
 """Generation service that wraps generate.py logic."""
 
+import os
 import random
 import threading
 import uuid
@@ -15,6 +16,10 @@ STATUS_QUEUED = "queued"
 STATUS_RUNNING = "running"
 STATUS_COMPLETED = "completed"
 STATUS_FAILED = "failed"
+
+# Configuration from environment or defaults
+MINIO_ENDPOINT = os.getenv("MINIO_ENDPOINT", "192.168.1.215:9000")
+MINIO_BUCKET = os.getenv("MINIO_BUCKET", "comfy-gen")
 
 
 class GenerationJob:
@@ -238,7 +243,7 @@ class GenerationService:
                             if filename:
                                 # Construct MinIO URL
                                 # ComfyUI saves to output directory, which is synced to MinIO
-                                image_url = f"http://192.168.1.215:9000/comfy-gen/{filename}"
+                                image_url = f"http://{MINIO_ENDPOINT}/{MINIO_BUCKET}/{filename}"
                                 break
 
             if not image_url:

@@ -12,6 +12,21 @@ FastAPI server that wraps `generate.py` functionality, enabling typed client acc
 - Thread-safe in-memory job queue
 - Integration with existing ComfyUI client
 
+## Configuration
+
+The server uses environment variables for configuration:
+
+```bash
+# MinIO endpoint (default: 192.168.1.215:9000)
+export MINIO_ENDPOINT="192.168.1.215:9000"
+
+# MinIO bucket name (default: comfy-gen)
+export MINIO_BUCKET="comfy-gen"
+
+# ComfyUI host (configured in clients/comfyui_client.py)
+# Default: http://192.168.1.215:8188
+```
+
 ## Quick Start
 
 ### Start the Server

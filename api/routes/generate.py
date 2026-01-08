@@ -1,5 +1,7 @@
 """Generation endpoints."""
 
+import asyncio
+
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
 
 from api.schemas import GenerationRequest, GenerationResponse, ProgressUpdate
@@ -118,8 +120,8 @@ async def websocket_progress(websocket: WebSocket, job_id: str):
             if job.status in ["completed", "failed"]:
                 break
 
-            # Wait before next update
-            await websocket.receive_text()  # Keep connection alive
+            # Wait before next update (1 second interval)
+            await asyncio.sleep(1.0)
 
     except WebSocketDisconnect:
         pass
