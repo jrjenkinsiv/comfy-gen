@@ -8,6 +8,23 @@ This guide explains how to run experiments and batch generations in comfy-gen. U
 
 ---
 
+## Directory Structure
+
+```
+experiments/
+├── TEMPLATE.json           # Copy this for new experiments
+├── sessions/               # Curated session files with learnings + feedback
+│   ├── 2026-01-06-handjob-session.json
+│   └── 2026-01-08-flux-golden-retriever-session.json
+└── archive/                # Old raw batch dumps (not for reproduction)
+```
+
+**Where to save session files:** `experiments/sessions/YYYY-MM-DD-<name>.json`
+
+**DO NOT** save raw batch output JSONs - they're too verbose and lack learnings. Always create a curated session file.
+
+---
+
 ## Table of Contents
 
 1. [Quick Reference](#quick-reference-what-the-agent-must-know)
