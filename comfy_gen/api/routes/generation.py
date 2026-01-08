@@ -12,6 +12,7 @@ from ..schemas.generation import (
     GenerationStatus,
     ProgressInfo,
 )
+from ..websocket import start_progress_proxy
 
 router = APIRouter(prefix="/api/v1", tags=["generation"])
 logger = logging.getLogger(__name__)
@@ -44,8 +45,12 @@ async def execute_generation(generation_id: str, request: GenerationRequest) -> 
             current_node="queuing",
         )
 
-        # Execute via pipeline
+        # Execute via pipeline - get prompt_id for WebSocket proxy
         result = await pipeline.execute(request, client_id=generation_id)
+
+        # Start WebSocket proxy if we have a prompt_id
+        if hasattr(result, "prompt_id") and result.prompt_id:
+            start_progress_proxy(generation_id, result.prompt_id)
 
         # Mark as completed
         generation_store[generation_id]["status"] = GenerationStatus.COMPLETED

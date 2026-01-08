@@ -5,11 +5,12 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import AsyncGenerator
 
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from .config import settings
+from .websocket import websocket_progress_endpoint, manager
 from .routes import (
     categories_router,
     compose_router,
@@ -108,6 +109,22 @@ async def root() -> dict:
         "docs": "/docs",
         "health": "/health",
     }
+
+
+# WebSocket endpoint for real-time progress
+@app.websocket("/ws/progress/{generation_id}")
+async def websocket_progress(websocket: WebSocket, generation_id: str):
+    """
+    WebSocket endpoint for real-time generation progress.
+
+    Connect to receive progress updates for a specific generation.
+    Messages:
+    - {"type": "progress", "value": 15, "max": 50, "step": "Step 15 of 50"}
+    - {"type": "executing", "node": "KSampler", "message": "..."}
+    - {"type": "complete", "image_url": "..."}
+    - {"type": "error", "message": "..."}
+    """
+    await websocket_progress_endpoint(websocket, generation_id)
 
 
 def create_app() -> FastAPI:
