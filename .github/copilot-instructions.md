@@ -64,9 +64,23 @@ When assigned a meta-issue (instruction/documentation updates):
 
 **Tech Stack:** Python, ComfyUI API, MinIO (object storage), MLflow (experiment tracking), GitHub Actions.
 
+### Instruction Files (MUST CONSULT)
+
+| Trigger | File | Purpose |
+|---------|------|---------|
+| "generate", "create image/video" | `instructions/generation.md` | Workflows, params, LoRAs, prompts |
+| "experiment", "batch", "variations" | `instructions/experiments.md` | Session tracking, MLflow, reproducibility |
+
+**ALWAYS consult `instructions/generation.md` before any generation.** It contains:
+- Workflow selection guide (which workflow for which task)
+- Parameter defaults by model (steps, CFG, resolution)
+- LoRA compatibility and usage
+- Prompt strategies (verbose vs short+tags)
+- Validation and quality scoring
+
 ### Generation & Experiment Triggers
 
-**When user says any of these, immediately consult `instructions/experiments.md`:**
+**When user says any of these, also consult `instructions/experiments.md`:**
 - "run an experiment", "run experiment", "generate variations"
 - "batch generate", "batch generation", "run a batch"
 - "test different [poses/expressions/LoRAs/etc]"
