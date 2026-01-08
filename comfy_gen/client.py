@@ -7,10 +7,12 @@ Auto-validates requests/responses against Pydantic schemas.
 
 import asyncio
 import logging
-from typing import Any, AsyncIterator, Optional
+from typing import Any, AsyncIterator, Literal, Optional
 
 import httpx
 
+from .api.schemas.category import Category, CategoryType
+from .api.schemas.compose import ComposeRequest, ComposeResponse
 from .api.schemas.generation import (
     GenerationRequest,
     GenerationResponse,
@@ -291,6 +293,155 @@ class ComfyGenClient:
             poll_interval=poll_interval,
             timeout=timeout,
         )
+
+    # ============================================================
+    # COMPOSE ENDPOINTS
+    # ============================================================
+
+    def compose(
+        self,
+        input_text: str,
+        dry_run: bool = False,
+        max_categories: int = 3,
+        min_confidence: float = 0.3,
+        policy_tier: Literal["general", "mature", "explicit"] = "general",
+    ) -> ComposeResponse:
+        """
+        POST /api/v1/compose - Compose categories into a generation recipe.
+
+        Args:
+            input_text: User input with optional @tags and prompt text
+            dry_run: If true, returns recipe without executing
+            max_categories: Maximum categories to include (1-10)
+            min_confidence: Minimum confidence for inferred categories (0.0-1.0)
+            policy_tier: Content policy tier
+        """
+        request = ComposeRequest(
+            input=input_text,
+            dry_run=dry_run,
+            max_categories=max_categories,
+            min_confidence=min_confidence,
+            policy_tier=policy_tier,
+        )
+        response = self._get_sync_client().post(
+            "/api/v1/compose",
+            json=request.model_dump(),
+        )
+        self._handle_error(response)
+        return ComposeResponse.model_validate(response.json())
+
+    async def compose_async(
+        self,
+        input_text: str,
+        dry_run: bool = False,
+        max_categories: int = 3,
+        min_confidence: float = 0.3,
+        policy_tier: Literal["general", "mature", "explicit"] = "general",
+    ) -> ComposeResponse:
+        """POST /api/v1/compose (async)."""
+        request = ComposeRequest(
+            input=input_text,
+            dry_run=dry_run,
+            max_categories=max_categories,
+            min_confidence=min_confidence,
+            policy_tier=policy_tier,
+        )
+        response = await self._get_async_client().post(
+            "/api/v1/compose",
+            json=request.model_dump(),
+        )
+        self._handle_error(response)
+        return ComposeResponse.model_validate(response.json())
+
+    # ============================================================
+    # CATEGORY ENDPOINTS
+    # ============================================================
+
+    def list_categories(
+        self,
+        type: Optional[CategoryType] = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> dict:
+        """
+        GET /api/v1/categories - List all available categories.
+
+        Args:
+            type: Filter by category type (subject, setting, modifier, style)
+            page: Page number (1-indexed)
+            page_size: Items per page (1-100)
+
+        Returns:
+            dict with items, total, page, page_size
+        """
+        params: dict[str, Any] = {"page": page, "page_size": page_size}
+        if type:
+            params["type"] = type.value if hasattr(type, "value") else type
+
+        response = self._get_sync_client().get("/api/v1/categories", params=params)
+        self._handle_error(response)
+        return response.json()
+
+    async def list_categories_async(
+        self,
+        type: Optional[CategoryType] = None,
+        page: int = 1,
+        page_size: int = 20,
+    ) -> dict:
+        """GET /api/v1/categories (async)."""
+        params: dict[str, Any] = {"page": page, "page_size": page_size}
+        if type:
+            params["type"] = type.value if hasattr(type, "value") else type
+
+        response = await self._get_async_client().get("/api/v1/categories", params=params)
+        self._handle_error(response)
+        return response.json()
+
+    def search_categories(self, query: str) -> dict:
+        """
+        GET /api/v1/categories/search - Search categories by keyword.
+
+        Args:
+            query: Search keyword or phrase (min 2 chars)
+
+        Returns:
+            dict with query, results, count
+        """
+        response = self._get_sync_client().get(
+            "/api/v1/categories/search",
+            params={"q": query},
+        )
+        self._handle_error(response)
+        return response.json()
+
+    async def search_categories_async(self, query: str) -> dict:
+        """GET /api/v1/categories/search (async)."""
+        response = await self._get_async_client().get(
+            "/api/v1/categories/search",
+            params={"q": query},
+        )
+        self._handle_error(response)
+        return response.json()
+
+    def get_category(self, category_id: str) -> Category:
+        """
+        GET /api/v1/categories/{id} - Get a specific category by ID.
+
+        Args:
+            category_id: The category ID (e.g., "portrait", "night")
+
+        Returns:
+            Category object
+        """
+        response = self._get_sync_client().get(f"/api/v1/categories/{category_id}")
+        self._handle_error(response)
+        return Category.model_validate(response.json())
+
+    async def get_category_async(self, category_id: str) -> Category:
+        """GET /api/v1/categories/{id} (async)."""
+        response = await self._get_async_client().get(f"/api/v1/categories/{category_id}")
+        self._handle_error(response)
+        return Category.model_validate(response.json())
 
 
 # Module-level convenience function

@@ -10,13 +10,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from .config import settings
-from .websocket import websocket_progress_endpoint, manager
 from .routes import (
     categories_router,
     compose_router,
     favorites_router,
     generation_router,
 )
+from .websocket import websocket_progress_endpoint
 
 # Configure logging
 logging.basicConfig(

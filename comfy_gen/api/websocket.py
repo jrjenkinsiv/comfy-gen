@@ -7,7 +7,7 @@ Proxies real-time progress updates from ComfyUI to connected clients.
 import asyncio
 import json
 import logging
-from typing import Any, Optional
+from typing import Any
 from uuid import uuid4
 
 import websockets
@@ -93,10 +93,13 @@ async def proxy_comfyui_progress(generation_id: str, prompt_id: str) -> None:
 
     try:
         async with websockets.connect(ws_url) as comfy_ws:
-            await manager.broadcast(generation_id, {
-                "type": "connected",
-                "message": "Connected to ComfyUI progress stream",
-            })
+            await manager.broadcast(
+                generation_id,
+                {
+                    "type": "connected",
+                    "message": "Connected to ComfyUI progress stream",
+                },
+            )
 
             async for message in comfy_ws:
                 try:
@@ -113,12 +116,15 @@ async def proxy_comfyui_progress(generation_id: str, prompt_id: str) -> None:
                     if msg_type == "progress":
                         # KSampler step progress
                         progress_data = data.get("data", {})
-                        await manager.broadcast(generation_id, {
-                            "type": "progress",
-                            "value": progress_data.get("value", 0),
-                            "max": progress_data.get("max", 1),
-                            "step": f"Step {progress_data.get('value', 0)} of {progress_data.get('max', 1)}",
-                        })
+                        await manager.broadcast(
+                            generation_id,
+                            {
+                                "type": "progress",
+                                "value": progress_data.get("value", 0),
+                                "max": progress_data.get("max", 1),
+                                "step": f"Step {progress_data.get('value', 0)} of {progress_data.get('max', 1)}",
+                            },
+                        )
 
                     elif msg_type == "executing":
                         # Node execution updates
@@ -126,41 +132,56 @@ async def proxy_comfyui_progress(generation_id: str, prompt_id: str) -> None:
                         node = exec_data.get("node")
                         if node is None:
                             # Execution complete
-                            await manager.broadcast(generation_id, {
-                                "type": "executing",
-                                "node": None,
-                                "message": "Execution complete",
-                            })
+                            await manager.broadcast(
+                                generation_id,
+                                {
+                                    "type": "executing",
+                                    "node": None,
+                                    "message": "Execution complete",
+                                },
+                            )
                             break
                         else:
-                            await manager.broadcast(generation_id, {
-                                "type": "executing",
-                                "node": node,
-                                "message": f"Executing node: {node}",
-                            })
+                            await manager.broadcast(
+                                generation_id,
+                                {
+                                    "type": "executing",
+                                    "node": node,
+                                    "message": f"Executing node: {node}",
+                                },
+                            )
 
                     elif msg_type == "executed":
                         # Node completed with output
                         exec_data = data.get("data", {})
-                        await manager.broadcast(generation_id, {
-                            "type": "executed",
-                            "node": exec_data.get("node"),
-                            "output": exec_data.get("output"),
-                        })
+                        await manager.broadcast(
+                            generation_id,
+                            {
+                                "type": "executed",
+                                "node": exec_data.get("node"),
+                                "output": exec_data.get("output"),
+                            },
+                        )
 
                     elif msg_type == "execution_start":
-                        await manager.broadcast(generation_id, {
-                            "type": "start",
-                            "message": "Generation started",
-                        })
+                        await manager.broadcast(
+                            generation_id,
+                            {
+                                "type": "start",
+                                "message": "Generation started",
+                            },
+                        )
 
                     elif msg_type == "status":
                         # Queue status
                         status_data = data.get("data", {}).get("status", {})
-                        await manager.broadcast(generation_id, {
-                            "type": "status",
-                            "queue_remaining": status_data.get("exec_info", {}).get("queue_remaining", 0),
-                        })
+                        await manager.broadcast(
+                            generation_id,
+                            {
+                                "type": "status",
+                                "queue_remaining": status_data.get("exec_info", {}).get("queue_remaining", 0),
+                            },
+                        )
 
                 except json.JSONDecodeError:
                     logger.warning(f"Invalid JSON from ComfyUI: {message[:100]}")
@@ -171,10 +192,13 @@ async def proxy_comfyui_progress(generation_id: str, prompt_id: str) -> None:
         logger.info(f"ComfyUI WebSocket closed for generation {generation_id}")
     except Exception as e:
         logger.error(f"ComfyUI WebSocket error: {e}")
-        await manager.broadcast(generation_id, {
-            "type": "error",
-            "message": str(e),
-        })
+        await manager.broadcast(
+            generation_id,
+            {
+                "type": "error",
+                "message": str(e),
+            },
+        )
 
 
 def start_progress_proxy(generation_id: str, prompt_id: str) -> None:

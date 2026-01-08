@@ -7,6 +7,10 @@ Core Generation:
 - Image generation (generate_image, img2img)
 - Video generation (generate_video, image_to_video)
 
+Intelligent Composition:
+- compose_recipe: Parse natural language + @tags into generation recipes
+- list_categories: Discover available generation categories
+
 Model Management:
 - list_models, list_loras, get_model_info
 - suggest_model, suggest_loras
@@ -30,8 +34,10 @@ Advanced features (pending custom workflows):
 Run this server to allow MCP clients (like Claude Desktop) to generate images/videos.
 """
 
+import os
 import sys
 from pathlib import Path
+from typing import Literal, Optional
 
 # Add scripts directory to path
 scripts_dir = Path(__file__).parent / "scripts"
@@ -44,6 +50,9 @@ import restart_comfyui  # noqa: E402
 import start_comfyui  # noqa: E402
 import stop_comfyui  # noqa: E402
 from mcp.server import FastMCP  # noqa: E402
+
+# Import typed API client for compose/category operations
+from comfy_gen.client import ComfyGenClient, ComfyGenError  # noqa: E402
 
 # Import config loader
 from comfygen.config import get_config_loader  # noqa: E402
@@ -58,6 +67,18 @@ mcp = FastMCP("ComfyUI Comprehensive Generation Server")
 config_loader = None
 presets_config = None
 lora_catalog = None
+
+# Lazy-loaded API client
+_api_client: Optional[ComfyGenClient] = None
+
+
+def _get_api_client() -> ComfyGenClient:
+    """Get or create the typed API client instance."""
+    global _api_client
+    if _api_client is None:
+        api_url = os.environ.get("COMFYGEN_API_URL", "http://localhost:8000")
+        _api_client = ComfyGenClient(base_url=api_url, timeout=60.0)
+    return _api_client
 
 
 def _ensure_config_loaded():
@@ -361,6 +382,209 @@ async def img2img(
         cfg=cfg,
         seed=seed,
     )
+
+
+# ============================================================================
+# INTELLIGENT COMPOSITION TOOLS (via API Client)
+# ============================================================================
+
+
+@mcp.tool()
+async def compose_recipe(
+    input_text: str,
+    dry_run: bool = True,
+    max_categories: int = 3,
+    min_confidence: float = 0.3,
+    policy_tier: Literal["general", "mature", "explicit"] = "general",
+) -> dict:
+    """Compose categories into a generation recipe with full explainability.
+
+    This tool parses natural language input (with optional @tags) and composes
+    a generation recipe by selecting appropriate categories, prompts, and settings.
+    Returns detailed explanation of how the recipe was composed.
+
+    Args:
+        input_text: User input with optional @tags (e.g., "@portrait @outdoor professional headshot")
+        dry_run: If True, returns recipe without executing generation (default: True)
+        max_categories: Maximum number of categories to include (1-10, default: 3)
+        min_confidence: Minimum confidence for inferred categories (0.0-1.0, default: 0.3)
+        policy_tier: Content policy tier - general, mature, or explicit (default: general)
+
+    Returns:
+        Dictionary with:
+        - recipe: The composed generation recipe with prompts, settings, LoRAs
+        - explanation: Detailed breakdown of how recipe was composed including:
+            - summary: Human-readable summary
+            - explicit_tags: @tags found in input
+            - inferred_categories: Categories inferred from keywords with confidence scores
+            - remaining_prompt: User text after @tag extraction
+            - final_categories: Category IDs used in composition
+            - steps: Detailed composition steps for provenance
+            - warnings: Non-fatal issues during composition
+            - suggestions: Suggestions for improving results
+        - dry_run: Whether this was a dry run
+
+    Example:
+        compose_recipe("@portrait professional headshot natural lighting")
+        -> Returns recipe with portrait category settings, prompts for professional headshot,
+           and explanation of why portrait was selected and how prompts were composed.
+    """
+    try:
+        client = _get_api_client()
+        response = client.compose(
+            input_text=input_text,
+            dry_run=dry_run,
+            max_categories=max_categories,
+            min_confidence=min_confidence,
+            policy_tier=policy_tier,
+        )
+
+        # Convert to dict for MCP response
+        return {
+            "status": "success",
+            "recipe": response.recipe,
+            "explanation": {
+                "summary": response.explanation.summary,
+                "explicit_tags": response.explanation.explicit_tags,
+                "inferred_categories": response.explanation.inferred_categories,
+                "remaining_prompt": response.explanation.remaining_prompt,
+                "final_categories": response.explanation.final_categories,
+                "steps": [
+                    {
+                        "phase": step.phase,
+                        "action": step.action,
+                        "detail": step.detail,
+                        "source": step.source,
+                    }
+                    for step in response.explanation.steps
+                ],
+                "warnings": response.explanation.warnings,
+                "suggestions": response.explanation.suggestions,
+            },
+            "dry_run": response.dry_run,
+        }
+    except ComfyGenError as e:
+        return {"status": "error", "error": str(e), "status_code": e.status_code}
+    except Exception as e:
+        return {"status": "error", "error": f"Failed to compose recipe: {str(e)}"}
+
+
+@mcp.tool()
+async def list_available_categories(
+    category_type: Optional[str] = None,
+    page: int = 1,
+    page_size: int = 20,
+) -> dict:
+    """List available generation categories for intelligent composition.
+
+    Categories define generation presets including prompts, LoRAs, and settings.
+    Use these category IDs with @tags in compose_recipe (e.g., "@portrait").
+
+    Args:
+        category_type: Filter by type - subject, setting, modifier, or style (optional)
+        page: Page number for pagination (default: 1)
+        page_size: Items per page, 1-100 (default: 20)
+
+    Returns:
+        Dictionary with:
+        - items: List of categories with id, type, display_name, description, keywords
+        - total: Total number of categories matching filter
+        - page: Current page number
+        - page_size: Number of items per page
+
+    Example:
+        list_available_categories(category_type="subject")
+        -> Returns subject categories like portrait, landscape, etc.
+    """
+    try:
+        client = _get_api_client()
+        # Map string to enum if provided
+        cat_type = None
+        if category_type:
+            from comfy_gen.api.schemas.category import CategoryType
+
+            try:
+                cat_type = CategoryType(category_type)
+            except ValueError:
+                return {
+                    "status": "error",
+                    "error": f"Invalid category type: {category_type}. Valid types: subject, setting, modifier, style",
+                }
+
+        response = client.list_categories(type=cat_type, page=page, page_size=page_size)
+        return {"status": "success", **response}
+    except ComfyGenError as e:
+        return {"status": "error", "error": str(e), "status_code": e.status_code}
+    except Exception as e:
+        return {"status": "error", "error": f"Failed to list categories: {str(e)}"}
+
+
+@mcp.tool()
+async def search_available_categories(query: str) -> dict:
+    """Search categories by keyword for intelligent composition.
+
+    Searches across category names, descriptions, and keywords.
+    Useful for discovering relevant categories when you're not sure
+    which @tags to use.
+
+    Args:
+        query: Search keyword or phrase (minimum 2 characters)
+
+    Returns:
+        Dictionary with:
+        - query: The search query
+        - results: List of matching categories
+        - count: Number of results
+
+    Example:
+        search_available_categories("portrait")
+        -> Returns categories related to portraits, headshots, etc.
+    """
+    try:
+        client = _get_api_client()
+        response = client.search_categories(query)
+        return {"status": "success", **response}
+    except ComfyGenError as e:
+        return {"status": "error", "error": str(e), "status_code": e.status_code}
+    except Exception as e:
+        return {"status": "error", "error": f"Failed to search categories: {str(e)}"}
+
+
+@mcp.tool()
+async def get_category_details(category_id: str) -> dict:
+    """Get detailed information about a specific category.
+
+    Returns full category details including prompts, LoRAs, settings,
+    and composition rules. Use this to understand what a category
+    will contribute to a generation recipe.
+
+    Args:
+        category_id: The category ID (e.g., "portrait", "night", "cinematic")
+
+    Returns:
+        Dictionary with full category details including:
+        - id: Category identifier
+        - type: Category type (subject, setting, modifier, style)
+        - display_name: Human-friendly name
+        - description: What the category is for
+        - keywords: Primary and secondary keywords for inference
+        - prompts: Positive and negative prompt additions
+        - loras: LoRA configurations
+        - settings: Generation settings overrides
+        - composition: Composition rules (conflicts, requires, etc.)
+
+    Example:
+        get_category_details("portrait")
+        -> Returns full portrait category with prompt templates, LoRA suggestions, etc.
+    """
+    try:
+        client = _get_api_client()
+        category = client.get_category(category_id)
+        return {"status": "success", "category": category.model_dump()}
+    except ComfyGenError as e:
+        return {"status": "error", "error": str(e), "status_code": e.status_code}
+    except Exception as e:
+        return {"status": "error", "error": f"Failed to get category: {str(e)}"}
 
 
 # ============================================================================
