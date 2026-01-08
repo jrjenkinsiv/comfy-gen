@@ -31,35 +31,30 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      
       - name: Install linting dependencies
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install -r requirements-lint.txt
+          python3 -m pip install --upgrade pip --user
+          python3 -m pip install -r requirements-lint.txt --user
       
       - name: Python syntax check
         run: |
           echo "Checking Python syntax with py_compile..."
-          python -m py_compile comfy_gen/*.py
-          python -m py_compile scripts/*.py || echo "[WARN] Some scripts may have issues"
-          python -m py_compile generate.py
-          python -m py_compile mcp_server.py
+          python3 -m py_compile utils/*.py
+          python3 -m py_compile scripts/*.py || echo "[WARN] Some scripts may have issues"
+          python3 -m py_compile generate.py
+          python3 -m py_compile mcp_server.py
           echo "[OK] Python syntax check passed"
       
       - name: Ruff lint
         run: |
           echo "Running ruff linter..."
-          python -m ruff check . --output-format github
+          python3 -m ruff check . --output-format github
           echo "[OK] Ruff lint passed"
       
       - name: Ruff format check
         run: |
           echo "Checking code formatting..."
-          python -m ruff format --check .
+          python3 -m ruff format --check .
           echo "[OK] Format check passed"
 
   # ============================================================================
@@ -72,20 +67,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install -r requirements-lint.txt
+          python3 -m pip install --upgrade pip --user
+          python3 -m pip install -r requirements-lint.txt --user
       
       - name: Run mypy
         run: |
           echo "Running mypy type checker..."
-          python -m mypy comfy_gen/ --show-error-codes --pretty || echo "[WARN] Type errors found - review recommended"
+          python3 -m mypy utils/ --show-error-codes --pretty || echo "[WARN] Type errors found - review recommended"
           echo "[OK] Mypy check completed"
 
   # ============================================================================
@@ -99,27 +89,22 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
+          python3 -m pip install --upgrade pip --user
           # Install minimal deps for import validation
-          python -m pip install requests pyyaml click Pillow minio httpx aiofiles
-          python -m pip install -e .
+          python3 -m pip install requests pyyaml click Pillow minio httpx aiofiles --user
+          python3 -m pip install -e . --user
       
       - name: Module import validation
         run: |
           echo "Running smoke tests..."
-          python scripts/smoke_test.py
+          python3 scripts/smoke_test.py
       
       - name: Workflow JSON validation
         run: |
           echo "Validating workflow JSON files..."
-          python scripts/validate_workflows.py
+          python3 scripts/validate_workflows.py
 
 
   # ============================================================================
@@ -133,23 +118,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install -r requirements.txt
-          python -m pip install pytest pytest-cov
-          python -m pip install -e .
+          python3 -m pip install --upgrade pip --user
+          python3 -m pip install -r requirements.txt --user
+          python3 -m pip install pytest pytest-cov --user
+          python3 -m pip install -e . --user
       
       - name: Run pytest
         run: |
           echo "Running pytest..."
           echo "Note: Integration tests marked @pytest.mark.integration are skipped"
-          python -m pytest tests/ -v \
+          python3 -m pytest tests/ -v \
             -m "not integration" \
             --ignore=tests/manual_test_*.py \
             --ignore=tests/test_error_handling_manual.sh \
