@@ -48,5 +48,13 @@ gallery.html
 
 # Temporary files
 *.log
+
+# Batch results in root (should go to experiments/batch_results/)
+/batch_*.json
+/*_batch_results.json
+/*_results.json
+
+# Environment
+.env
 *.tmp
 .env

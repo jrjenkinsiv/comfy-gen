@@ -1,23 +1,27 @@
 # ComfyGen Experiments & Batch Generation
 
-**Last updated:** 2026-01-07
+**Last updated:** 2026-01-08
 
 This guide explains how to run experiments and batch generations in comfy-gen. Use these procedures when the user asks to "run an experiment", "generate variations", "test different options", or "batch generate".
+
+**CRITICAL:** Every experiment must be reproducible. Use the standardized session JSON format to capture all parameters, scores, ratings, and learnings.
 
 ---
 
 ## Table of Contents
 
 1. [Quick Reference](#quick-reference-what-the-agent-must-know)
-2. [Types of Experiments](#types-of-experiments)
-3. [Batch Script Template](#batch-script-template)
-4. [Project & Tagging System](#project--tagging-system)
-5. [Output Standards](#output-standards)
-6. [Gallery Organization](#gallery-organization)
-7. [Consuming Results](#consuming-results)
-8. [Workflow Selection](#workflow-selection-guide)
-9. [Common Negative Prompts](#common-negative-prompts-by-category)
-10. [Troubleshooting](#troubleshooting)
+2. [Session JSON Template](#session-json-template)
+3. [Feedback to MLflow Flow](#feedback-to-mlflow-flow)
+4. [Types of Experiments](#types-of-experiments)
+5. [Batch Script Template](#batch-script-template)
+6. [Project & Tagging System](#project--tagging-system)
+7. [Output Standards](#output-standards)
+8. [Gallery Organization](#gallery-organization)
+9. [Consuming Results](#consuming-results)
+10. [Workflow Selection](#workflow-selection-guide)
+11. [Common Negative Prompts](#common-negative-prompts-by-category)
+12. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -31,20 +35,38 @@ This guide explains how to run experiments and batch generations in comfy-gen. U
    - **Variations**: What should vary? (poses, expressions, LoRAs, styles, etc.)
    - **Count**: How many variations? (default: 50)
    - **Project**: What project is this for? (e.g., "youngboh", "nsfw-test", etc.)
+   - **Category**: sfw or nsfw (affects MLflow experiment name)
    
-2. Create a batch script with:
-   - Project tag in all filenames
-   - Variation arrays for each parameter
-   - Nested loops to generate combinations
-   - Results saved to JSON with full metadata
-   - All image URLs extracted and returned
+2. Generate images and track results:
+   - Run generation with progress output
+   - Collect CLIP validation scores
+   - **Collect user feedback** (rating 1-5, specific observations)
    
-3. **ALWAYS return all generated image URLs directly** - never say "check the bucket" or give patterns
+3. **Create session JSON** using template at `experiments/TEMPLATE.json`:
+   - Copy template to `experiments/YYYY-MM-DD-<session-name>.json`
+   - Fill in ALL model config, generation params, prompts
+   - Include user feedback for each experiment
+   - Document key_learnings and next_steps
+   
+4. **Log to MLflow** with user feedback:
+   ```python
+   from comfy_gen.mlflow_logger import log_experiment
+   log_experiment(
+       run_name="descriptive_name",
+       image_url="http://...",
+       params={...},
+       validation_score=0.70,
+       user_rating=4,  # FROM USER
+       feedback="User's specific feedback about what works/doesn't"  # FROM USER
+   )
+   ```
 
-4. **ALWAYS provide a consumption summary** with:
-   - Gallery link with project filter
-   - Top-scoring images highlighted
-   - Quick visual comparison recommendations
+5. **ALWAYS return all generated image URLs directly** - never say "check the bucket"
+
+6. **ALWAYS ask for user feedback** before logging to MLflow:
+   - "Rate this 1-5?"
+   - "What works? What doesn't?"
+   - Capture feedback in session JSON and MLflow
 
 ### Minimum Information Needed
 
@@ -53,11 +75,70 @@ This guide explains how to run experiments and batch generations in comfy-gen. U
 | Subject/character description | YES | - |
 | What to vary | YES | - |
 | Project name | NO | infer from context or use "experiment" |
+| Category (sfw/nsfw) | NO | infer from content |
 | Workflow | NO | infer from subject type |
 | Count | NO | 50 |
 | Negative prompt | NO | standard for category |
 
 ---
+
+## Session JSON Template
+
+All experiments MUST use the standardized template at `experiments/TEMPLATE.json`.
+
+**File location:** `experiments/YYYY-MM-DD-<descriptive-name>.json`
+
+**Example:** `experiments/2026-01-08-flux-golden-retriever-session.json`
+
+**Key sections:**
+- `session`: Unique identifier (date + name)
+- `category`: "sfw" or "nsfw" (determines MLflow experiment)
+- `project`: For gallery filtering
+- `purpose`: What hypothesis we're testing
+- `model_config`: checkpoint, workflow, loras, vae, encoders
+- `generation_params`: steps, cfg, sampler, resolution
+- `experiments[]`: Each run with URL, score, **rating**, **feedback**
+- `key_learnings[]`: What we learned
+- `next_steps[]`: What to try next
+
+**CRITICAL:** The `rating` and `feedback` fields come from the USER, not automated. Ask for feedback!
+
+---
+
+## Feedback to MLflow Flow
+
+User feedback is the most valuable data. Here's how it flows:
+
+```
+1. GENERATE image
+        |
+        v
+2. SHOW URL to user, ASK for rating (1-5) and feedback
+        |
+        v
+3. CAPTURE in session JSON:
+   {
+     "run_name": "flux_golden_v1",
+     "score": 0.701,
+     "rating": 5,              <-- FROM USER
+     "feedback": "Best fur detail, love the lighting"  <-- FROM USER
+   }
+        |
+        v
+4. LOG to MLflow with user_rating and feedback:
+   log_experiment(..., user_rating=5, feedback="Best fur detail...")
+        |
+        v
+5. UPDATE session JSON: mlflow_logged = true
+        |
+        v
+6. SEARCHABLE in MLflow by rating, feedback keywords, etc.
+```
+
+**Example good feedback (from handjob session):**
+- "Dick looks like dildo" (rating: 2) - specific, actionable
+- "Good composition, dick slightly less in focus - looks good" (rating: 4) - explains WHY it's good
+- "Almost there - dick shinier maybe wet. Good smirk" (rating: 4) - progress noted
 
 ## Types of Experiments
 

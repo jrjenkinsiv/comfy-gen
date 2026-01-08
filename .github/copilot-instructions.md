@@ -56,7 +56,13 @@ When assigned a meta-issue (instruction/documentation updates):
 
 **ComfyGen** is a programmatic image/video generation pipeline using ComfyUI. It enables text-based workflow execution, bypassing the ComfyUI GUI for automation and CI/CD integration.
 
-**Tech Stack:** Python, ComfyUI API, MinIO (object storage), GitHub Actions.
+**CORE PURPOSE:** Enable reproducible AI image generation experiments with full traceability. Every generation should be:
+1. **Reproducible** - Session JSON captures all parameters (checkpoint, LoRAs, steps, CFG, prompts)
+2. **Searchable** - MLflow logs enable finding past experiments by any parameter
+3. **Comparable** - CLIP validation scores + human ratings allow quality comparison
+4. **Iterative** - Key learnings feed into next experiments
+
+**Tech Stack:** Python, ComfyUI API, MinIO (object storage), MLflow (experiment tracking), GitHub Actions.
 
 ### Generation & Experiment Triggers
 
@@ -75,7 +81,29 @@ When assigned a meta-issue (instruction/documentation updates):
 - Create batch script with variation arrays
 - Run generation with progress output
 - **Return ALL image URLs directly** (never say "check bucket")
-- Save results to JSON for later reference
+- **Create session JSON** in `experiments/YYYY-MM-DD-<session-name>.json` (see existing examples)
+- **Log to MLflow** using `comfy_gen.mlflow_logger` for searchable experiment tracking
+- Include: checkpoint, workflow, LoRAs, steps, resolution, scores, ratings, key learnings
+
+**Session JSON Template:**
+```json
+{
+  "session": "2026-01-08-flux-golden-retriever",
+  "category": "sfw|nsfw",
+  "project": "project-name",
+  "purpose": "What we're testing and why",
+  "checkpoint": "model.safetensors",
+  "workflow": "workflow.json",
+  "loras": "lora:strength,lora2:strength",
+  "mlflow_experiment": "comfy-gen-<category>",
+  "mlflow_logged": true,
+  "experiments": [
+    {"run_name": "...", "url": "...", "score": 0.70, "rating": 5, "feedback": "..."}
+  ],
+  "key_learnings": ["What worked", "What didn't"],
+  "next_steps": ["Follow-up experiments"]
+}
+```
 
 **Key Architecture:**
 - `generate.py` - Main CLI for queuing workflows to ComfyUI API

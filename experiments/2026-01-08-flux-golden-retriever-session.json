@@ -1,0 +1,95 @@
+{
+  "session": "2026-01-08-flux-golden-retriever",
+  "category": "sfw",
+  "project": "golden-retriever-test",
+  "purpose": "Test Flux Dev FP8 quality with high-detail fur rendering, aiming for 0.70+ CLIP scores",
+  "checkpoint": "flux1-dev-fp8.safetensors",
+  "text_encoders": ["clip_l.safetensors", "t5xxl_fp16.safetensors"],
+  "vae": "ae.safetensors",
+  "workflow": "flux-dev-proper.json",
+  "loras": null,
+  "mlflow_experiment": "comfy-gen-flux-sfw",
+  "mlflow_logged": true,
+  "mlflow_run_ids": ["80965dba2c0b47ccb1954e96cca7bc65", "a52261435c1d4579aea16a06cbf6a385"],
+  "experiments": [
+    {
+      "run_name": "flux_golden_beach",
+      "url": "http://192.168.1.215:9000/comfy-gen/20260108_091228_flux_golden_beach.png",
+      "score": 0.685,
+      "steps": 25,
+      "resolution": "1024x1024",
+      "rating": null,
+      "feedback": "Good baseline, fur could be more detailed"
+    },
+    {
+      "run_name": "flux_golden_snow",
+      "url": "http://192.168.1.215:9000/comfy-gen/20260108_091251_flux_golden_snow.png",
+      "score": 0.683,
+      "steps": 25,
+      "resolution": "1024x1024",
+      "rating": null,
+      "feedback": "Winter scene, good composition"
+    },
+    {
+      "run_name": "flux_golden_portrait",
+      "url": "http://192.168.1.215:9000/comfy-gen/20260108_091315_flux_golden_portrait.png",
+      "score": 0.691,
+      "steps": 25,
+      "resolution": "1024x1024",
+      "rating": null,
+      "feedback": "Studio lighting, highest score at low steps"
+    },
+    {
+      "run_name": "flux_golden_swimming",
+      "url": "http://192.168.1.215:9000/comfy-gen/20260108_091338_flux_golden_swimming.png",
+      "score": 0.663,
+      "steps": 25,
+      "resolution": "1024x1024",
+      "rating": null,
+      "feedback": "Action shot with tennis ball, lower score likely due to complexity"
+    },
+    {
+      "run_name": "flux_golden_family",
+      "url": "http://192.168.1.215:9000/comfy-gen/20260108_091403_flux_golden_family.png",
+      "score": 0.676,
+      "steps": 25,
+      "resolution": "1024x1024",
+      "rating": null,
+      "feedback": "Multiple subjects (puppies), decent composition"
+    },
+    {
+      "run_name": "flux_golden_beach_realistic",
+      "url": "http://192.168.1.215:9000/comfy-gen/20260108_093843_flux_golden_beach_realistic.png",
+      "score": 0.693,
+      "steps": 100,
+      "resolution": "1536x1024",
+      "rating": null,
+      "feedback": "Higher steps + resolution, improved fur detail, landscape orientation"
+    },
+    {
+      "run_name": "flux_golden_issa_style",
+      "url": "http://192.168.1.215:9000/comfy-gen/20260108_094821_flux_golden_issa_style.png",
+      "score": 0.701,
+      "steps": 100,
+      "resolution": "1024x1536",
+      "rating": 5,
+      "feedback": "BEST - Broke 0.70! Reddish-gold Issa-style coloring, portrait orientation, detailed fur with individual strands, backlight rim lighting effect"
+    }
+  ],
+  "key_learnings": [
+    "Flux Dev FP8 working on RTX 5090 with 32GB VRAM",
+    "100 steps significantly improves detail over 25 steps",
+    "Portrait orientation (1024x1536) focuses on subject better than landscape",
+    "Specific fur texture prompts help: 'individual silky strands', 'wispy ear feathers', 'subsurface scattering'",
+    "Reddish-gold/auburn coloring produces more realistic results than generic 'golden'",
+    "Negative prompt for fur: 'smooth fur, flat lighting, matted fur, uniform color' helps",
+    "Score progression: 0.663-0.691 (25 steps) -> 0.693-0.701 (100 steps)",
+    "Breaking 0.70 requires: high steps (100), detailed prompt, appropriate resolution"
+  ],
+  "next_steps": [
+    "Try 150 steps to see if we can hit 0.72+",
+    "Test different CFG values (currently using default 3.5)",
+    "Try ControlNet for pose consistency",
+    "Backpass: regenerate best prompts with higher settings"
+  ]
+}

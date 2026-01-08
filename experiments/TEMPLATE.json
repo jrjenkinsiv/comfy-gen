@@ -1,0 +1,63 @@
+{
+  "_template_version": "1.0",
+  "_instructions": "Copy this template to YYYY-MM-DD-<session-name>.json. Fill in all required fields. Delete this _instructions field.",
+  
+  "session": "YYYY-MM-DD-descriptive-name",
+  "category": "sfw|nsfw",
+  "project": "project-name-for-gallery-filtering",
+  "purpose": "What hypothesis are we testing? What do we want to learn?",
+  
+  "model_config": {
+    "checkpoint": "model-name.safetensors",
+    "workflow": "workflow-name.json",
+    "loras": "lora1:strength,lora2:strength or null",
+    "vae": "vae-name.safetensors or null (uses checkpoint default)",
+    "text_encoders": ["encoder1.safetensors", "encoder2.safetensors"]
+  },
+  
+  "generation_params": {
+    "steps": 25,
+    "cfg": 7.0,
+    "sampler": "euler",
+    "scheduler": "normal",
+    "width": 1024,
+    "height": 1024,
+    "seed": -1
+  },
+  
+  "prompts": {
+    "base_positive": "The common positive prompt elements shared across experiments",
+    "base_negative": "The common negative prompt elements",
+    "variations": "Description of what was varied (poses, expressions, etc.)"
+  },
+  
+  "mlflow_tracking": {
+    "experiment_name": "comfy-gen-<category>",
+    "logged": false,
+    "run_ids": []
+  },
+  
+  "experiments": [
+    {
+      "run_name": "descriptive_run_name_v1",
+      "url": "http://192.168.1.215:9000/comfy-gen/YYYYMMDD_HHMMSS_filename.png",
+      "prompt_variation": "What was different about this run's prompt",
+      "score": 0.000,
+      "rating": 0,
+      "feedback": "YOUR FEEDBACK HERE - be specific about what works/doesn't work"
+    }
+  ],
+  
+  "key_learnings": [
+    "What we learned from this experiment session",
+    "Specific observations about what worked",
+    "What didn't work and why",
+    "Best performing: run_name (rating/5)"
+  ],
+  
+  "next_steps": [
+    "Follow-up experiments to run",
+    "Parameters to try next",
+    "Questions that remain unanswered"
+  ]
+}
