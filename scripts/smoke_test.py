@@ -83,7 +83,6 @@ def test_cli_entrypoint() -> int:
     print("-" * 40)
 
     import os
-    import sys
 
     try:
         # generate.py is the CLI - check if it exists and is executable
