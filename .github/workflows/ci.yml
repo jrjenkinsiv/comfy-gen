@@ -99,12 +99,12 @@ jobs:
       - name: Module import validation
         run: |
           echo "Running smoke tests..."
-          python3 scripts/smoke_test.py
+          /opt/homebrew/bin/python3.11 scripts/smoke_test.py
       
       - name: Workflow JSON validation
         run: |
           echo "Validating workflow JSON files..."
-          python3 scripts/validate_workflows.py
+          /opt/homebrew/bin/python3.11 scripts/validate_workflows.py
 
 
   # ============================================================================
