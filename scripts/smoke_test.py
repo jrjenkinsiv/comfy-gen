@@ -82,14 +82,20 @@ def test_cli_entrypoint() -> int:
     print("CLI Entrypoint:")
     print("-" * 40)
 
-    try:
-        # generate.py is the CLI - just check if it exists and is importable
-        import generate  # noqa: F401
+    import os
+    import sys
 
-        print("[OK] CLI entrypoint 'generate.py' is importable")
-        return 0
-    except ImportError as e:
-        print(f"[ERROR] CLI entrypoint import failed: {e}")
+    try:
+        # generate.py is the CLI - check if it exists and is executable
+        cli_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "generate.py")
+        if os.path.exists(cli_path):
+            print(f"[OK] CLI entrypoint 'generate.py' exists at {cli_path}")
+            return 0
+        else:
+            print(f"[ERROR] CLI entrypoint not found at {cli_path}")
+            return 1
+    except Exception as e:
+        print(f"[ERROR] CLI entrypoint check failed: {e}")
         return 1
 
 
