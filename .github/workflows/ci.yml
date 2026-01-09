@@ -93,7 +93,7 @@ jobs:
         run: |
           /opt/homebrew/bin/python3.11 -m pip install --upgrade pip --user
           # Install minimal deps for import validation
-          /opt/homebrew/bin/python3.11 -m pip install requests pyyaml click Pillow minio httpx aiofiles --user
+          /opt/homebrew/bin/python3.11 -m pip install requests pyyaml click Pillow minio httpx aiofiles mlflow --user
           /opt/homebrew/bin/python3.11 -m pip install -e . --user
       
       - name: Module import validation
