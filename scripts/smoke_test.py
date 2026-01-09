@@ -18,18 +18,18 @@ def test_imports() -> int:
 
     # Core modules that should always import
     core_modules = [
-        ("comfy_gen", "Main package"),
-        ("comfy_gen.cli", "CLI module"),
-        ("comfy_gen.metadata", "Metadata handling"),
-        ("comfy_gen.validation", "Validation utilities"),
-        ("comfy_gen.quality", "Quality assessment"),
-        ("comfy_gen.prompt_enhancer", "Prompt enhancement"),
+        ("utils", "Main package"),
+        ("utils.metadata", "Metadata handling"),
+        ("utils.validation", "Validation utilities"),
+        ("utils.quality", "Quality assessment"),
+        ("utils.prompt_enhancer", "Prompt enhancement"),
+        ("utils.mlflow_logger", "MLflow logging"),
     ]
 
     # Optional modules that may require extra dependencies
     optional_modules = [
-        ("comfy_gen.pose_validation", "Pose validation (requires mediapipe)"),
-        ("comfy_gen.content_validator", "Content validation (requires transformers)"),
+        ("utils.pose_validation", "Pose validation (requires mediapipe)"),
+        ("utils.content_validator", "Content validation (requires transformers)"),
     ]
 
     print("=" * 60)
@@ -77,15 +77,16 @@ def test_imports() -> int:
 
 
 def test_cli_entrypoint() -> int:
-    """Test that CLI entrypoint is callable."""
+    """Test that CLI entrypoint exists."""
     print()
     print("CLI Entrypoint:")
     print("-" * 40)
 
     try:
-        from utils.cli import main as cli_main  # noqa: F401
+        # generate.py is the CLI - just check if it exists and is importable
+        import generate  # noqa: F401
 
-        print("[OK] CLI entrypoint 'main' is importable")
+        print("[OK] CLI entrypoint 'generate.py' is importable")
         return 0
     except ImportError as e:
         print(f"[ERROR] CLI entrypoint import failed: {e}")
