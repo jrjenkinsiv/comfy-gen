@@ -133,12 +133,14 @@ magneto (git push) --> GitHub --> cerebro (runner) --> moira (ComfyUI)
                                                      MinIO storage
                                                           |
                                                           v
-                                              http://192.168.1.215:9000/comfy-gen/
+                                              http://moira:9000/comfy-gen/
 ```
 
 **Infrastructure:**
-| Machine | Role | IP |
-|---------|------|-----|
+**NETWORKING:** Use hostnames (via mDNS) - IPs are for reference only.
+
+| Machine | Role | IP (reference) |
+|---------|------|----------------|
 | magneto | Development workstation | 192.168.1.124 |
 | cerebro | PostgreSQL + MLflow + Gallery + GitHub Runner | 192.168.1.162 |
 | moira | ComfyUI + MinIO + GPU (RTX 5090) | 192.168.1.215 |
@@ -148,6 +150,7 @@ magneto (git push) --> GitHub --> cerebro (runner) --> moira (ComfyUI)
 | Machine | User | Sudo Password |
 |---------|------|---------------|
 | cerebro | jrjenkinsiv | `babyseal` |
+| ant-man | jrjenkinsiv | `nvidia1` |
 | moira | jrjen | N/A (Windows) |
 
 **Cerebro Server Configuration:**
@@ -160,31 +163,31 @@ ssh cerebro 'printf "babyseal\n" | sudo -S pmset -a displaysleep 0 sleep 0 disks
 | Service | Port | URL |
 |---------|------|-----|
 | PostgreSQL | 5432 | N/A (local) |
-| MLflow | 5001 | http://192.168.1.162:5001 |
-| Gallery | 8080 | http://192.168.1.162:8080 |
+| MLflow | 5001 | http://cerebro:5001 |
+| Gallery | 8080 | http://cerebro:8080 |
 | GitHub Runner | - | launchd service |
 
 **Service Ports on moira:**
 | Service | Port | URL |
 |---------|------|-----|
-| ComfyUI | 8188 | http://192.168.1.215:8188 |
-| MinIO | 9000 | http://192.168.1.215:9000 |
+| ComfyUI | 8188 | http://moira:8188 |
+| MinIO | 9000 | http://moira:9000 |
 
 **Service Ports on ant-man (LLM Inference):**
 | Service | Port | URL |
 |---------|------|-----|
-| Ollama API | 11434 | http://192.168.1.253:11434 |
-| OpenAI-compat | 11434 | http://192.168.1.253:11434/v1/chat/completions |
+| Ollama API | 11434 | http://ant-man:11434 |
+| OpenAI-compat | 11434 | http://ant-man:11434/v1/chat/completions |
 
 **LLM Configuration (for intent parsing):**
 ```bash
-export COMFYGEN_LLM_ENDPOINT="http://192.168.1.253:11434/v1/chat/completions"
+export COMFYGEN_LLM_ENDPOINT="http://ant-man:11434/v1/chat/completions"
 export COMFYGEN_LLM_MODEL="deepseek-r1:7b"
 export COMFYGEN_LLM_TIMEOUT="120"  # Reasoning models need more time
 ```
 Available models: `deepseek-r1:7b` (reasoning, primary), `mistral:7b`, `llama2:7b`, `orca-mini:3b`
 
-**IMPORTANT:** Cerebro is the permanent home for ML experiment tracking. All scripts and workflows MUST use cerebro's MLflow (http://192.168.1.162:5001). Moira's MLflow (port 5000) was deprecated as of January 2026.
+**IMPORTANT:** Cerebro is the permanent home for ML experiment tracking. All scripts and workflows MUST use cerebro's MLflow (http://cerebro:5001). Moira's MLflow (port 5000) was deprecated as of January 2026.
 
 ## 3. Issue-Driven Workflow
 1.  **Create Issue:** Use standard template (Context, Acceptance Criteria, Notes).
@@ -273,7 +276,7 @@ Issue #68 had a comment showing Phase 2 and 3 were complete, only `--prompt-pres
 **Cost-aware routing:** Use Copilot tokens for complex code generation, not documentation.
 
 **CRITICAL: Image/Video Generation is ALWAYS `local-network`**
-- Generation requires ComfyUI API at `192.168.1.215:8188` (moira)
+- Generation requires ComfyUI API at `moira:8188`
 - Copilot runs on GitHub infrastructure - it CANNOT reach the local network
 - Only the Orchestrator (VS Code Agent) can execute generation requests
 - Label generation issues as `local-network`, NOT `serial-assignment`
@@ -368,16 +371,16 @@ python3 generate.py --workflow workflows/flux-dev.json \
     --output /tmp/sunset.png
 
 # Check ComfyUI server status
-curl -s http://192.168.1.215:8188/system_stats | python3 -m json.tool
+curl -s http://moira:8188/system_stats | python3 -m json.tool
 
 # Start ComfyUI server (via SSH to moira)
 ssh moira "C:\\Users\\jrjen\\comfy\\.venv\\Scripts\\python.exe C:\\Users\\jrjen\\comfy-gen\\scripts\\start_comfyui.py"
 
 # List images in MinIO
-curl -s http://192.168.1.215:9000/comfy-gen/ | grep -oP '(?<=<Key>)[^<]+'
+curl -s http://moira:9000/comfy-gen/ | grep -oP '(?<=<Key>)[^<]+'
 
 # View image directly
-open "http://192.168.1.215:9000/comfy-gen/<filename>.png"
+open "http://moira:9000/comfy-gen/<filename>.png"
 ```
 
 ## 6. Code Conventions
@@ -477,7 +480,7 @@ The catalog contains:
 **ALL experiment feedback goes to MLflow on cerebro - NOT in YAML files!**
 
 ```
-MLflow Server: http://192.168.1.162:5001
+MLflow Server: http://cerebro:5001
 ```
 
 **DO NOT** duplicate feedback in:
@@ -494,7 +497,7 @@ from comfy_gen.mlflow_logger import log_experiment, log_favorite, log_batch
 # Log a single experiment with COMPLETE params
 log_experiment(
     run_name="redhead_handjob_v1",
-    image_url="http://192.168.1.215:9000/comfy-gen/20260106_123456_output.png",
+    image_url="http://moira:9000/comfy-gen/20260106_123456_output.png",
     params={
         # REQUIRED params (will warn if missing)
         "checkpoint": "pornmasterProPony_realismV1",
@@ -538,7 +541,7 @@ log_experiment(
 # Log a favorite (auto-sets 5/5 rating, goes to favorites experiment)
 log_favorite(
     run_name="best_redhead_v1",
-    image_url="http://192.168.1.215:9000/comfy-gen/...",
+    image_url="http://moira:9000/comfy-gen/...",
     params={...},
     feedback="Benchmark reference - best realism achieved so far",
 )
@@ -636,8 +639,8 @@ C:\Users\jrjen\comfy\models\
    - CFG: 8.5-9.5 for NSFW/explicit (stricter adherence), 7.0-8.0 for general
 5. **Generate** - `python3 generate.py --workflow <file> --prompt "<detailed_prompt>" --negative-prompt "<detailed_negative>" --steps 70 --cfg 9.0 --output /tmp/output.png`
 6. **Return ALL URLs** - ALWAYS list every generated image URL directly so user can view each one individually. For batch generation, provide a complete list of clickable links (not just a pattern or "see bucket"). Example format:
-   - http://192.168.1.215:9000/comfy-gen/20260106_132120_nsfw_majicmix_11111.png
-   - http://192.168.1.215:9000/comfy-gen/20260106_132126_nsfw_majicmix_22222.png
+   - http://moira:9000/comfy-gen/20260106_132120_nsfw_majicmix_11111.png
+   - http://moira:9000/comfy-gen/20260106_132126_nsfw_majicmix_22222.png
    - (list ALL generated images)
 
 ### CRITICAL: Video vs Image LoRAs
@@ -810,7 +813,7 @@ gh pr checks <PR_NUMBER> --repo jrjenkinsiv/comfy-gen
 - **ComfyUI not responding:** SSH to moira, check `tasklist | findstr python`, restart with `start_comfyui.py`.
 - **Model not found:** Verify model exists in `C:\Users\jrjen\comfy\models\` and workflow references correct filename.
 - **MinIO access denied:** Bucket policy may have reset. Run `scripts/set_bucket_policy.py`.
-- **Image not appearing:** Check MinIO bucket at `http://192.168.1.215:9000/minio/comfy-gen/`.
+- **Image not appearing:** Check MinIO bucket at `http://moira:9000/minio/comfy-gen/`.
 
 ## 11. Workflow Pickup Procedure
 
@@ -1001,12 +1004,12 @@ When building new services, be intentional about placement to avoid later migrat
 
 ### Quick Reference: Current Services by Machine
 
-| Machine | IP | Currently Running Services |
-|---------|-----|---------------------------|
-| **magneto** | 192.168.1.124 | Development workstation (VS Code, git, local testing) |
-| **cerebro** | 192.168.1.162 | Gallery server (`:8080`), PostgreSQL, MLflow (`:5001`) |
-| **moira** | 192.168.1.215 | ComfyUI server (`:8188`), MinIO (`:9000`), GPU tasks (RTX 5090) |
-| **ant-man** | 192.168.1.253 | GitHub Actions runner (ARM64) |
+| Machine | Hostname | Currently Running Services |
+|---------|----------|---------------------------|
+| **magneto** | magneto | Development workstation (VS Code, git, local testing) |
+| **cerebro** | cerebro | Gallery server (`:8080`), PostgreSQL, MLflow (`:5001`) |
+| **moira** | moira | ComfyUI server (`:8188`), MinIO (`:9000`), GPU tasks (RTX 5090) |
+| **ant-man** | ant-man | Ollama LLM inference (`:11434`) |
 
 ### Decision Checklist for New Services
 
