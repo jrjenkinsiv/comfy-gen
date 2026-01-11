@@ -133,7 +133,7 @@ magneto (git push) --> GitHub --> cerebro (runner) --> moira (ComfyUI)
                                                      MinIO storage
                                                           |
                                                           v
-                                              http://moira:9000/comfy-gen/
+                                              http://moira.local:9000/comfy-gen/
 ```
 
 **Infrastructure:**
@@ -156,38 +156,38 @@ magneto (git push) --> GitHub --> cerebro (runner) --> moira (ComfyUI)
 **Cerebro Server Configuration:**
 Cerebro is a headless server - it must NOT sleep. If MLflow becomes unreachable, SSH in and run:
 ```bash
-ssh cerebro 'printf "babyseal\n" | sudo -S pmset -a displaysleep 0 sleep 0 disksleep 0 powernap 0'
+ssh cerebro.local 'printf "babyseal\n" | sudo -S pmset -a displaysleep 0 sleep 0 disksleep 0 powernap 0'
 ```
 
 **Service Ports on cerebro:**
 | Service | Port | URL |
 |---------|------|-----|
 | PostgreSQL | 5432 | N/A (local) |
-| MLflow | 5001 | http://cerebro:5001 |
-| Gallery | 8080 | http://cerebro:8080 |
+| MLflow | 5001 | http://cerebro.local:5001 |
+| Gallery | 8080 | http://cerebro.local:8080 |
 | GitHub Runner | - | launchd service |
 
 **Service Ports on moira:**
 | Service | Port | URL |
 |---------|------|-----|
-| ComfyUI | 8188 | http://moira:8188 |
-| MinIO | 9000 | http://moira:9000 |
+| ComfyUI | 8188 | http://moira.local:8188 |
+| MinIO | 9000 | http://moira.local:9000 |
 
 **Service Ports on ant-man (LLM Inference):**
 | Service | Port | URL |
 |---------|------|-----|
-| Ollama API | 11434 | http://ant-man:11434 |
-| OpenAI-compat | 11434 | http://ant-man:11434/v1/chat/completions |
+| Ollama API | 11434 | http://ant-man.local:11434 |
+| OpenAI-compat | 11434 | http://ant-man.local:11434/v1/chat/completions |
 
 **LLM Configuration (for intent parsing):**
 ```bash
-export COMFYGEN_LLM_ENDPOINT="http://ant-man:11434/v1/chat/completions"
+export COMFYGEN_LLM_ENDPOINT="http://ant-man.local:11434/v1/chat/completions"
 export COMFYGEN_LLM_MODEL="deepseek-r1:7b"
 export COMFYGEN_LLM_TIMEOUT="120"  # Reasoning models need more time
 ```
 Available models: `deepseek-r1:7b` (reasoning, primary), `mistral:7b`, `llama2:7b`, `orca-mini:3b`
 
-**IMPORTANT:** Cerebro is the permanent home for ML experiment tracking. All scripts and workflows MUST use cerebro's MLflow (http://cerebro:5001). Moira's MLflow (port 5000) was deprecated as of January 2026.
+**IMPORTANT:** Cerebro is the permanent home for ML experiment tracking. All scripts and workflows MUST use cerebro's MLflow (http://cerebro.local:5001). Moira's MLflow (port 5000) was deprecated as of January 2026.
 
 ## 3. Issue-Driven Workflow
 1.  **Create Issue:** Use standard template (Context, Acceptance Criteria, Notes).
@@ -371,16 +371,16 @@ python3 generate.py --workflow workflows/flux-dev.json \
     --output /tmp/sunset.png
 
 # Check ComfyUI server status
-curl -s http://moira:8188/system_stats | python3 -m json.tool
+curl -s http://moira.local:8188/system_stats | python3 -m json.tool
 
 # Start ComfyUI server (via SSH to moira)
-ssh moira "C:\\Users\\jrjen\\comfy\\.venv\\Scripts\\python.exe C:\\Users\\jrjen\\comfy-gen\\scripts\\start_comfyui.py"
+ssh moira.local "C:\\Users\\jrjen\\comfy\\.venv\\Scripts\\python.exe C:\\Users\\jrjen\\comfy-gen\\scripts\\start_comfyui.py"
 
 # List images in MinIO
-curl -s http://moira:9000/comfy-gen/ | grep -oP '(?<=<Key>)[^<]+'
+curl -s http://moira.local:9000/comfy-gen/ | grep -oP '(?<=<Key>)[^<]+'
 
 # View image directly
-open "http://moira:9000/comfy-gen/<filename>.png"
+open "http://moira.local:9000/comfy-gen/<filename>.png"
 ```
 
 ## 6. Code Conventions
@@ -434,7 +434,7 @@ The `extra_model_paths.yaml` file (in ComfyUI directory) tells ComfyUI where to 
 
 ```bash
 # CORRECT: Background download with isBackground=true
-ssh moira "powershell -Command \"
+ssh moira.local "powershell -Command \"
   \$url = 'https://huggingface.co/...'
   \$dest = 'C:\\Users\\jrjen\\comfy\\models\\controlnet\\Model.safetensors'
   Write-Host 'Starting download...'
@@ -443,7 +443,7 @@ ssh moira "powershell -Command \"
 \"" &
 
 # Then check status later:
-ssh moira "powershell -Command \"Get-Item 'path\\to\\file' | Select-Object Name, Length\""
+ssh moira.local "powershell -Command \"Get-Item 'path\\to\\file' | Select-Object Name, Length\""
 ```
 
 **When to use `isBackground=true`:**
@@ -480,7 +480,7 @@ The catalog contains:
 **ALL experiment feedback goes to MLflow on cerebro - NOT in YAML files!**
 
 ```
-MLflow Server: http://cerebro:5001
+MLflow Server: http://cerebro.local:5001
 ```
 
 **DO NOT** duplicate feedback in:
@@ -497,7 +497,7 @@ from comfy_gen.mlflow_logger import log_experiment, log_favorite, log_batch
 # Log a single experiment with COMPLETE params
 log_experiment(
     run_name="redhead_handjob_v1",
-    image_url="http://moira:9000/comfy-gen/20260106_123456_output.png",
+    image_url="http://moira.local:9000/comfy-gen/20260106_123456_output.png",
     params={
         # REQUIRED params (will warn if missing)
         "checkpoint": "pornmasterProPony_realismV1",
@@ -541,7 +541,7 @@ log_experiment(
 # Log a favorite (auto-sets 5/5 rating, goes to favorites experiment)
 log_favorite(
     run_name="best_redhead_v1",
-    image_url="http://moira:9000/comfy-gen/...",
+    image_url="http://moira.local:9000/comfy-gen/...",
     params={...},
     feedback="Benchmark reference - best realism achieved so far",
 )
@@ -602,7 +602,7 @@ The logger captures these params (see `comfy_gen/mlflow_logger.py` for full sche
 The logger auto-checks MLflow health. If it fails:
 ```bash
 # Wake up cerebro (Mac mini tends to sleep)
-ssh cerebro 'printf "babyseal\n" | sudo -S pmset -a displaysleep 0 sleep 0 disksleep 0 powernap 0'
+ssh cerebro.local 'printf "babyseal\n" | sudo -S pmset -a displaysleep 0 sleep 0 disksleep 0 powernap 0'
 ```
 
 **Why MLflow:**
@@ -639,8 +639,8 @@ C:\Users\jrjen\comfy\models\
    - CFG: 8.5-9.5 for NSFW/explicit (stricter adherence), 7.0-8.0 for general
 5. **Generate** - `python3 generate.py --workflow <file> --prompt "<detailed_prompt>" --negative-prompt "<detailed_negative>" --steps 70 --cfg 9.0 --output /tmp/output.png`
 6. **Return ALL URLs** - ALWAYS list every generated image URL directly so user can view each one individually. For batch generation, provide a complete list of clickable links (not just a pattern or "see bucket"). Example format:
-   - http://moira:9000/comfy-gen/20260106_132120_nsfw_majicmix_11111.png
-   - http://moira:9000/comfy-gen/20260106_132126_nsfw_majicmix_22222.png
+   - http://moira.local:9000/comfy-gen/20260106_132120_nsfw_majicmix_11111.png
+   - http://moira.local:9000/comfy-gen/20260106_132126_nsfw_majicmix_22222.png
    - (list ALL generated images)
 
 ### CRITICAL: Video vs Image LoRAs
@@ -653,7 +653,7 @@ The authoritative source for LoRA base model is CivitAI API. Use `scripts/civita
 
 ```bash
 # 1. Get SHA256 hash from moira
-ssh moira "powershell -Command \"(Get-FileHash -Algorithm SHA256 '<path>').Hash\""
+ssh moira.local "powershell -Command \"(Get-FileHash -Algorithm SHA256 '<path>').Hash\""
 
 # 2. Look up on CivitAI API - returns baseModel, trainedWords
 curl "https://civitai.com/api/v1/model-versions/by-hash/<SHA256_HASH>"
@@ -813,7 +813,7 @@ gh pr checks <PR_NUMBER> --repo jrjenkinsiv/comfy-gen
 - **ComfyUI not responding:** SSH to moira, check `tasklist | findstr python`, restart with `start_comfyui.py`.
 - **Model not found:** Verify model exists in `C:\Users\jrjen\comfy\models\` and workflow references correct filename.
 - **MinIO access denied:** Bucket policy may have reset. Run `scripts/set_bucket_policy.py`.
-- **Image not appearing:** Check MinIO bucket at `http://moira:9000/minio/comfy-gen/`.
+- **Image not appearing:** Check MinIO bucket at `http://moira.local:9000/minio/comfy-gen/`.
 
 ## 11. Workflow Pickup Procedure
 
