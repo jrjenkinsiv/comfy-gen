@@ -1025,3 +1025,46 @@ Before implementing a new service, answer these questions:
 - **Lesson:** Long-running web services with persistent state → cerebro, NOT magneto.
 
 **When in doubt:** Default to cerebro for web services, moira for GPU/storage tasks.
+
+## 13. Repository Maintenance
+
+### Package Structure
+```
+comfy-gen/
+├── clients/     # API clients (ComfyUI, MinIO, CivitAI, HuggingFace)
+├── utils/       # Utilities (validation, quality, MLflow)
+├── api/         # FastAPI server (if implemented)
+├── categories/  # Category definitions (if implemented)
+├── workflows/   # ComfyUI workflow JSONs
+├── scripts/     # Utility scripts
+├── tests/       # All tests
+├── docs/        # Documentation
+└── instructions/ # Agent guides
+```
+
+### Naming Conventions
+- Package names: lowercase, descriptive (`clients/` not `comfygen/`)
+- No redundant naming (avoid `comfy-gen/comfy_gen/`)
+- Test files: `test_<module>.py`
+- Workflow files: `<model>-<variant>.json`
+
+### No Archive Folders
+- **NEVER** create archive folders
+- Git history preserves everything
+- Either complete the code or delete it
+- Use GitHub issues to track incomplete work
+
+### Test Requirements
+Every PR must include:
+- Unit tests for new functionality
+- Integration tests if touching external services
+- Update to manual test checklist if adding features
+
+### Cleanup Procedures
+If repo drifts from standards:
+1. Create tracking issue
+2. Delete unused/broken code (git history preserves)
+3. Rename packages to logical names
+4. Update all imports
+5. Verify tests pass
+6. Update documentation
